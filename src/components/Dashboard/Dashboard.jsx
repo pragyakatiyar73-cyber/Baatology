@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { MODES } from '../../utils/aiResponses';
 import { getPracticeHistory } from '../../utils/progressHistory';
 
@@ -7,40 +7,9 @@ export default function Dashboard({
   onNavigate,
   cameraActive,
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState(null);
-
   // Real persistent data from localStorage
   const historyRecords = getPracticeHistory();
   const latestSession = historyRecords[historyRecords.length - 1] || { score: 86, eyeContact: 88, fillers: 1 };
-
-  // Quick Study Chips Data
-  const quickChips = [
-    {
-      name: 'B-Tree Indexing',
-      category: 'DBMS & Storage',
-      summary: 'B+ trees maintain sorted key-value pairs at leaf nodes with doubly linked list pointers for O(log N) lookups and high-throughput range scans without random disk seeks.',
-      takeaway: 'In high-scale database queries, clustered B+ tree indices prevent table scans and reduce query latency by 90%+.',
-    },
-    {
-      name: 'STAR Framework',
-      category: 'Behavioral & Tech Pitch',
-      summary: 'Situation (Context), Task (Engineering Objective), Action (Concrete code, tool choices & implementation), Result (Measurable metrics: latency, throughput, users).',
-      takeaway: 'Always ground the "Result" with empirical numbers to prove technical business impact to interview panels.',
-    },
-    {
-      name: 'Agentic AI Loops',
-      category: 'Generative AI & LLMs',
-      summary: 'Autonomous LLM agent systems that combine chain-of-thought reasoning, external API tool execution, long-term memory, and self-reflection (ReAct architecture).',
-      takeaway: 'Agentic loops shift software engineering from static procedural code to goal-driven autonomous systems.',
-    },
-    {
-      name: 'Virtual DOM',
-      category: 'Web Tech & React',
-      summary: 'An in-memory lightweight JavaScript tree representing the browser DOM. When state changes, React diffs previous vs new VDOM (reconciliation) and batches atomic DOM mutations.',
-      takeaway: 'Minimizes expensive browser layout repaints and reflows by updating only changed subtrees.',
-    },
-  ];
 
   // Modern Practice Arenas
   const arenas = [
@@ -85,29 +54,6 @@ export default function Dashboard({
       tagColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
     },
   ];
-
-  const handleChipClick = (chip) => {
-    setSelectedTopic(chip);
-  };
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    const match = quickChips.find((c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.summary.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    if (match) {
-      setSelectedTopic(match);
-    } else {
-      setSelectedTopic({
-        name: searchQuery,
-        category: 'Engineering Concept',
-        summary: `Key engineering topic: "${searchQuery}". Review this fundamental concept for technical depth, trade-offs, and architecture justification before speaking in interviews.`,
-        takeaway: `Formulate a concise 45-second explanation with a real-world project example.`,
-      });
-    }
-  };
 
   return (
     <div className="flex-1 h-full overflow-y-auto px-10 py-8 space-y-10 bg-[#0a0f1d] text-slate-100 select-none pb-32">
@@ -265,7 +211,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* ════════════════ 3. DATE-WISE PROGRESS TABLE & VERBAL ENCOURAGEMENT BANNER ════════════════ */}
+      {/* ════════════════ DATE-WISE PROGRESS TABLE & VERBAL ENCOURAGEMENT BANNER ════════════════ */}
       <div className="p-7 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl space-y-5">
         {/* Celebratory Highlight Banner */}
         <div className="p-4 rounded-xl bg-gradient-to-r from-teal-950/70 via-slate-900 to-indigo-950/70 border border-teal-500/40 flex items-center gap-3.5 shadow-lg">
@@ -341,93 +287,6 @@ export default function Dashboard({
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* ════════════════ 2. ACADEMIC NOTES & SYLLABUS ENGINE WIDGET ════════════════ */}
-      <div className="p-7 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2.5">
-              <span>📚</span>
-              <span>Academic Notes &amp; Syllabus Engine</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Instant engineering definitions &amp; high-impact interview takeaways for quick reference.
-            </p>
-          </div>
-        </div>
-
-        {/* Live Search Input */}
-        <form onSubmit={handleSearchSubmit} className="relative">
-          <input
-            type="text"
-            placeholder="Search DSA, DBMS, OS, AI topics..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 pl-11 bg-slate-900 border border-slate-700/80 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-400 transition-colors shadow-inner"
-          />
-          <span className="absolute left-4 top-3.5 text-slate-400 text-sm">🔍</span>
-          <button
-            type="submit"
-            className="absolute right-2.5 top-2 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs transition-all shadow-md"
-          >
-            Search
-          </button>
-        </form>
-
-        {/* Clickable Quick-Study Chips */}
-        <div className="space-y-2">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Quick-Study Topics:
-          </p>
-          <div className="flex flex-wrap items-center gap-2.5">
-            {quickChips.map((chip) => {
-              const isSelected = selectedTopic?.name === chip.name;
-              return (
-                <button
-                  key={chip.name}
-                  onClick={() => handleChipClick(chip)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-teal-500/25 text-teal-300 border border-teal-400/60 shadow-md shadow-teal-500/10'
-                      : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60'
-                  }`}
-                >
-                  <span>⚡</span>
-                  <span>{chip.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Selected Topic Quick Insight Card */}
-        {selectedTopic && (
-          <div className="p-4 rounded-xl bg-slate-900/90 border border-teal-500/40 text-xs space-y-2.5 fade-in">
-            <div className="flex items-center justify-between">
-              <span className="font-black text-sm text-white flex items-center gap-2">
-                <span>📘</span>
-                <span>{selectedTopic.name}</span>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-500/30">
-                  {selectedTopic.category}
-                </span>
-              </span>
-              <button
-                onClick={() => setSelectedTopic(null)}
-                className="text-slate-400 hover:text-white text-xs px-1"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-slate-300 leading-relaxed text-xs">
-              {selectedTopic.summary}
-            </p>
-            <div className="p-2.5 rounded-lg bg-teal-950/50 border border-teal-500/30 text-teal-200 text-xs">
-              <span className="font-bold">🗣️ Interview Takeaway: </span>
-              {selectedTopic.takeaway}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
