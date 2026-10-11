@@ -1,28 +1,41 @@
 import React, { useState } from 'react';
 
-/**
- * High-definition enlarged webcam Picture-in-Picture feed.
- * Increased size for clear candidate self-monitoring and eye contact verification.
- */
 export default function WebcamPIP({
   videoRef,
   isActive,
   hasPermission,
   screenVideoRef,
   screenActive,
+  onToggleCamera,
 }) {
+  const [isMinimized, setIsMinimized] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Large default size (260x195), expandable to (340x255)
-  const widthClass = isExpanded ? 'w-[340px] h-[255px]' : 'w-[250px] h-[188px]';
+  // If candidate minimized it on dashboard
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => setIsMinimized(false)}
+          className="px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs font-bold text-slate-300 hover:text-white shadow-xl flex items-center gap-2 hover:bg-slate-800 transition-all"
+          title="Open Video Self-View"
+        >
+          <span>📷</span>
+          <span>Open Self-View</span>
+        </button>
+      </div>
+    );
+  }
+
+  const dimensionClass = isExpanded ? 'w-[320px] h-[240px]' : 'w-[230px] h-[172px]';
 
   return (
-    <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3 select-none">
-      {/* ── Screen Share PIP Preview (if presenting) ── */}
+    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3 select-none">
+      {/* ── Screen Share PIP Preview (if presenting slides) ── */}
       {screenActive && (
         <div
           className="rounded-2xl overflow-hidden border border-cyan-400/50 shadow-2xl relative w-[240px] h-[150px] bg-[#090e17]"
-          style={{ boxShadow: '0 8px 32px rgba(0, 229, 255, 0.2)' }}
+          style={{ boxShadow: '0 8px 32px rgba(0, 229, 255, 0.25)' }}
         >
           <video
             ref={screenVideoRef}
@@ -31,19 +44,19 @@ export default function WebcamPIP({
             playsInline
             className="w-full h-full object-cover"
           />
-          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/70 px-2 py-0.5 rounded-md text-[10px] font-bold text-cyan-300">
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/75 px-2 py-0.5 rounded-md text-[10px] font-bold text-cyan-300">
             <span className="w-2 h-2 rounded-full bg-cyan-400 pulse-dot" />
-            <span>PRESENTING SLIDES</span>
+            <span>SHARING SCREEN</span>
           </div>
         </div>
       )}
 
-      {/* ── Candidate Webcam Main Feed (Enlarged Size) ── */}
+      {/* ── Candidate Webcam Self-View ── */}
       <div
-        className={`rounded-2xl overflow-hidden border border-slate-700/70 shadow-2xl relative transition-all duration-300 ${widthClass}`}
+        className={`rounded-2xl overflow-hidden border border-slate-700/80 shadow-2xl relative transition-all duration-300 ${dimensionClass}`}
         style={{
           background: '#090e17',
-          boxShadow: '0 0 0 1px rgba(13,217,184,0.25), 0 16px 48px rgba(0,0,0,0.75)',
+          boxShadow: '0 0 0 1px rgba(20, 184, 166, 0.3), 0 20px 48px rgba(0, 0, 0, 0.8)',
         }}
       >
         {isActive ? (
@@ -53,55 +66,60 @@ export default function WebcamPIP({
             muted
             playsInline
             className="w-full h-full object-cover"
-            style={{ transform: 'scaleX(-1)' }} // Mirror view for natural reflection
+            style={{ transform: 'scaleX(-1)' }}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400 p-3 text-center bg-[#070b12]">
-            {hasPermission === false ? (
-              <>
-                <span className="text-3xl">🚫</span>
-                <span className="text-xs font-semibold">Camera Access Blocked</span>
-                <span className="text-[10px] text-slate-500">Allow camera permission in browser</span>
-              </>
-            ) : (
-              <>
-                <span className="text-3xl">📷</span>
-                <span className="text-xs font-semibold">Camera Off</span>
-                <span className="text-[10px] text-slate-500">Toggle camera to enable</span>
-              </>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400 p-4 text-center bg-[#0c1222]">
+            <span className="text-2xl">📷</span>
+            <span className="text-xs font-bold text-slate-200">Camera Off</span>
+            {onToggleCamera && (
+              <button
+                onClick={onToggleCamera}
+                className="mt-1 px-3 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-bold text-[11px] transition-all"
+              >
+                Turn On
+              </button>
             )}
           </div>
         )}
 
-        {/* Live Indicator Pill */}
-        {isActive && (
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-black/70 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-sm">
-            <div className="w-2 h-2 rounded-full bg-red-500 pulse-dot" />
-            <span className="text-[10px] text-white font-extrabold tracking-wider">LIVE</span>
+        {/* Top Controls Bar */}
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-auto">
+          {/* Live Indicator */}
+          {isActive ? (
+            <div className="flex items-center gap-1.5 bg-black/75 px-2.5 py-0.5 rounded-full border border-white/10 backdrop-blur-sm">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot" />
+              <span className="text-[10px] text-white font-extrabold tracking-wider">LIVE</span>
+            </div>
+          ) : (
+            <span />
+          )}
+
+          {/* Minimize and Resize Buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="bg-black/70 hover:bg-black text-white/80 hover:text-white p-1 rounded-md text-[10px] transition-all"
+              title={isExpanded ? 'Shrink PIP' : 'Enlarge PIP'}
+            >
+              {isExpanded ? '↙' : '↗'}
+            </button>
+            <button
+              onClick={() => setIsMinimized(true)}
+              className="bg-black/70 hover:bg-black text-white/80 hover:text-white p-1 rounded-md text-[10px] transition-all"
+              title="Minimize to button"
+            >
+              ✕
+            </button>
           </div>
-        )}
+        </div>
 
-        {/* Resize / Expand Toggle Button */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="absolute top-2.5 right-2.5 bg-black/60 hover:bg-black/80 text-white/80 hover:text-white p-1 rounded-md text-[10px] transition-all"
-          title={isExpanded ? 'Shrink PIP' : 'Enlarge PIP'}
-        >
-          {isExpanded ? '↙' : '↗'}
-        </button>
-
-        {/* Candidate Identifier Badge */}
-        <div className="absolute bottom-2 right-2.5">
+        {/* Bottom Tag */}
+        <div className="absolute bottom-2 right-2">
           <span className="text-[10px] text-white/90 font-bold bg-black/70 px-2 py-0.5 rounded-md border border-white/10">
             YOU
           </span>
         </div>
-
-        {/* Glowing border outline */}
-        <div
-          className="absolute inset-0 rounded-2xl pointer-events-none"
-          style={{ boxShadow: 'inset 0 0 0 1px rgba(13,217,184,0.3)' }}
-        />
       </div>
     </div>
   );

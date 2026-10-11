@@ -1,7 +1,9 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 
 import Dashboard from './components/Dashboard/Dashboard';
 import Sidebar from './components/Dashboard/Sidebar';
+import NotesView from './components/Dashboard/NotesView';
+import HistoryView from './components/Dashboard/HistoryView';
 import ThreeAvatar from './components/AuraGD/ThreeAvatar';
 import WebcamPIP from './components/AuraGD/WebcamPIP';
 import ControlDock from './components/AuraGD/ControlDock';
@@ -28,17 +30,17 @@ import { recordNewSession } from './utils/progressHistory';
 export default function App() {
   const userName = 'Pragya';
 
-  // ── Navigation & View State: 'dashboard' | 'arena'
+  // ── Navigation State: 'dashboard' | 'notes' | 'history' | 'arena'
   const [currentView, setCurrentView] = useState('dashboard');
   const [currentMode, setCurrentMode] = useState(MODES.PRESENTATION);
 
-  // ── Call & Voice State
+  // ── Voice & Audio Call State
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [hasStartedVoice, setHasStartedVoice] = useState(false);
 
-  // ── STT & TTS Coordination Refs
+  // ── Stable Hook Coordination Refs
   const startListeningRef = useRef(null);
   const stopListeningRef = useRef(null);
 
@@ -55,10 +57,10 @@ export default function App() {
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [scores, setScores] = useState(null);
 
-  // ── Session Metrics Tracking (in background)
+  // ── Metrics Tracking in background
   const statsRef = useRef({ turnCount: 0, wordCounts: [], totalWords: 0, fillersCount: 0 });
 
-  // ── Webcam Hook (Enlarged Candidate Camera)
+  // ── Webcam Hook
   const { videoRef, isActive: cameraActive, hasPermission, toggleCamera } = useWebcam(true);
 
   // ── Real-Time Vision Posture & Mistake Detection Hook
@@ -80,7 +82,7 @@ export default function App() {
     },
     onEnd: () => {
       setIsSpeaking(false);
-      // Auto-resume continuous listening when AI finishes speaking in arena
+      // Automatically resume continuous listening in arena
       if (currentView === 'arena' && !showScoreModal) {
         startListeningRef.current?.();
         setIsListening(true);
@@ -103,7 +105,7 @@ export default function App() {
     }, 380);
   }, [currentMode, speak, userName]);
 
-  // ── STT Hook (With Real-time Voice Volume & Silence Debounce)
+  // ── STT Hook
   const { startListening, stopListening, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
     onResult: (finalText) => {
       if (!finalText || !finalText.trim()) return;
@@ -307,12 +309,12 @@ export default function App() {
     : '';
 
   return (
-    <div className={`relative w-full h-full min-h-screen overflow-hidden bg-[#070b12] text-slate-100 select-none ${edgeGlowClass}`}>
+    <div className={`relative w-full h-full min-h-screen overflow-hidden bg-[#0a0f1d] text-slate-100 select-none ${edgeGlowClass}`}>
 
       {/* ══════════════════════════════════════════════════════════════
-          VIEW 1: DASHBOARD VIEW (With Syllabus Engine & Consistency Table)
+          VIEWS: DASHBOARD / NOTES / HISTORY
       ══════════════════════════════════════════════════════════════ */}
-      {currentView === 'dashboard' && (
+      {currentView !== 'arena' && (
         <div className="w-full h-screen flex overflow-hidden">
           {/* Left Navigation Sidebar */}
           <Sidebar
@@ -321,25 +323,36 @@ export default function App() {
             onStartArena={handleStartArena}
           />
 
-          {/* Main Dashboard Content */}
-          <Dashboard
-            onStartArena={handleStartArena}
-            cameraActive={cameraActive}
-          />
+          {/* Dynamic Content Views */}
+          {currentView === 'dashboard' && (
+            <Dashboard
+              onStartArena={handleStartArena}
+              onNavigate={(viewId) => setCurrentView(viewId)}
+              cameraActive={cameraActive}
+            />
+          )}
+
+          {currentView === 'notes' && (
+            <NotesView onStartArena={handleStartArena} />
+          )}
+
+          {currentView === 'history' && (
+            <HistoryView onStartArena={handleStartArena} />
+          )}
         </div>
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          VIEW 2: ARENA 1-ON-1 CALL VIEW ("kebal bo and me dheku")
+          VIEW: ARENA 1-ON-1 CALL VIEW ("kebal bo and me dheku")
       ══════════════════════════════════════════════════════════════ */}
       {currentView === 'arena' && (
         <div className="w-full h-screen relative overflow-hidden">
           {/* Top Minimal HUD with Arena Status & Back to Dashboard */}
-          <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-auto">
+          <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-8 py-5 pointer-events-auto">
             <div className="flex items-center gap-3">
               <button
                 onClick={handleBackToDashboard}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 shadow-md"
+                className="px-4 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 text-xs font-bold text-slate-200 hover:text-white transition-all flex items-center gap-2 shadow-lg"
               >
                 <span>←</span>
                 <span>Dashboard</span>
@@ -349,7 +362,7 @@ export default function App() {
                 <span className="text-white">Aura</span>
                 <span className="text-teal-400">GD</span>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-teal-950/60 border border-teal-500/30 text-teal-300 text-[10px] font-bold tracking-widest uppercase">
+              <span className="px-3 py-1 rounded-full bg-teal-950/70 border border-teal-500/30 text-teal-300 text-xs font-bold uppercase tracking-wider">
                 {currentMode === MODES.PRESENTATION
                   ? 'Project Presentation Arena'
                   : currentMode === MODES.SELF_INTRO
@@ -362,9 +375,9 @@ export default function App() {
 
             {/* Live Status Pill with Speech Detection Alert */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 backdrop-blur-md text-xs font-semibold">
+              <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-700/70 backdrop-blur-md text-xs font-semibold shadow-lg">
                 <span
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-2.5 h-2.5 rounded-full ${
                     isSpeaking
                       ? 'bg-cyan-400 pulse-dot'
                       : isListening
@@ -443,6 +456,7 @@ export default function App() {
         hasPermission={hasPermission}
         screenVideoRef={screenVideoRef}
         screenActive={screenActive}
+        onToggleCamera={toggleCamera}
       />
 
       {/* ══════════════════════════════════════════════════════════════
