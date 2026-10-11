@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 
@@ -141,7 +141,6 @@ function Neck() {
 function Head({ headRef, visorRef, mouthRef }) {
   return (
     <group ref={headRef} position={[0, 0.9, 0]}>
-      {/* Drum cylinder faceted head */}
       <mesh castShadow>
         <cylinderGeometry args={[0.305, 0.285, 0.44, 8]} />
         <meshStandardMaterial color="#c8851f" roughness={0.25} metalness={0.82} />
@@ -166,7 +165,6 @@ function Head({ headRef, visorRef, mouthRef }) {
         />
       </mesh>
 
-      {/* Visor with dynamic glowing material */}
       <mesh ref={visorRef} position={[0, 0.04, 0.248]}>
         <boxGeometry args={[0.44, 0.155, 0.06]} />
         <meshStandardMaterial
@@ -180,7 +178,6 @@ function Head({ headRef, visorRef, mouthRef }) {
         />
       </mesh>
 
-      {/* Eye pupils */}
       <mesh position={[-0.105, 0.045, 0.278]}>
         <sphereGeometry args={[0.03, 8, 8]} />
         <meshStandardMaterial
@@ -198,7 +195,6 @@ function Head({ headRef, visorRef, mouthRef }) {
         />
       </mesh>
 
-      {/* Moving mouth / speaker mesh */}
       <mesh ref={mouthRef} position={[0, -0.12, 0.258]}>
         <boxGeometry args={[0.18, 0.028, 0.04]} />
         <meshStandardMaterial
@@ -228,100 +224,97 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
   const chestGlowRef = useRef();
 
   useFrame((state) => {
-    const t = state.clock.elapsedTime;
+    try {
+      const t = state.clock.elapsedTime;
 
-    // Body idle breathing & posture
-    if (groupRef.current) {
-      if (isSpeaking) {
-        groupRef.current.position.y = Math.sin(t * 3.2) * 0.05;
-        groupRef.current.rotation.y = Math.sin(t * 0.5) * 0.06;
-      } else if (isListening) {
-        // Attentive slight forward lean when student is speaking
-        groupRef.current.position.y = Math.sin(t * 1.5) * 0.02;
-        groupRef.current.position.z = 0.06;
-        groupRef.current.rotation.y = Math.sin(t * 0.4) * 0.03;
-      } else {
-        groupRef.current.position.y = Math.sin(t * 1.2) * 0.02;
-        groupRef.current.position.z = 0;
-        groupRef.current.rotation.y = Math.sin(t * 0.3) * 0.04;
+      if (groupRef.current) {
+        if (isSpeaking) {
+          groupRef.current.position.y = Math.sin(t * 3.2) * 0.05;
+          groupRef.current.rotation.y = Math.sin(t * 0.5) * 0.06;
+        } else if (isListening) {
+          groupRef.current.position.y = Math.sin(t * 1.5) * 0.02;
+          groupRef.current.position.z = 0.06;
+          groupRef.current.rotation.y = Math.sin(t * 0.4) * 0.03;
+        } else {
+          groupRef.current.position.y = Math.sin(t * 1.2) * 0.02;
+          groupRef.current.position.z = 0;
+          groupRef.current.rotation.y = Math.sin(t * 0.3) * 0.04;
+        }
       }
-    }
 
-    // Head nodding / tilt
-    if (headRef.current) {
-      if (isSpeaking) {
-        headRef.current.rotation.x = Math.sin(t * 4.2) * 0.08;
-        headRef.current.rotation.y = Math.sin(t * 0.8) * 0.12;
-      } else if (isListening) {
-        // Subtle active-listening nods
-        headRef.current.rotation.x = 0.05 + Math.sin(t * 1.8) * 0.04;
-        headRef.current.rotation.y = Math.sin(t * 0.6) * 0.05;
-      } else {
-        headRef.current.rotation.x = Math.sin(t * 0.6) * 0.02;
-        headRef.current.rotation.y = Math.sin(t * 0.4) * 0.08;
+      if (headRef.current) {
+        if (isSpeaking) {
+          headRef.current.rotation.x = Math.sin(t * 4.2) * 0.08;
+          headRef.current.rotation.y = Math.sin(t * 0.8) * 0.12;
+        } else if (isListening) {
+          headRef.current.rotation.x = 0.05 + Math.sin(t * 1.8) * 0.04;
+          headRef.current.rotation.y = Math.sin(t * 0.6) * 0.05;
+        } else {
+          headRef.current.rotation.x = Math.sin(t * 0.6) * 0.02;
+          headRef.current.rotation.y = Math.sin(t * 0.4) * 0.08;
+        }
       }
-    }
 
-    // Mouth movement during speech
-    if (mouthRef.current) {
-      if (isSpeaking) {
-        const mouthScale = 1 + Math.abs(Math.sin(t * 14)) * 1.8;
-        mouthRef.current.scale.set(1, mouthScale, 1);
-      } else {
-        mouthRef.current.scale.set(1, 1, 1);
+      if (mouthRef.current) {
+        if (isSpeaking) {
+          const mouthScale = 1 + Math.abs(Math.sin(t * 14)) * 1.8;
+          mouthRef.current.scale.set(1, mouthScale, 1);
+        } else {
+          mouthRef.current.scale.set(1, 1, 1);
+        }
       }
-    }
 
-    // Visor and Chest lights dynamic response
-    if (visorRef.current && chestGlowRef.current) {
-      if (isSpeaking) {
-        // Cyan speaking glow
-        visorRef.current.material.color.set('#00e5ff');
-        visorRef.current.material.emissive.set('#00e5ff');
-        visorRef.current.material.emissiveIntensity = 2.4 + Math.sin(t * 8) * 0.8;
+      const visorMat = visorRef.current?.material;
+      const chestMat = chestGlowRef.current?.material;
 
-        chestGlowRef.current.material.color.set('#0dd9b8');
-        chestGlowRef.current.material.emissive.set('#0dd9b8');
-        chestGlowRef.current.material.emissiveIntensity = 1.5 + Math.sin(t * 7) * 0.6;
-      } else if (isListening) {
-        // Emerald active-listening glow
-        visorRef.current.material.color.set('#10b981');
-        visorRef.current.material.emissive.set('#10b981');
-        visorRef.current.material.emissiveIntensity = 2.0 + Math.sin(t * 4.5) * 0.7;
+      if (visorMat && chestMat) {
+        if (isSpeaking) {
+          visorMat.color?.set?.('#00e5ff');
+          visorMat.emissive?.set?.('#00e5ff');
+          visorMat.emissiveIntensity = 2.4 + Math.sin(t * 8) * 0.8;
 
-        chestGlowRef.current.material.color.set('#10b981');
-        chestGlowRef.current.material.emissive.set('#10b981');
-        chestGlowRef.current.material.emissiveIntensity = 1.6 + Math.sin(t * 4) * 0.5;
-      } else if (isThinking) {
-        // Sky blue thinking glow
-        visorRef.current.material.color.set('#38bdf8');
-        visorRef.current.material.emissive.set('#38bdf8');
-        visorRef.current.material.emissiveIntensity = 1.8 + Math.sin(t * 6) * 0.6;
+          chestMat.color?.set?.('#0dd9b8');
+          chestMat.emissive?.set?.('#0dd9b8');
+          chestMat.emissiveIntensity = 1.5 + Math.sin(t * 7) * 0.6;
+        } else if (isListening) {
+          visorMat.color?.set?.('#10b981');
+          visorMat.emissive?.set?.('#10b981');
+          visorMat.emissiveIntensity = 2.0 + Math.sin(t * 4.5) * 0.7;
 
-        chestGlowRef.current.material.color.set('#38bdf8');
-        chestGlowRef.current.material.emissive.set('#38bdf8');
-        chestGlowRef.current.material.emissiveIntensity = 1.4 + Math.sin(t * 5) * 0.5;
-      } else {
-        // Idle gentle teal
-        visorRef.current.material.color.set('#00e5ff');
-        visorRef.current.material.emissive.set('#00e5ff');
-        visorRef.current.material.emissiveIntensity = 1.5 + Math.sin(t * 1.5) * 0.3;
+          chestMat.color?.set?.('#10b981');
+          chestMat.emissive?.set?.('#10b981');
+          chestMat.emissiveIntensity = 1.6 + Math.sin(t * 4) * 0.5;
+        } else if (isThinking) {
+          visorMat.color?.set?.('#38bdf8');
+          visorMat.emissive?.set?.('#38bdf8');
+          visorMat.emissiveIntensity = 1.8 + Math.sin(t * 6) * 0.6;
 
-        chestGlowRef.current.material.color.set('#0dd9b8');
-        chestGlowRef.current.material.emissive.set('#0dd9b8');
-        chestGlowRef.current.material.emissiveIntensity = 0.8 + Math.sin(t * 1.5) * 0.2;
+          chestMat.color?.set?.('#38bdf8');
+          chestMat.emissive?.set?.('#38bdf8');
+          chestMat.emissiveIntensity = 1.4 + Math.sin(t * 5) * 0.5;
+        } else {
+          visorMat.color?.set?.('#00e5ff');
+          visorMat.emissive?.set?.('#00e5ff');
+          visorMat.emissiveIntensity = 1.5 + Math.sin(t * 1.5) * 0.3;
+
+          chestMat.color?.set?.('#0dd9b8');
+          chestMat.emissive?.set?.('#0dd9b8');
+          chestMat.emissiveIntensity = 0.8 + Math.sin(t * 1.5) * 0.2;
+        }
       }
-    }
 
-    // Arm gestures
-    if (leftArmRef.current && rightArmRef.current) {
-      if (isSpeaking) {
-        leftArmRef.current.rotation.z = 0.32 + Math.sin(t * 2.5) * 0.22;
-        rightArmRef.current.rotation.z = -0.32 - Math.sin(t * 2.5) * 0.22;
-      } else {
-        leftArmRef.current.rotation.z = 0.12 + Math.sin(t * 0.6) * 0.04;
-        rightArmRef.current.rotation.z = -0.12 - Math.sin(t * 0.6) * 0.04;
+      if (leftArmRef.current && rightArmRef.current) {
+        if (isSpeaking) {
+          leftArmRef.current.rotation.z = 0.32 + Math.sin(t * 2.5) * 0.22;
+          rightArmRef.current.rotation.z = -0.32 - Math.sin(t * 2.5) * 0.22;
+        } else {
+          leftArmRef.current.rotation.z = 0.12 + Math.sin(t * 0.6) * 0.04;
+          rightArmRef.current.rotation.z = -0.12 - Math.sin(t * 0.6) * 0.04;
+        }
       }
+    } catch (e) {
+      // Prevent frame animation crash from bubbling up
+      console.debug('Animation frame handled:', e);
     }
   });
 
@@ -340,48 +333,139 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
   );
 }
 
-export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
+// ── Fallback Robot Component if WebGL is unavailable ──
+function FallbackRobotAvatar({ isSpeaking, isListening, isThinking }) {
   return (
-    <Canvas
-      camera={{ position: [0, 0.35, 3.8], fov: 42 }}
-      shadows
-      gl={{ antialias: true, alpha: true }}
-      style={{ width: '100%', height: '100%', background: 'transparent' }}
-    >
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[4, 6, 4]} intensity={1.4} castShadow shadow-mapSize={[1024, 1024]} />
-      <pointLight position={[-2.5, 2.5, 2.5]} intensity={0.8} color="#0dd9b8" />
-      <pointLight position={[0, -1.5, 2.0]} intensity={0.4} color="#f59e0b" />
-      <pointLight position={[0, 3, -3]} intensity={0.45} color="#00e5ff" />
-      <fog attach="fog" args={['#070b12', 7, 24]} />
+    <div className="w-full h-full flex flex-col items-center justify-center pointer-events-none select-none">
+      <div className="relative flex flex-col items-center">
+        {/* Glowing Head */}
+        <div
+          className={`w-36 h-36 rounded-3xl border-2 flex flex-col items-center justify-center transition-all duration-300 shadow-2xl ${
+            isListening
+              ? 'bg-emerald-950/40 border-emerald-400 shadow-emerald-500/20'
+              : isSpeaking
+              ? 'bg-cyan-950/40 border-cyan-400 shadow-cyan-500/30'
+              : 'bg-amber-950/30 border-amber-500/60 shadow-amber-500/20'
+          }`}
+          style={{ background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)' }}
+        >
+          {/* Visor */}
+          <div
+            className={`w-24 h-10 rounded-xl flex items-center justify-around px-2 transition-all duration-200 ${
+              isListening
+                ? 'bg-emerald-400 shadow-[0_0_20px_#10b981]'
+                : isSpeaking
+                ? 'bg-cyan-400 shadow-[0_0_20px_#00e5ff]'
+                : isThinking
+                ? 'bg-sky-400 shadow-[0_0_20px_#38bdf8]'
+                : 'bg-teal-400 shadow-[0_0_15px_#0dd9b8]'
+            }`}
+          >
+            <div className="w-3.5 h-3.5 rounded-full bg-white pulse-dot" />
+            <div className="w-3.5 h-3.5 rounded-full bg-white pulse-dot" />
+          </div>
 
-      <RobotModel isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} />
+          {/* Mouth animation */}
+          <div className="mt-3 flex gap-1 items-center h-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className={`w-1 rounded-full transition-all duration-150 ${
+                  isSpeaking ? 'bg-cyan-300 h-3 animate-pulse' : 'bg-slate-600 h-1'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
 
-      {/* Ground plane */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.36, 0]} receiveShadow>
-        <planeGeometry args={[12, 12]} />
-        <meshStandardMaterial color="#080d16" roughness={0.85} metalness={0.15} />
-      </mesh>
+        {/* Torso */}
+        <div className="w-48 h-40 rounded-2xl bg-slate-800/80 border border-amber-600/40 mt-2 flex flex-col items-center justify-center shadow-xl">
+          <div
+            className={`w-14 h-14 rounded-full border-2 flex items-center justify-center ${
+              isListening
+                ? 'border-emerald-400 bg-emerald-500/20 pulse-dot'
+                : isSpeaking
+                ? 'border-cyan-400 bg-cyan-500/20 pulse-dot'
+                : 'border-teal-400 bg-teal-500/20'
+            }`}
+          >
+            <span className="text-xl">⚡</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      {/* Ambient floor glow */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.35, 0]}>
-        <ringGeometry args={[0.5, 1.25, 32]} />
-        <meshStandardMaterial
-          color={isListening ? '#10b981' : '#0dd9b8'}
-          emissive={isListening ? '#10b981' : '#0dd9b8'}
-          emissiveIntensity={0.25}
-          transparent
-          opacity={0.45}
+export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
+  const [webGLError, setWebGLError] = useState(false);
+
+  useEffect(() => {
+    // Check if WebGL is supported
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) setWebGLError(true);
+    } catch (e) {
+      setWebGLError(true);
+    }
+  }, []);
+
+  if (webGLError) {
+    return <FallbackRobotAvatar isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} />;
+  }
+
+  return (
+    <div className="w-full h-full relative">
+      <Canvas
+        camera={{ position: [0, 0.35, 3.8], fov: 42 }}
+        shadows
+        gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
+        onCreated={({ gl }) => {
+          gl.setClearColor('#000000', 0);
+        }}
+        onError={() => setWebGLError(true)}
+        style={{ width: '100%', height: '100%', background: 'transparent' }}
+      >
+        <ambientLight intensity={0.5} />
+        <directionalLight
+          position={[4, 6, 4]}
+          intensity={1.4}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
         />
-      </mesh>
+        <pointLight position={[-2.5, 2.5, 2.5]} intensity={0.8} color="#0dd9b8" />
+        <pointLight position={[0, -1.5, 2.0]} intensity={0.4} color="#f59e0b" />
+        <pointLight position={[0, 3, -3]} intensity={0.45} color="#00e5ff" />
+        <fog attach="fog" args={['#070b12', 7, 24]} />
 
-      <OrbitControls
-        enablePan={false}
-        enableZoom={false}
-        maxPolarAngle={Math.PI / 2.05}
-        minPolarAngle={Math.PI / 4.5}
-        target={[0, 0.1, 0]}
-      />
-    </Canvas>
+        <RobotModel isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} />
+
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.36, 0]} receiveShadow>
+          <planeGeometry args={[12, 12]} />
+          <meshStandardMaterial color="#080d16" roughness={0.85} metalness={0.15} />
+        </mesh>
+
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.35, 0]}>
+          <ringGeometry args={[0.5, 1.25, 32]} />
+          <meshStandardMaterial
+            color={isListening ? '#10b981' : '#0dd9b8'}
+            emissive={isListening ? '#10b981' : '#0dd9b8'}
+            emissiveIntensity={0.25}
+            transparent
+            opacity={0.45}
+          />
+        </mesh>
+
+        <OrbitControls
+          enablePan={false}
+          enableZoom={false}
+          maxPolarAngle={Math.PI / 2.05}
+          minPolarAngle={Math.PI / 4.5}
+          target={[0, 0.1, 0]}
+        />
+      </Canvas>
+    </div>
   );
 }

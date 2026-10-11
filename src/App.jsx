@@ -5,6 +5,7 @@ import WebcamPIP from './components/AuraGD/WebcamPIP';
 import ControlDock from './components/AuraGD/ControlDock';
 import PostureAlertBadge from './components/AuraGD/PostureAlertBadge';
 import ScoreModal from './components/AuraGD/ScoreModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
@@ -41,7 +42,7 @@ export default function App() {
   const { videoRef, isActive: cameraActive, hasPermission, toggleCamera } = useWebcam(true);
 
   // ── Natural TTS Hook
-  const { speak, stop: stopTTS, isSupported: ttsSupported } = useSpeechSynthesis({
+  const { speak, stop: stopTTS } = useSpeechSynthesis({
     onStart: () => {
       setIsSpeaking(true);
       setIsThinking(false);
@@ -99,6 +100,11 @@ export default function App() {
       if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
       setScreenActive(false);
     } else {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
+        alert('Screen sharing is not supported in this browser environment.');
+        return;
+      }
+
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: { cursor: 'always' },
@@ -199,7 +205,6 @@ export default function App() {
   // ── Periodic Smart Posture / Gaze Simulation Check
   useEffect(() => {
     const postureInterval = setInterval(() => {
-      // If camera is active and user is participating, periodically verify composure
       if (cameraActive && Math.random() < 0.22 && !showScoreModal) {
         const alerts = [
           'Steady Eye Contact: Keep looking directly at the camera lens',
@@ -239,11 +244,10 @@ export default function App() {
     : '';
 
   return (
-    <div className={`relative w-screen h-screen overflow-hidden bg-[#070b12] select-none ${edgeGlowClass}`}>
+    <div className={`relative w-full h-full min-h-screen overflow-hidden bg-[#070b12] text-slate-100 select-none ${edgeGlowClass}`}>
 
       {/* ════════════════════ TOP MINIMAL NAV / HUD ════════════════════ */}
-      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-auto">
-        {/* Brand */}
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-auto">
         <div className="flex items-center gap-3">
           <div className="text-xl font-black tracking-tight leading-none">
             <span className="text-white">Aura</span>
@@ -254,7 +258,6 @@ export default function App() {
           </span>
         </div>
 
-        {/* Live Status Indicator Pill */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 backdrop-blur-md text-xs font-semibold">
             <span
@@ -289,15 +292,17 @@ export default function App() {
             </span>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* ════════════════════ FULL-SCREEN 3D ROBOT VIEWPORT ════════════════════ */}
-      <main className="w-full h-full relative z-10">
-        <ThreeAvatar
-          isSpeaking={isSpeaking}
-          isListening={isListening}
-          isThinking={isThinking}
-        />
+      <main className="w-full h-full absolute inset-0 z-10">
+        <ErrorBoundary>
+          <ThreeAvatar
+            isSpeaking={isSpeaking}
+            isListening={isListening}
+            isThinking={isThinking}
+          />
+        </ErrorBoundary>
       </main>
 
       {/* ════════════════════ POSTURE ALERT BADGE (Minimal HUD) ════════════════════ */}

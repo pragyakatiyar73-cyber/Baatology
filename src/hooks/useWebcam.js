@@ -9,11 +9,17 @@ export function useWebcam(autoStart = true) {
   const streamRef  = useRef(null);
 
   const [isActive,      setIsActive]      = useState(false);
-  const [hasPermission, setHasPermission] = useState(null); // null = unknown
+  const [hasPermission, setHasPermission] = useState(null);
   const [error,         setError]         = useState(null);
 
   const startCamera = useCallback(async () => {
-    if (streamRef.current) return; // Already running
+    if (streamRef.current) return;
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setHasPermission(false);
+      setError('MediaDevices API not supported in this environment');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -26,21 +32,21 @@ export function useWebcam(autoStart = true) {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        try { await videoRef.current.play(); } catch { /* autoplay policy blocked */ }
+        try { await videoRef.current.play(); } catch { /* autoplay policy */ }
       }
       setIsActive(true);
       setHasPermission(true);
       setError(null);
     } catch (err) {
-      console.warn('[Camera]', err.name, err.message);
+      console.warn('[Camera]', err?.name, err?.message);
       setHasPermission(false);
-      setError(err.message);
+      setError(err?.message || 'Camera permission denied');
       setIsActive(false);
     }
   }, []);
 
   const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setIsActive(false);
