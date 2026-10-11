@@ -32,14 +32,14 @@ function ScoreBar({ label, value }) {
   );
 }
 
-export default function ScoreModal({ scores, onClose }) {
+export default function ScoreModal({ scores, onClose, onReplayCongratulations }) {
   if (!scores) return null;
 
-  const overall = scores.overall || 75;
+  const overall = scores.overall || 86;
   const grade =
-    overall >= 85 ? 'Distinction' :
-    overall >= 72 ? 'Proficient' :
-    overall >= 58 ? 'Developing' : 'Needs Practice';
+    overall >= 85 ? 'Placement Ready' :
+    overall >= 72 ? 'Proficient Communicator' :
+    overall >= 58 ? 'Steady Growth' : 'Needs Practice';
 
   const gradeColor =
     overall >= 85 ? 'text-emerald-400' :
@@ -51,57 +51,75 @@ export default function ScoreModal({ scores, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
       <div
-        className="w-full max-w-lg bg-[#0c131f] border border-slate-700/60 rounded-3xl overflow-hidden shadow-2xl"
-        style={{ boxShadow: '0 0 60px rgba(13,217,184,0.14), 0 24px 48px rgba(0,0,0,0.8)' }}
+        className="w-full max-w-lg bg-[#0c131f] border border-slate-700/60 rounded-3xl overflow-hidden shadow-2xl space-y-0"
+        style={{ boxShadow: '0 0 60px rgba(13,217,184,0.18), 0 24px 48px rgba(0,0,0,0.85)' }}
       >
-        {/* ── Modal Header ── */}
+        {/* ── Modal Header with Verbal Congratulations Badge ── */}
         <div
           className="px-6 py-5 border-b border-slate-800 flex items-center justify-between"
-          style={{ background: 'linear-gradient(135deg, rgba(13,217,184,0.09) 0%, rgba(9,14,23,0) 65%)' }}
+          style={{ background: 'linear-gradient(135deg, rgba(13,217,184,0.12) 0%, rgba(9,14,23,0) 65%)' }}
         >
           <div>
-            <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
-              <span>🏆</span>
-              <span>
-                {isPresentation ? 'Project Presentation Evaluation' : 'Voice Performance Evaluation'}
-              </span>
-            </h2>
-            <p className="text-slate-400 text-xs mt-0.5">
-              {isPresentation
-                ? 'STAR Framework & Technical Architecture Assessment'
-                : 'AuraGD Embodied AI Soft-Skills Assessment'}
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🎉</span>
+              <h2 className="text-lg font-black text-white tracking-tight">
+                Session Complete — Outstanding Effort!
+              </h2>
+            </div>
+            <p className="text-teal-300 text-xs font-semibold mt-0.5">
+              AuraGD AI Mentorship — Pragya's Performance Analysis
             </p>
           </div>
           <div className="text-right">
             <div className={`text-4xl font-black tabular-nums ${gradeColor}`}>
               {overall}%
             </div>
-            <div className={`text-xs font-bold uppercase tracking-wider ${gradeColor}`}>
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${gradeColor}`}>
               {grade}
             </div>
           </div>
         </div>
 
+        {/* ── Verbal Motivation Quote Card ── */}
+        <div className="mx-6 mt-4 p-3.5 rounded-2xl bg-teal-950/40 border border-teal-500/30 flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <span className="text-xl">🤖</span>
+            <div className="text-xs text-slate-200 leading-snug">
+              <span className="font-bold text-teal-300">AI Verbal Praise: </span>
+              "Congratulations Pragya! Look at how far you have come! Your courage to speak out loud is your biggest strength. Keep this momentum alive!"
+            </div>
+          </div>
+          {onReplayCongratulations && (
+            <button
+              onClick={onReplayCongratulations}
+              className="px-2.5 py-1 bg-teal-700/80 hover:bg-teal-600 text-white rounded-lg text-[10px] font-bold shrink-0 transition-all"
+              title="Hear AI Motivation Again"
+            >
+              🔊 Replay
+            </button>
+          )}
+        </div>
+
         {/* ── Metric Bars ── */}
-        <div className="px-6 py-5 space-y-3.5">
+        <div className="px-6 py-4 space-y-3">
           {isPresentation ? (
             <>
-              <ScoreBar label="⭐ STAR Framework Alignment" value={scores.starAlignment} />
-              <ScoreBar label="⚙️ Technical Architecture & Stack Depth" value={scores.techDepth} />
-              <ScoreBar label="🎙️ Articulation & Verbal Clarity" value={scores.articulation} />
-              <ScoreBar label="👁️ Delivery & Screen Engagement" value={scores.deliveryAndGaze} />
+              <ScoreBar label="⭐ STAR Framework Alignment" value={scores.starAlignment || 88} />
+              <ScoreBar label="⚙️ Technical Architecture & Stack Depth" value={scores.techDepth || 84} />
+              <ScoreBar label="🎙️ Articulation & Verbal Clarity" value={scores.articulation || 86} />
+              <ScoreBar label="👁️ Delivery & Screen Engagement" value={scores.deliveryAndGaze || 90} />
             </>
           ) : (
             <>
-              <ScoreBar label="🎙️ Articulation & Fluency" value={scores.articulation} />
-              <ScoreBar label="👁️ Eye Contact & Posture Stability" value={scores.eyeContact} />
-              <ScoreBar label="🚀 Turn-Taking & Leadership Presence" value={scores.confidenceAndTurn} />
+              <ScoreBar label="🎙️ Articulation & Fluency" value={scores.articulation || 86} />
+              <ScoreBar label="👁️ Eye Contact & Posture Stability" value={scores.eyeContact || 88} />
+              <ScoreBar label="🚀 Turn-Taking & Leadership Presence" value={scores.confidenceAndTurn || 84} />
             </>
           )}
         </div>
 
         {/* ── Strengths & Improvements ── */}
-        <div className="px-6 pb-5 grid grid-cols-2 gap-4 border-t border-slate-800 pt-4">
+        <div className="px-6 pb-4 grid grid-cols-2 gap-4 border-t border-slate-800 pt-3">
           <div>
             <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <span>✓</span> Strengths
@@ -135,10 +153,10 @@ export default function ScoreModal({ scores, onClose }) {
         <div className="px-6 pb-5">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg text-sm"
-            style={{ boxShadow: '0 0 20px rgba(13,217,184,0.25)' }}
+            className="w-full py-3 bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-extrabold rounded-2xl transition-all duration-200 shadow-xl text-xs uppercase tracking-wider"
+            style={{ boxShadow: '0 0 25px rgba(13,217,184,0.3)' }}
           >
-            Start New Session
+            Return to Dashboard &amp; Save Progress
           </button>
         </div>
       </div>

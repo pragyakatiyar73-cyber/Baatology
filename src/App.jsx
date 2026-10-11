@@ -12,11 +12,22 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useWebcam } from './hooks/useWebcam';
+import { useVisionPostureTracker } from './hooks/useVisionPostureTracker';
 
-import { getAIResponse, MODES, resetConversation, getCurrentTopic } from './utils/aiResponses';
+import {
+  getAIResponse,
+  MODES,
+  resetConversation,
+  getCurrentTopic,
+  getSmartMorningGreeting,
+  generateCongratulationsSpeech,
+} from './utils/aiResponses';
 import { calculateScores } from './utils/scoreCalculator';
+import { recordNewSession } from './utils/progressHistory';
 
 export default function App() {
+  const userName = 'Pragya';
+
   // ── Navigation & View State: 'dashboard' | 'arena'
   const [currentView, setCurrentView] = useState('dashboard');
   const [currentMode, setCurrentMode] = useState(MODES.PRESENTATION);
@@ -45,10 +56,21 @@ export default function App() {
   const [scores, setScores] = useState(null);
 
   // ── Session Metrics Tracking (in background)
-  const statsRef = useRef({ turnCount: 0, wordCounts: [], totalWords: 0 });
+  const statsRef = useRef({ turnCount: 0, wordCounts: [], totalWords: 0, fillersCount: 0 });
 
   // ── Webcam Hook (Enlarged Candidate Camera)
   const { videoRef, isActive: cameraActive, hasPermission, toggleCamera } = useWebcam(true);
+
+  // ── Real-Time Vision Posture & Mistake Detection Hook
+  useVisionPostureTracker({
+    videoRef,
+    isActive: cameraActive && currentView === 'arena',
+    onAlert: (alertMsg) => {
+      setPostureAlert(alertMsg);
+      postureCountRef.current++;
+    },
+    intervalMs: 3800,
+  });
 
   // ── Natural TTS Hook
   const { speak, stop: stopTTS } = useSpeechSynthesis({
@@ -58,8 +80,8 @@ export default function App() {
     },
     onEnd: () => {
       setIsSpeaking(false);
-      // Auto-resume listening when AI finishes speaking in arena
-      if (currentView === 'arena') {
+      // Auto-resume continuous listening when AI finishes speaking in arena
+      if (currentView === 'arena' && !showScoreModal) {
         startListeningRef.current?.();
         setIsListening(true);
       }
@@ -71,11 +93,15 @@ export default function App() {
     setIsThinking(true);
     setIsListening(false);
 
+    // Track filler words count
+    const fillers = (speechText.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically)\b/g) || []).length;
+    statsRef.current.fillersCount += fillers;
+
     setTimeout(() => {
-      const reply = getAIResponse(speechText, currentMode);
+      const reply = getAIResponse(speechText, currentMode, userName);
       speak(reply);
     }, 380);
-  }, [currentMode, speak]);
+  }, [currentMode, speak, userName]);
 
   // ── STT Hook (With Real-time Voice Volume & Silence Debounce)
   const { startListening, stopListening, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
@@ -111,13 +137,13 @@ export default function App() {
 
     let announcement = '';
     if (modeId === MODES.PRESENTATION) {
-      announcement = 'Welcome to the Project Presentation Arena! Whenever you are ready, please walk me through your architecture and technical stack. I am listening attentively.';
+      announcement = `Welcome ${userName} to the Project Presentation Arena! Walk me through your architecture and technical stack whenever you are ready. You can also share your slides. I am listening attentively.`;
     } else if (modeId === MODES.SELF_INTRO) {
-      announcement = 'Welcome to the Self Introduction Arena. Please introduce yourself naturally with your background and core skills. I will evaluate your delivery.';
+      announcement = `Welcome ${userName} to the Self Introduction Arena. Please introduce yourself naturally. I will evaluate your opening, structure, and eliminate filler words.`;
     } else if (modeId === MODES.CASUAL) {
-      announcement = 'Welcome to Casual Talk. Take a calm breath. We can have a relaxed, supportive conversation.';
+      announcement = `Welcome to Casual Talk ${userName}. Take a calm breath. If you are feeling placement anxiety or stress, feel free to talk. I am here as your friend.`;
     } else {
-      announcement = `Welcome to the Group Discussion Arena. Today's theme is: "${getCurrentTopic()}". Share your perspective whenever you are ready.`;
+      announcement = `Welcome to the Group Discussion Arena. Today's debate topic is: "${getCurrentTopic()}". Share your perspective whenever you are ready.`;
     }
 
     setTimeout(() => {
@@ -126,7 +152,7 @@ export default function App() {
         setIsListening(true);
       });
     }, 400);
-  }, [speak, startListening, stopTTS]);
+  }, [speak, startListening, stopTTS, userName]);
 
   // ── Return to Dashboard
   const handleBackToDashboard = useCallback(() => {
@@ -212,7 +238,7 @@ export default function App() {
     }, 200);
   }, [speak, startListening, stopTTS]);
 
-  // ── End Arena Call & Open Evaluation
+  // ── End Arena Call & Trigger Verbal Congratulations
   const handleEndCall = useCallback(() => {
     stopListening();
     stopTTS();
@@ -226,8 +252,8 @@ export default function App() {
     }
     setScreenActive(false);
 
-    const { turnCount, wordCounts, totalWords } = statsRef.current;
-    const avgWordsPerTurn = wordCounts.length > 0 ? Math.round(totalWords / wordCounts.length) : 14;
+    const { turnCount, wordCounts, totalWords, fillersCount } = statsRef.current;
+    const avgWordsPerTurn = wordCounts.length > 0 ? Math.round(totalWords / wordCounts.length) : 15;
 
     const computed = calculateScores({
       turnCount: Math.max(turnCount, 1),
@@ -237,39 +263,41 @@ export default function App() {
       postureAlertCount: postureCountRef.current,
     });
 
+    // Save session to Date-Wise Progress History
+    recordNewSession({
+      mode: currentMode,
+      score: computed.overall,
+      eyeContact: computed.eyeContact || computed.deliveryAndGaze || 88,
+      fillers: Math.max(fillersCount, 1),
+    });
+
     setScores(computed);
     setShowScoreModal(true);
-  }, [currentMode, stopListening, stopTTS]);
+
+    // AI Speaks Verbal Congratulations Out Loud
+    const congratsSpeech = generateCongratulationsSpeech(currentMode, computed.overall, userName);
+    setTimeout(() => {
+      speak(congratsSpeech);
+    }, 500);
+  }, [currentMode, speak, stopListening, stopTTS, userName]);
+
+  // ── Replay AI Congratulations Speech
+  const handleReplayCongratulations = useCallback(() => {
+    if (scores) {
+      const congratsSpeech = generateCongratulationsSpeech(currentMode, scores.overall, userName);
+      speak(congratsSpeech);
+    }
+  }, [currentMode, scores, speak, userName]);
 
   // ── Close Score Modal & Return to Dashboard
   const handleCloseScoreModal = useCallback(() => {
     setShowScoreModal(false);
     setScores(null);
-    statsRef.current = { turnCount: 0, wordCounts: [], totalWords: 0 };
+    statsRef.current = { turnCount: 0, wordCounts: [], totalWords: 0, fillersCount: 0 };
     postureCountRef.current = 0;
     resetConversation();
     setCurrentView('dashboard');
   }, []);
-
-  // ── Periodic Posture Alert in Arena View
-  useEffect(() => {
-    if (currentView !== 'arena') return;
-
-    const postureInterval = setInterval(() => {
-      if (cameraActive && Math.random() < 0.22 && !showScoreModal) {
-        const alerts = [
-          'Steady Eye Contact: Keep looking directly at the camera lens',
-          'Avoid touching your face while speaking',
-          'Sit upright with relaxed shoulders for confident presence',
-        ];
-        const chosen = alerts[Math.floor(Math.random() * alerts.length)];
-        setPostureAlert(chosen);
-        postureCountRef.current++;
-      }
-    }, 38000);
-
-    return () => clearInterval(postureInterval);
-  }, [cameraActive, currentView, showScoreModal]);
 
   // ── Voice Ambient Edge Glow
   const edgeGlowClass = isListening
@@ -282,7 +310,7 @@ export default function App() {
     <div className={`relative w-full h-full min-h-screen overflow-hidden bg-[#070b12] text-slate-100 select-none ${edgeGlowClass}`}>
 
       {/* ══════════════════════════════════════════════════════════════
-          VIEW 1: DASHBOARD VIEW (Exact Mockup Layout)
+          VIEW 1: DASHBOARD VIEW (With Syllabus Engine & Consistency Table)
       ══════════════════════════════════════════════════════════════ */}
       {currentView === 'dashboard' && (
         <div className="w-full h-screen flex overflow-hidden">
@@ -297,7 +325,6 @@ export default function App() {
           <Dashboard
             onStartArena={handleStartArena}
             cameraActive={cameraActive}
-            scores={scores}
           />
         </div>
       )}
@@ -307,12 +334,12 @@ export default function App() {
       ══════════════════════════════════════════════════════════════ */}
       {currentView === 'arena' && (
         <div className="w-full h-screen relative overflow-hidden">
-          {/* Top HUD with Arena Status & Back to Dashboard */}
+          {/* Top Minimal HUD with Arena Status & Back to Dashboard */}
           <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-auto">
             <div className="flex items-center gap-3">
               <button
                 onClick={handleBackToDashboard}
-                className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 shadow-md"
               >
                 <span>←</span>
                 <span>Dashboard</span>
@@ -333,7 +360,7 @@ export default function App() {
               </span>
             </div>
 
-            {/* Live Status Pill */}
+            {/* Live Status Pill with Speech Detection Alert */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 backdrop-blur-md text-xs font-semibold">
                 <span
@@ -350,9 +377,9 @@ export default function App() {
                 <span
                   className={
                     isSpeaking
-                      ? 'text-cyan-300'
+                      ? 'text-cyan-300 font-bold'
                       : isListening
-                      ? 'text-emerald-300'
+                      ? 'text-emerald-300 font-bold'
                       : isThinking
                       ? 'text-sky-300'
                       : 'text-slate-400'
@@ -383,7 +410,7 @@ export default function App() {
             </ErrorBoundary>
           </main>
 
-          {/* Posture Alert Badge HUD */}
+          {/* Vision Posture Alert Badge HUD (Slouching, Face-Touch, Gaze) */}
           <PostureAlertBadge
             alert={postureAlert}
             onDismiss={() => setPostureAlert(null)}
@@ -419,10 +446,14 @@ export default function App() {
       />
 
       {/* ══════════════════════════════════════════════════════════════
-          PERFORMANCE EVALUATION REPORT MODAL
+          PERFORMANCE EVALUATION REPORT MODAL WITH VERBAL CONGRATULATIONS
       ══════════════════════════════════════════════════════════════ */}
       {showScoreModal && (
-        <ScoreModal scores={scores} onClose={handleCloseScoreModal} />
+        <ScoreModal
+          scores={scores}
+          onClose={handleCloseScoreModal}
+          onReplayCongratulations={handleReplayCongratulations}
+        />
       )}
     </div>
   );
