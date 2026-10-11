@@ -22,6 +22,10 @@ export default function App() {
   const [isThinking, setIsThinking] = useState(false);
   const [hasStartedVoice, setHasStartedVoice] = useState(false);
 
+  // ── STT & TTS Coordination Refs (Prevents TDZ reference errors)
+  const startListeningRef = useRef(null);
+  const stopListeningRef = useRef(null);
+
   // ── Screen Share State
   const [screenActive, setScreenActive] = useState(false);
   const screenVideoRef = useRef(null);
@@ -49,8 +53,8 @@ export default function App() {
     },
     onEnd: () => {
       setIsSpeaking(false);
-      // Automatically resume continuous listening once AI finishes speaking
-      startListening();
+      // Safely resume continuous listening via ref
+      startListeningRef.current?.();
       setIsListening(true);
     },
   });
@@ -69,7 +73,7 @@ export default function App() {
 
   // ── STT Hook (Continuous Background Recognition)
   const { startListening, stopListening, isSupported: sttSupported } = useSpeechRecognition({
-    onResult: useCallback((finalText) => {
+    onResult: (finalText) => {
       if (!finalText || !finalText.trim()) return;
 
       const words = finalText.trim().split(/\s+/).length;
@@ -77,10 +81,10 @@ export default function App() {
       statsRef.current.wordCounts.push(words);
       statsRef.current.totalWords += words;
 
-      stopListening();
+      stopListeningRef.current?.();
       setIsListening(false);
       triggerAIResponse(finalText);
-    }, [stopListening, triggerAIResponse]),
+    },
 
     onEnd: () => {
       // Keep listening unless AI is speaking or modal is open
@@ -89,6 +93,10 @@ export default function App() {
       }
     },
   });
+
+  // Keep coordination refs current
+  startListeningRef.current = startListening;
+  stopListeningRef.current = stopListening;
 
   // ── Screen Share Toggle
   const toggleScreenShare = useCallback(async () => {
@@ -234,7 +242,7 @@ export default function App() {
     }, 1200);
 
     return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [speak, startListening]);
 
   // ── Active Voice Edge Ambience
   const edgeGlowClass = isListening
