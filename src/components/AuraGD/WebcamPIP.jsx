@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 
+/**
+ * High-definition enlarged webcam Picture-in-Picture feed.
+ * Increased size for clear candidate self-monitoring and eye contact verification.
+ */
 export default function WebcamPIP({
   videoRef,
   isActive,
@@ -7,18 +11,18 @@ export default function WebcamPIP({
   screenVideoRef,
   screenActive,
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Large default size (260x195), expandable to (340x255)
+  const widthClass = isExpanded ? 'w-[340px] h-[255px]' : 'w-[250px] h-[188px]';
+
   return (
-    <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-2.5">
-      {/* ── Screen Share PIP Preview (if screen share active) ── */}
+    <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3 select-none">
+      {/* ── Screen Share PIP Preview (if presenting) ── */}
       {screenActive && (
         <div
-          className="rounded-xl overflow-hidden border border-cyan-500/40 shadow-2xl relative"
-          style={{
-            width: '180px',
-            height: '110px',
-            background: '#090e17',
-            boxShadow: '0 8px 32px rgba(0, 229, 255, 0.15)',
-          }}
+          className="rounded-2xl overflow-hidden border border-cyan-400/50 shadow-2xl relative w-[240px] h-[150px] bg-[#090e17]"
+          style={{ boxShadow: '0 8px 32px rgba(0, 229, 255, 0.2)' }}
         >
           <video
             ref={screenVideoRef}
@@ -27,21 +31,19 @@ export default function WebcamPIP({
             playsInline
             className="w-full h-full object-cover"
           />
-          <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded text-[9px] font-bold text-cyan-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 pulse-dot" />
-            <span>PRESENTING</span>
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/70 px-2 py-0.5 rounded-md text-[10px] font-bold text-cyan-300">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 pulse-dot" />
+            <span>PRESENTING SLIDES</span>
           </div>
         </div>
       )}
 
-      {/* ── Candidate Webcam PIP ── */}
+      {/* ── Candidate Webcam Main Feed (Enlarged Size) ── */}
       <div
-        className="rounded-2xl overflow-hidden border border-slate-700/60 shadow-2xl relative"
+        className={`rounded-2xl overflow-hidden border border-slate-700/70 shadow-2xl relative transition-all duration-300 ${widthClass}`}
         style={{
-          width: '154px',
-          height: '116px',
-          background: '#0a0f1a',
-          boxShadow: '0 0 0 1px rgba(13,217,184,0.18), 0 12px 36px rgba(0,0,0,0.65)',
+          background: '#090e17',
+          boxShadow: '0 0 0 1px rgba(13,217,184,0.25), 0 16px 48px rgba(0,0,0,0.75)',
         }}
       >
         {isActive ? (
@@ -51,40 +53,54 @@ export default function WebcamPIP({
             muted
             playsInline
             className="w-full h-full object-cover"
-            style={{ transform: 'scaleX(-1)' }}
+            style={{ transform: 'scaleX(-1)' }} // Mirror view for natural reflection
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-500 p-2 text-center">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400 p-3 text-center bg-[#070b12]">
             {hasPermission === false ? (
               <>
-                <span className="text-xl">🚫</span>
-                <span className="text-[10px] leading-tight">Camera blocked</span>
+                <span className="text-3xl">🚫</span>
+                <span className="text-xs font-semibold">Camera Access Blocked</span>
+                <span className="text-[10px] text-slate-500">Allow camera permission in browser</span>
               </>
             ) : (
               <>
-                <span className="text-xl">📷</span>
-                <span className="text-[10px]">Camera Off</span>
+                <span className="text-3xl">📷</span>
+                <span className="text-xs font-semibold">Camera Off</span>
+                <span className="text-[10px] text-slate-500">Toggle camera to enable</span>
               </>
             )}
           </div>
         )}
 
+        {/* Live Indicator Pill */}
         {isActive && (
-          <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500 pulse-dot" />
-            <span className="text-[9px] text-white/90 font-bold tracking-wider">LIVE</span>
+          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-black/70 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-sm">
+            <div className="w-2 h-2 rounded-full bg-red-500 pulse-dot" />
+            <span className="text-[10px] text-white font-extrabold tracking-wider">LIVE</span>
           </div>
         )}
 
-        <div className="absolute bottom-1 right-1.5">
-          <span className="text-[9px] text-white/70 font-bold bg-black/60 px-1.5 py-0.5 rounded-sm">
+        {/* Resize / Expand Toggle Button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="absolute top-2.5 right-2.5 bg-black/60 hover:bg-black/80 text-white/80 hover:text-white p-1 rounded-md text-[10px] transition-all"
+          title={isExpanded ? 'Shrink PIP' : 'Enlarge PIP'}
+        >
+          {isExpanded ? '↙' : '↗'}
+        </button>
+
+        {/* Candidate Identifier Badge */}
+        <div className="absolute bottom-2 right-2.5">
+          <span className="text-[10px] text-white/90 font-bold bg-black/70 px-2 py-0.5 rounded-md border border-white/10">
             YOU
           </span>
         </div>
 
+        {/* Glowing border outline */}
         <div
           className="absolute inset-0 rounded-2xl pointer-events-none"
-          style={{ boxShadow: 'inset 0 0 0 1px rgba(13,217,184,0.2)' }}
+          style={{ boxShadow: 'inset 0 0 0 1px rgba(13,217,184,0.3)' }}
         />
       </div>
     </div>

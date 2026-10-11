@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 
+import Dashboard from './components/Dashboard/Dashboard';
+import Sidebar from './components/Dashboard/Sidebar';
 import ThreeAvatar from './components/AuraGD/ThreeAvatar';
 import WebcamPIP from './components/AuraGD/WebcamPIP';
 import ControlDock from './components/AuraGD/ControlDock';
@@ -15,14 +17,17 @@ import { getAIResponse, MODES, resetConversation, getCurrentTopic } from './util
 import { calculateScores } from './utils/scoreCalculator';
 
 export default function App() {
-  // ── Call & Mode State
+  // ── Navigation & View State: 'dashboard' | 'arena'
+  const [currentView, setCurrentView] = useState('dashboard');
   const [currentMode, setCurrentMode] = useState(MODES.PRESENTATION);
+
+  // ── Call & Voice State
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [hasStartedVoice, setHasStartedVoice] = useState(false);
 
-  // ── STT & TTS Coordination Refs (Prevents TDZ reference errors)
+  // ── STT & TTS Coordination Refs
   const startListeningRef = useRef(null);
   const stopListeningRef = useRef(null);
 
@@ -39,10 +44,10 @@ export default function App() {
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [scores, setScores] = useState(null);
 
-  // ── Session Metrics Tracking (Zero-text in background)
+  // ── Session Metrics Tracking (in background)
   const statsRef = useRef({ turnCount: 0, wordCounts: [], totalWords: 0 });
 
-  // ── Webcam Hook
+  // ── Webcam Hook (Enlarged Candidate Camera)
   const { videoRef, isActive: cameraActive, hasPermission, toggleCamera } = useWebcam(true);
 
   // ── Natural TTS Hook
@@ -53,9 +58,11 @@ export default function App() {
     },
     onEnd: () => {
       setIsSpeaking(false);
-      // Safely resume continuous listening via ref
-      startListeningRef.current?.();
-      setIsListening(true);
+      // Auto-resume listening when AI finishes speaking in arena
+      if (currentView === 'arena') {
+        startListeningRef.current?.();
+        setIsListening(true);
+      }
     },
   });
 
@@ -64,15 +71,14 @@ export default function App() {
     setIsThinking(true);
     setIsListening(false);
 
-    // Natural processing pause (300-500ms)
     setTimeout(() => {
       const reply = getAIResponse(speechText, currentMode);
       speak(reply);
-    }, 400);
+    }, 380);
   }, [currentMode, speak]);
 
-  // ── STT Hook (Continuous Background Recognition)
-  const { startListening, stopListening, isSupported: sttSupported } = useSpeechRecognition({
+  // ── STT Hook (With Real-time Voice Volume & Silence Debounce)
+  const { startListening, stopListening, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
     onResult: (finalText) => {
       if (!finalText || !finalText.trim()) return;
 
@@ -87,16 +93,50 @@ export default function App() {
     },
 
     onEnd: () => {
-      // Keep listening unless AI is speaking or modal is open
-      if (!isSpeaking && !showScoreModal && hasStartedVoice) {
+      if (!isSpeaking && !showScoreModal && hasStartedVoice && currentView === 'arena') {
         setIsListening(true);
       }
     },
   });
 
-  // Keep coordination refs current
   startListeningRef.current = startListening;
   stopListeningRef.current = stopListening;
+
+  // ── Enter Arena View ("kebal bo and me dheku")
+  const handleStartArena = useCallback((modeId) => {
+    setCurrentMode(modeId);
+    setCurrentView('arena');
+    setHasStartedVoice(true);
+    stopTTS();
+
+    let announcement = '';
+    if (modeId === MODES.PRESENTATION) {
+      announcement = 'Welcome to the Project Presentation Arena! Whenever you are ready, please walk me through your architecture and technical stack. I am listening attentively.';
+    } else if (modeId === MODES.SELF_INTRO) {
+      announcement = 'Welcome to the Self Introduction Arena. Please introduce yourself naturally with your background and core skills. I will evaluate your delivery.';
+    } else if (modeId === MODES.CASUAL) {
+      announcement = 'Welcome to Casual Talk. Take a calm breath. We can have a relaxed, supportive conversation.';
+    } else {
+      announcement = `Welcome to the Group Discussion Arena. Today's theme is: "${getCurrentTopic()}". Share your perspective whenever you are ready.`;
+    }
+
+    setTimeout(() => {
+      speak(announcement, () => {
+        startListening();
+        setIsListening(true);
+      });
+    }, 400);
+  }, [speak, startListening, stopTTS]);
+
+  // ── Return to Dashboard
+  const handleBackToDashboard = useCallback(() => {
+    stopListening();
+    stopTTS();
+    setIsListening(false);
+    setIsSpeaking(false);
+    setIsThinking(false);
+    setCurrentView('dashboard');
+  }, [stopListening, stopTTS]);
 
   // ── Screen Share Toggle
   const toggleScreenShare = useCallback(async () => {
@@ -109,7 +149,7 @@ export default function App() {
       setScreenActive(false);
     } else {
       if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
-        alert('Screen sharing is not supported in this browser environment.');
+        alert('Screen sharing is not supported in this browser.');
         return;
       }
 
@@ -148,28 +188,31 @@ export default function App() {
     }
   }, [isListening, startListening, stopListening, stopTTS]);
 
-  // ── Mode Switch Handler
+  // ── Mode Switch within Arena
   const handleSelectMode = useCallback((newMode) => {
     setCurrentMode(newMode);
     stopTTS();
 
     let verbalAnnouncement = '';
     if (newMode === MODES.PRESENTATION) {
-      verbalAnnouncement = 'Switched to Project Presentation mode. Walk me through your architecture and technical stack whenever you are ready. I am listening.';
+      verbalAnnouncement = 'Switched to Project Presentation mode. Walk me through your architecture and technical stack whenever you are ready.';
     } else if (newMode === MODES.SELF_INTRO) {
-      verbalAnnouncement = 'Switched to Self Introduction mode. Introduce yourself comfortably, and I will share structured verbal coaching.';
+      verbalAnnouncement = 'Switched to Self Introduction mode. Introduce yourself comfortably.';
     } else if (newMode === MODES.CASUAL) {
-      verbalAnnouncement = 'Switched to Casual Talk mode. Take a deep breath. We can have a relaxed, supportive conversation.';
+      verbalAnnouncement = 'Switched to Casual Talk mode. Take a deep breath.';
     } else {
-      verbalAnnouncement = `Switched to Group Discussion mode. Our theme is: "${getCurrentTopic()}". Share your perspective whenever you are ready.`;
+      verbalAnnouncement = `Switched to Group Discussion mode. Our theme is: "${getCurrentTopic()}".`;
     }
 
     setTimeout(() => {
-      speak(verbalAnnouncement);
+      speak(verbalAnnouncement, () => {
+        startListening();
+        setIsListening(true);
+      });
     }, 200);
-  }, [speak, stopTTS]);
+  }, [speak, startListening, stopTTS]);
 
-  // ── End Call Handler
+  // ── End Arena Call & Open Evaluation
   const handleEndCall = useCallback(() => {
     stopListening();
     stopTTS();
@@ -184,7 +227,7 @@ export default function App() {
     setScreenActive(false);
 
     const { turnCount, wordCounts, totalWords } = statsRef.current;
-    const avgWordsPerTurn = wordCounts.length > 0 ? Math.round(totalWords / wordCounts.length) : 12;
+    const avgWordsPerTurn = wordCounts.length > 0 ? Math.round(totalWords / wordCounts.length) : 14;
 
     const computed = calculateScores({
       turnCount: Math.max(turnCount, 1),
@@ -198,20 +241,20 @@ export default function App() {
     setShowScoreModal(true);
   }, [currentMode, stopListening, stopTTS]);
 
-  // ── Restart Session
+  // ── Close Score Modal & Return to Dashboard
   const handleCloseScoreModal = useCallback(() => {
     setShowScoreModal(false);
     setScores(null);
     statsRef.current = { turnCount: 0, wordCounts: [], totalWords: 0 };
     postureCountRef.current = 0;
     resetConversation();
+    setCurrentView('dashboard');
+  }, []);
 
-    const welcomeMsg = 'Welcome back! Let us begin a fresh session. What would you like to explore next?';
-    speak(welcomeMsg);
-  }, [speak]);
-
-  // ── Periodic Smart Posture / Gaze Simulation Check
+  // ── Periodic Posture Alert in Arena View
   useEffect(() => {
+    if (currentView !== 'arena') return;
+
     const postureInterval = setInterval(() => {
       if (cameraActive && Math.random() < 0.22 && !showScoreModal) {
         const alerts = [
@@ -226,25 +269,9 @@ export default function App() {
     }, 38000);
 
     return () => clearInterval(postureInterval);
-  }, [cameraActive, showScoreModal]);
+  }, [cameraActive, currentView, showScoreModal]);
 
-  // ── Initial Verbal Greeting On Load
-  useEffect(() => {
-    const initialGreeting =
-      'Good morning! How has your day been going so far? I am right here with you. What would you like to talk about today?';
-
-    const timer = setTimeout(() => {
-      speak(initialGreeting, () => {
-        setHasStartedVoice(true);
-        startListening();
-        setIsListening(true);
-      });
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [speak, startListening]);
-
-  // ── Active Voice Edge Ambience
+  // ── Voice Ambient Edge Glow
   const edgeGlowClass = isListening
     ? 'voice-edge-listening'
     : isSpeaking
@@ -254,72 +281,135 @@ export default function App() {
   return (
     <div className={`relative w-full h-full min-h-screen overflow-hidden bg-[#070b12] text-slate-100 select-none ${edgeGlowClass}`}>
 
-      {/* ════════════════════ TOP MINIMAL NAV / HUD ════════════════════ */}
-      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-auto">
-        <div className="flex items-center gap-3">
-          <div className="text-xl font-black tracking-tight leading-none">
-            <span className="text-white">Aura</span>
-            <span className="text-teal-400">GD</span>
-          </div>
-          <span className="px-2.5 py-0.5 rounded-full bg-teal-950/60 border border-teal-500/30 text-teal-300 text-[10px] font-bold tracking-widest uppercase">
-            Voice Call Active
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 backdrop-blur-md text-xs font-semibold">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isSpeaking
-                  ? 'bg-cyan-400 pulse-dot'
-                  : isListening
-                  ? 'bg-emerald-400 pulse-dot'
-                  : isThinking
-                  ? 'bg-sky-400 pulse-dot'
-                  : 'bg-slate-500'
-              }`}
-            />
-            <span
-              className={
-                isSpeaking
-                  ? 'text-cyan-300'
-                  : isListening
-                  ? 'text-emerald-300'
-                  : isThinking
-                  ? 'text-sky-300'
-                  : 'text-slate-400'
-              }
-            >
-              {isSpeaking
-                ? 'AI Speaking...'
-                : isListening
-                ? 'Listening to you...'
-                : isThinking
-                ? 'AI Thinking...'
-                : 'Standby'}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      {/* ════════════════════ FULL-SCREEN 3D ROBOT VIEWPORT ════════════════════ */}
-      <main className="w-full h-full absolute inset-0 z-10">
-        <ErrorBoundary>
-          <ThreeAvatar
-            isSpeaking={isSpeaking}
-            isListening={isListening}
-            isThinking={isThinking}
+      {/* ══════════════════════════════════════════════════════════════
+          VIEW 1: DASHBOARD VIEW (Exact Mockup Layout)
+      ══════════════════════════════════════════════════════════════ */}
+      {currentView === 'dashboard' && (
+        <div className="w-full h-screen flex overflow-hidden">
+          {/* Left Navigation Sidebar */}
+          <Sidebar
+            currentView={currentView}
+            onNavigate={(viewId) => setCurrentView(viewId)}
+            onStartArena={handleStartArena}
           />
-        </ErrorBoundary>
-      </main>
 
-      {/* ════════════════════ POSTURE ALERT BADGE (Minimal HUD) ════════════════════ */}
-      <PostureAlertBadge
-        alert={postureAlert}
-        onDismiss={() => setPostureAlert(null)}
-      />
+          {/* Main Dashboard Content */}
+          <Dashboard
+            onStartArena={handleStartArena}
+            cameraActive={cameraActive}
+            scores={scores}
+          />
+        </div>
+      )}
 
-      {/* ════════════════════ FLOATING PICTURE-IN-PICTURE WEBCAM & SCREEN ════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════
+          VIEW 2: ARENA 1-ON-1 CALL VIEW ("kebal bo and me dheku")
+      ══════════════════════════════════════════════════════════════ */}
+      {currentView === 'arena' && (
+        <div className="w-full h-screen relative overflow-hidden">
+          {/* Top HUD with Arena Status & Back to Dashboard */}
+          <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 pointer-events-auto">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleBackToDashboard}
+                className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+              >
+                <span>←</span>
+                <span>Dashboard</span>
+              </button>
+
+              <div className="text-xl font-black tracking-tight leading-none ml-2">
+                <span className="text-white">Aura</span>
+                <span className="text-teal-400">GD</span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-teal-950/60 border border-teal-500/30 text-teal-300 text-[10px] font-bold tracking-widest uppercase">
+                {currentMode === MODES.PRESENTATION
+                  ? 'Project Presentation Arena'
+                  : currentMode === MODES.SELF_INTRO
+                  ? 'Self Introduction Arena'
+                  : currentMode === MODES.CASUAL
+                  ? 'Casual Talk Arena'
+                  : 'Group Discussion Arena'}
+              </span>
+            </div>
+
+            {/* Live Status Pill */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 backdrop-blur-md text-xs font-semibold">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isSpeaking
+                      ? 'bg-cyan-400 pulse-dot'
+                      : isListening
+                      ? 'bg-emerald-400 pulse-dot'
+                      : isThinking
+                      ? 'bg-sky-400 pulse-dot'
+                      : 'bg-slate-500'
+                  }`}
+                />
+                <span
+                  className={
+                    isSpeaking
+                      ? 'text-cyan-300'
+                      : isListening
+                      ? 'text-emerald-300'
+                      : isThinking
+                      ? 'text-sky-300'
+                      : 'text-slate-400'
+                  }
+                >
+                  {isSpeaking
+                    ? 'AI Speaking...'
+                    : isListening
+                    ? audioLevel > 15
+                      ? 'Listening to you (Speech detected)...'
+                      : 'Listening to you...'
+                    : isThinking
+                    ? 'AI Thinking...'
+                    : 'Standby'}
+                </span>
+              </div>
+            </div>
+          </header>
+
+          {/* Full-Screen 3D Robot Evaluator ("bo") */}
+          <main className="w-full h-full absolute inset-0 z-10">
+            <ErrorBoundary>
+              <ThreeAvatar
+                isSpeaking={isSpeaking}
+                isListening={isListening}
+                isThinking={isThinking}
+              />
+            </ErrorBoundary>
+          </main>
+
+          {/* Posture Alert Badge HUD */}
+          <PostureAlertBadge
+            alert={postureAlert}
+            onDismiss={() => setPostureAlert(null)}
+          />
+
+          {/* Floating Bottom Control Dock */}
+          <ControlDock
+            currentMode={currentMode}
+            onSelectMode={handleSelectMode}
+            isListening={isListening}
+            isSpeaking={isSpeaking}
+            onToggleMic={handleToggleMic}
+            cameraActive={cameraActive}
+            onToggleCamera={toggleCamera}
+            screenActive={screenActive}
+            onToggleScreenShare={toggleScreenShare}
+            onEndCall={handleEndCall}
+            onBackToDashboard={handleBackToDashboard}
+            audioLevel={audioLevel}
+          />
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          ENLARGED CANDIDATE WEBCAM PIP ("me") - Always visible in both views
+      ══════════════════════════════════════════════════════════════ */}
       <WebcamPIP
         videoRef={videoRef}
         isActive={cameraActive}
@@ -328,21 +418,9 @@ export default function App() {
         screenActive={screenActive}
       />
 
-      {/* ════════════════════ FLOATING BOTTOM GLASSMORPHISM CONTROL DOCK ════════════════════ */}
-      <ControlDock
-        currentMode={currentMode}
-        onSelectMode={handleSelectMode}
-        isListening={isListening}
-        isSpeaking={isSpeaking}
-        onToggleMic={handleToggleMic}
-        cameraActive={cameraActive}
-        onToggleCamera={toggleCamera}
-        screenActive={screenActive}
-        onToggleScreenShare={toggleScreenShare}
-        onEndCall={handleEndCall}
-      />
-
-      {/* ════════════════════ PERFORMANCE EVALUATION REPORT MODAL ════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════
+          PERFORMANCE EVALUATION REPORT MODAL
+      ══════════════════════════════════════════════════════════════ */}
       {showScoreModal && (
         <ScoreModal scores={scores} onClose={handleCloseScoreModal} />
       )}
