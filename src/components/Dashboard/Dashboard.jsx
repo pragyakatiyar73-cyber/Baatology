@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { MODES } from '../../utils/aiResponses';
-import { SYLLABUS_SUBJECTS, SYLLABUS_NOTES } from '../../utils/syllabusData';
 import { getPracticeHistory } from '../../utils/progressHistory';
 
 export default function Dashboard({
@@ -8,16 +7,9 @@ export default function Dashboard({
   onNavigate,
   cameraActive,
 }) {
-  const [selectedSubject, setSelectedSubject] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedNoteId, setExpandedNoteId] = useState('dsa-1');
-
   // Real persistent data from localStorage
   const historyRecords = getPracticeHistory();
   const latestSession = historyRecords[historyRecords.length - 1] || { score: 86, eyeContact: 88 };
-  const avgScore = Math.round(
-    historyRecords.reduce((acc, r) => acc + r.score, 0) / historyRecords.length
-  );
 
   // Modern Practice Arenas
   const arenas = [
@@ -62,15 +54,6 @@ export default function Dashboard({
       tagColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
     },
   ];
-
-  // Filter notes
-  const filteredNotes = SYLLABUS_NOTES.filter((note) => {
-    const matchesSubject = selectedSubject === 'all' || note.subject === selectedSubject;
-    const matchesQuery =
-      note.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.summary.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSubject && matchesQuery;
-  }).slice(0, 4); // Display top 4 on dashboard, full view in Notes tab
 
   return (
     <div className="flex-1 h-full overflow-y-auto px-10 py-8 space-y-10 bg-[#0a0f1d] text-slate-100 select-none pb-32">
@@ -294,107 +277,6 @@ export default function Dashboard({
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* ════════════════ ACADEMIC STUDY NOTES QUICK SECTION ════════════════ */}
-      <div className="p-7 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2.5">
-              <span>📚</span>
-              <span>Academic Engineering Syllabus Notes</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Quick reference definitions &amp; high-impact interview cheat sheets before stepping into group discussions.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onNavigate('notes')}
-            className="text-xs font-bold text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1 shrink-0"
-          >
-            <span>Open Complete Notes Library</span>
-            <span>→</span>
-          </button>
-        </div>
-
-        {/* Search Bar + Tabs */}
-        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {SYLLABUS_SUBJECTS.map((sub) => (
-              <button
-                key={sub.id}
-                onClick={() => setSelectedSubject(sub.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  selectedSubject === sub.id
-                    ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-sm'
-                    : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-                }`}
-              >
-                {sub.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="relative w-full md:w-80">
-            <input
-              type="text"
-              placeholder="Search concepts, DP, ACID, indexing..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pl-9 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-400 transition-colors"
-            />
-            <span className="absolute left-3 top-2 text-slate-400 text-xs">🔍</span>
-          </div>
-        </div>
-
-        {/* Notes Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredNotes.map((note) => {
-            const isExpanded = expandedNoteId === note.id;
-            return (
-              <div
-                key={note.id}
-                className="p-5 rounded-xl bg-slate-900/60 border border-slate-800/90 hover:border-slate-700 transition-all space-y-3 cursor-pointer"
-                onClick={() => setExpandedNoteId(isExpanded ? null : note.id)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                      {note.subjectLabel}
-                    </span>
-                    <h4 className="text-sm font-bold text-white hover:text-teal-300 transition-colors mt-1.5">
-                      {note.topic}
-                    </h4>
-                  </div>
-                  <span className="text-slate-400 text-xs">{isExpanded ? '▲' : '▼'}</span>
-                </div>
-
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {note.summary}
-                </p>
-
-                {isExpanded && (
-                  <div className="space-y-3 pt-3 border-t border-slate-800 fade-in text-xs">
-                    <div>
-                      <span className="font-bold text-cyan-300 uppercase tracking-wider text-[11px]">Core Architecture Concepts:</span>
-                      <ul className="list-disc list-inside text-slate-300 space-y-1 mt-1 pl-1">
-                        {note.keyPoints.map((pt, i) => (
-                          <li key={i}>{pt}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="p-3 rounded-lg bg-teal-950/40 border border-teal-500/30 text-teal-200 text-xs leading-relaxed">
-                      <span className="font-bold">🗣️ GD Talking Point: </span>
-                      {note.gdTalkingPoint}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>

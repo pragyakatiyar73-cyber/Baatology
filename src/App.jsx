@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef } from 'react';
 
 import Dashboard from './components/Dashboard/Dashboard';
 import Sidebar from './components/Dashboard/Sidebar';
-import NotesView from './components/Dashboard/NotesView';
 import HistoryView from './components/Dashboard/HistoryView';
 import ThreeAvatar from './components/AuraGD/ThreeAvatar';
 import WebcamPIP from './components/AuraGD/WebcamPIP';
@@ -30,7 +29,7 @@ import { recordNewSession } from './utils/progressHistory';
 export default function App() {
   const userName = 'Pragya';
 
-  // ── Navigation State: 'dashboard' | 'notes' | 'history' | 'arena'
+  // ── Navigation State: 'dashboard' | 'history' | 'arena'
   const [currentView, setCurrentView] = useState('dashboard');
   const [currentMode, setCurrentMode] = useState(MODES.PRESENTATION);
 
@@ -312,7 +311,7 @@ export default function App() {
     <div className={`relative w-full h-full min-h-screen overflow-hidden bg-[#0a0f1d] text-slate-100 select-none ${edgeGlowClass}`}>
 
       {/* ══════════════════════════════════════════════════════════════
-          VIEWS: DASHBOARD / NOTES / HISTORY
+          VIEWS: DASHBOARD / HISTORY
       ══════════════════════════════════════════════════════════════ */}
       {currentView !== 'arena' && (
         <div className="w-full h-screen flex overflow-hidden">
@@ -330,10 +329,6 @@ export default function App() {
               onNavigate={(viewId) => setCurrentView(viewId)}
               cameraActive={cameraActive}
             />
-          )}
-
-          {currentView === 'notes' && (
-            <NotesView onStartArena={handleStartArena} />
           )}
 
           {currentView === 'history' && (

@@ -8,7 +8,6 @@ export default function Sidebar({
 }) {
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard Overview', icon: '📊' },
-    { id: 'notes', label: 'Syllabus Study Notes', icon: '📚' },
     { id: 'history', label: 'Journey & Growth History', icon: '📈' },
   ];
 
