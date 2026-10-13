@@ -126,6 +126,7 @@ export function useSpeechRecognition({ onResult, onInterim, onEnd, onError } = {
     };
 
     rec.onresult = (event) => {
+      if (!activeRef.current) return;
       let newlyFinal = '';
       let newlyInterim = '';
 

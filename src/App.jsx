@@ -76,37 +76,62 @@ export default function App() {
     intervalMs: 3800,
   });
 
+  const lastAITextRef = useRef('');
+
   // ── Natural TTS Hook
   const { speak, stop: stopTTS } = useSpeechSynthesis({
     onStart: () => {
       setIsSpeaking(true);
       setIsThinking(false);
+      // Immediately stop listening so the microphone doesn't capture the AI's own speaker output
+      stopListeningRef.current?.();
+      setIsListening(false);
+      setInterimTranscript('');
     },
     onEnd: () => {
       setIsSpeaking(false);
-      // Automatically resume continuous listening in arena
+      // Resume listening after 700ms acoustic settle delay so room echo dissipates
       if (currentView === 'arena' && !showScoreModal) {
-        startListeningRef.current?.();
-        setIsListening(true);
+        setTimeout(() => {
+          startListeningRef.current?.();
+          setIsListening(true);
+        }, 700);
       }
     },
   });
 
   // ── AI Response Trigger
   const triggerAIResponse = useCallback((speechText) => {
+    // If AI is currently speaking, completely ignore any audio input
+    if (isSpeaking) {
+      console.debug('[Echo Filter] Discarded sound captured while AI was speaking');
+      return;
+    }
+
+    const cleaned = speechText.trim();
+    if (!cleaned) return;
+
+    // Check if what was heard is just an echo of the AI's own last spoken statement
+    const recentAI = lastAITextRef.current.toLowerCase();
+    if (recentAI && (recentAI.includes(cleaned.toLowerCase()) || cleaned.toLowerCase().includes(recentAI.slice(0, 25)))) {
+      console.debug('[Echo Filter] Discarded self-echo of previous AI speech:', cleaned);
+      return;
+    }
+
     setIsThinking(true);
     setIsListening(false);
     setInterimTranscript('');
 
     // Track filler words count
-    const fillers = (speechText.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically)\b/g) || []).length;
+    const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically)\b/g) || []).length;
     statsRef.current.fillersCount += fillers;
 
     setTimeout(() => {
-      const reply = getAIResponse(speechText, currentMode, userName);
+      const reply = getAIResponse(cleaned, currentMode, userName);
+      lastAITextRef.current = reply;
       speak(reply);
     }, 380);
-  }, [currentMode, speak, userName]);
+  }, [currentMode, isSpeaking, speak, userName]);
 
   // ── STT Hook
   const { startListening, stopListening, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
