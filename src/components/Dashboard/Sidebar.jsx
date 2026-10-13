@@ -61,8 +61,8 @@ export default function Sidebar({
               </span>
             </div>
             <div className="flex items-center gap-1.5 mt-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot" />
-              <span className="text-[11px] text-emerald-400 font-bold">Online &amp; Evaluating</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot shadow-[0_0_8px_#10b981]" />
+              <span className="text-[11px] text-emerald-400 font-bold tracking-tight">AI Active</span>
             </div>
           </div>
         </div>

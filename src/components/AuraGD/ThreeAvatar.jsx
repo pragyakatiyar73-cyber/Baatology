@@ -2,16 +2,19 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 
+// ── Standard Low-Poly Golden Robot Geometries (60 FPS on any laptop) ──
+// All parts use MeshStandardMaterial (metalness: 0.6, roughness: 0.3)
+
 function Feet() {
   return (
     <>
       <mesh position={[-0.22, -1.28, 0.06]} castShadow receiveShadow>
         <boxGeometry args={[0.22, 0.1, 0.30]} />
-        <meshStandardMaterial color="#0f1923" roughness={0.55} metalness={0.65} />
+        <meshStandardMaterial color="#161f2e" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0.22, -1.28, 0.06]} castShadow receiveShadow>
         <boxGeometry args={[0.22, 0.1, 0.30]} />
-        <meshStandardMaterial color="#0f1923" roughness={0.55} metalness={0.65} />
+        <meshStandardMaterial color="#161f2e" roughness={0.3} metalness={0.6} />
       </mesh>
     </>
   );
@@ -22,19 +25,19 @@ function Legs() {
     <>
       <mesh position={[-0.22, -0.9, 0]} castShadow>
         <boxGeometry args={[0.17, 0.64, 0.17]} />
-        <meshStandardMaterial color="#c8851f" roughness={0.25} metalness={0.82} />
+        <meshStandardMaterial color="#d49b28" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0.22, -0.9, 0]} castShadow>
         <boxGeometry args={[0.17, 0.64, 0.17]} />
-        <meshStandardMaterial color="#c8851f" roughness={0.25} metalness={0.82} />
+        <meshStandardMaterial color="#d49b28" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[-0.22, -0.76, 0]}>
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <meshStandardMaterial color="#8a5a0d" roughness={0.4} metalness={0.9} />
+        <sphereGeometry args={[0.1, 10, 10]} />
+        <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0.22, -0.76, 0]}>
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <meshStandardMaterial color="#8a5a0d" roughness={0.4} metalness={0.9} />
+        <sphereGeometry args={[0.1, 10, 10]} />
+        <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
       </mesh>
     </>
   );
@@ -44,7 +47,7 @@ function Pelvis() {
   return (
     <mesh position={[0, -0.56, 0]} castShadow>
       <boxGeometry args={[0.6, 0.22, 0.38]} />
-      <meshStandardMaterial color="#a06a10" roughness={0.32} metalness={0.78} />
+      <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
     </mesh>
   );
 }
@@ -54,7 +57,7 @@ function Torso({ chestGlowRef }) {
     <group>
       <mesh position={[0, 0.06, 0]} castShadow>
         <boxGeometry args={[0.9, 0.92, 0.52]} />
-        <meshStandardMaterial color="#c8851f" roughness={0.25} metalness={0.82} />
+        <meshStandardMaterial color="#d49b28" roughness={0.3} metalness={0.6} />
       </mesh>
 
       {/* Dynamic Chest glow reactor */}
@@ -64,8 +67,8 @@ function Torso({ chestGlowRef }) {
           color="#0dd9b8"
           emissive="#0dd9b8"
           emissiveIntensity={1.0}
-          roughness={0.1}
-          metalness={0}
+          roughness={0.2}
+          metalness={0.4}
         />
       </mesh>
 
@@ -75,7 +78,9 @@ function Torso({ chestGlowRef }) {
           <meshStandardMaterial
             color="#00e5ff"
             emissive="#00e5ff"
-            emissiveIntensity={3.0}
+            emissiveIntensity={2.8}
+            roughness={0.3}
+            metalness={0.6}
           />
         </mesh>
       ))}
@@ -83,7 +88,7 @@ function Torso({ chestGlowRef }) {
       {[-1, 1].map((side, i) => (
         <mesh key={i} position={[side * 0.38, 0.06, 0]}>
           <boxGeometry args={[0.06, 0.7, 0.44]} />
-          <meshStandardMaterial color="#8a5a0d" roughness={0.35} metalness={0.8} />
+          <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
         </mesh>
       ))}
     </group>
@@ -95,11 +100,11 @@ function ShoulderJoints() {
     <>
       <mesh position={[-0.56, 0.32, 0]} rotation={[0, 0, Math.PI / 2]}>
         <torusGeometry args={[0.1, 0.038, 8, 16]} />
-        <meshStandardMaterial color="#8a5a0d" roughness={0.42} metalness={0.9} />
+        <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0.56, 0.32, 0]} rotation={[0, 0, Math.PI / 2]}>
         <torusGeometry args={[0.1, 0.038, 8, 16]} />
-        <meshStandardMaterial color="#8a5a0d" roughness={0.42} metalness={0.9} />
+        <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
       </mesh>
     </>
   );
@@ -110,20 +115,20 @@ function Arm({ side, armRef }) {
   return (
     <group ref={armRef} position={[dir * 0.64, 0.28, 0]}>
       <mesh position={[0, -0.22, 0]} castShadow>
-        <cylinderGeometry args={[0.065, 0.055, 0.38, 8]} />
-        <meshStandardMaterial color="#c8851f" roughness={0.25} metalness={0.82} />
+        <cylinderGeometry args={[0.065, 0.055, 0.38, 10]} />
+        <meshStandardMaterial color="#d49b28" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0, -0.43, 0]}>
-        <sphereGeometry args={[0.07, 8, 8]} />
-        <meshStandardMaterial color="#8a5a0d" roughness={0.42} metalness={0.9} />
+        <sphereGeometry args={[0.07, 10, 10]} />
+        <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0, -0.6, 0]} castShadow>
-        <cylinderGeometry args={[0.052, 0.042, 0.32, 8]} />
-        <meshStandardMaterial color="#c8851f" roughness={0.25} metalness={0.82} />
+        <cylinderGeometry args={[0.052, 0.042, 0.32, 10]} />
+        <meshStandardMaterial color="#d49b28" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0, -0.79, 0]} castShadow>
         <boxGeometry args={[0.13, 0.11, 0.09]} />
-        <meshStandardMaterial color="#a06a10" roughness={0.32} metalness={0.78} />
+        <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
       </mesh>
     </group>
   );
@@ -132,93 +137,177 @@ function Arm({ side, armRef }) {
 function Neck() {
   return (
     <mesh position={[0, 0.64, 0]}>
-      <cylinderGeometry args={[0.1, 0.12, 0.22, 8]} />
-      <meshStandardMaterial color="#8a5a0d" roughness={0.42} metalness={0.9} />
+      <cylinderGeometry args={[0.1, 0.12, 0.22, 10]} />
+      <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
     </mesh>
   );
 }
 
-function Head({ headRef, visorRef, mouthRef }) {
+function Head({ headRef, visorRef, mouthRef, leftEyeRef, rightEyeRef }) {
   return (
     <group ref={headRef} position={[0, 0.9, 0]}>
+      {/* Main Head Base */}
       <mesh castShadow>
-        <cylinderGeometry args={[0.305, 0.285, 0.44, 8]} />
-        <meshStandardMaterial color="#c8851f" roughness={0.25} metalness={0.82} />
+        <cylinderGeometry args={[0.305, 0.285, 0.44, 12]} />
+        <meshStandardMaterial color="#d49b28" roughness={0.3} metalness={0.6} />
       </mesh>
 
+      {/* Head Top Crown */}
       <mesh position={[0, 0.23, 0]}>
-        <cylinderGeometry args={[0.285, 0.305, 0.06, 8]} />
-        <meshStandardMaterial color="#8a5a0d" roughness={0.38} metalness={0.82} />
+        <cylinderGeometry args={[0.285, 0.305, 0.06, 12]} />
+        <meshStandardMaterial color="#7a4e0a" roughness={0.3} metalness={0.6} />
       </mesh>
 
+      {/* Antenna Pole & Beacon */}
       <mesh position={[0, 0.4, 0]}>
         <cylinderGeometry args={[0.014, 0.014, 0.24, 6]} />
-        <meshStandardMaterial color="#c8851f" roughness={0.3} metalness={0.9} />
+        <meshStandardMaterial color="#d49b28" roughness={0.3} metalness={0.6} />
       </mesh>
-
       <mesh position={[0, 0.52, 0]}>
-        <sphereGeometry args={[0.034, 8, 8]} />
+        <sphereGeometry args={[0.034, 10, 10]} />
         <meshStandardMaterial
           color="#00e5ff"
           emissive="#00e5ff"
-          emissiveIntensity={3.5}
+          emissiveIntensity={3.2}
+          roughness={0.2}
+          metalness={0.4}
         />
       </mesh>
 
+      {/* Visor Screen with Cyan / Teal Emission */}
       <mesh ref={visorRef} position={[0, 0.04, 0.248]}>
         <boxGeometry args={[0.44, 0.155, 0.06]} />
         <meshStandardMaterial
           color="#00e5ff"
           emissive="#00e5ff"
-          emissiveIntensity={2.8}
-          roughness={0}
-          metalness={0}
+          emissiveIntensity={2.6}
+          roughness={0.1}
+          metalness={0.2}
           transparent
           opacity={0.92}
         />
       </mesh>
 
-      <mesh position={[-0.105, 0.045, 0.278]}>
-        <sphereGeometry args={[0.03, 8, 8]} />
+      {/* Two Eyes on the Visor - with periodic blinking & center gaze */}
+      <mesh ref={leftEyeRef} position={[-0.105, 0.045, 0.278]}>
+        <sphereGeometry args={[0.03, 10, 10]} />
         <meshStandardMaterial
           color="#ffffff"
           emissive="#ffffff"
-          emissiveIntensity={2.0}
+          emissiveIntensity={2.2}
+          roughness={0.1}
+          metalness={0.1}
         />
       </mesh>
-      <mesh position={[0.105, 0.045, 0.278]}>
-        <sphereGeometry args={[0.03, 8, 8]} />
+      <mesh ref={rightEyeRef} position={[0.105, 0.045, 0.278]}>
+        <sphereGeometry args={[0.03, 10, 10]} />
         <meshStandardMaterial
           color="#ffffff"
           emissive="#ffffff"
-          emissiveIntensity={2.0}
+          emissiveIntensity={2.2}
+          roughness={0.1}
+          metalness={0.1}
         />
       </mesh>
 
+      {/* Lower Mouth Mesh - moves up and down synchronized with speech output */}
       <mesh ref={mouthRef} position={[0, -0.12, 0.258]}>
-        <boxGeometry args={[0.18, 0.028, 0.04]} />
+        <boxGeometry args={[0.20, 0.035, 0.04]} />
         <meshStandardMaterial
           color="#0dd9b8"
           emissive="#0dd9b8"
-          emissiveIntensity={1.8}
+          emissiveIntensity={2.0}
+          roughness={0.2}
+          metalness={0.4}
         />
       </mesh>
 
-      {[-0.055, 0, 0.055].map((x, i) => (
-        <mesh key={i} position={[x, -0.14, 0.26]}>
-          <boxGeometry args={[0.026, 0.018, 0.03]} />
-          <meshStandardMaterial color="#000814" />
+      {/* Mouth grill mechanical detail */}
+      {[-0.06, 0, 0.06].map((x, i) => (
+        <mesh key={i} position={[x, -0.145, 0.26]}>
+          <boxGeometry args={[0.026, 0.016, 0.03]} />
+          <meshStandardMaterial color="#000814" roughness={0.5} metalness={0.8} />
         </mesh>
       ))}
     </group>
   );
 }
 
+// ── Floor Emerald-Green Aura Ring ──
+function AuraFloorRing({ isListening, isSpeaking }) {
+  const ringRef = useRef();
+  const matRef = useRef();
+
+  useFrame((state) => {
+    try {
+      const t = state.clock.elapsedTime;
+      if (!ringRef.current || !matRef.current) return;
+
+      if (isListening) {
+        // Subtle emerald-green aura ring pulses beneath the robot
+        const scale = 1.0 + Math.sin(t * 3.6) * 0.08;
+        ringRef.current.scale.set(scale, scale, 1);
+        matRef.current.color.set('#10b981');
+        matRef.current.emissive.set('#10b981');
+        matRef.current.emissiveIntensity = 0.8 + Math.sin(t * 3.6) * 0.4;
+        matRef.current.opacity = 0.65 + Math.sin(t * 3.6) * 0.2;
+      } else if (isSpeaking) {
+        const scale = 1.0 + Math.sin(t * 2.2) * 0.04;
+        ringRef.current.scale.set(scale, scale, 1);
+        matRef.current.color.set('#00e5ff');
+        matRef.current.emissive.set('#00e5ff');
+        matRef.current.emissiveIntensity = 0.4 + Math.sin(t * 4) * 0.2;
+        matRef.current.opacity = 0.4;
+      } else {
+        // IDLE
+        ringRef.current.scale.set(1, 1, 1);
+        matRef.current.color.set('#0dd9b8');
+        matRef.current.emissive.set('#0dd9b8');
+        matRef.current.emissiveIntensity = 0.25 + Math.sin(t * 1.5) * 0.1;
+        matRef.current.opacity = 0.35;
+      }
+    } catch (e) {
+      // safe fallback
+    }
+  });
+
+  return (
+    <group position={[0, -1.35, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Primary animated floor ring */}
+      <mesh ref={ringRef}>
+        <ringGeometry args={[0.55, 1.35, 32]} />
+        <meshStandardMaterial
+          ref={matRef}
+          color={isListening ? '#10b981' : '#0dd9b8'}
+          emissive={isListening ? '#10b981' : '#0dd9b8'}
+          emissiveIntensity={0.3}
+          transparent
+          opacity={0.35}
+          roughness={0.4}
+          metalness={0.2}
+        />
+      </mesh>
+      {/* Subtle outer accent perimeter ring */}
+      <mesh>
+        <ringGeometry args={[1.36, 1.40, 32]} />
+        <meshBasicMaterial
+          color={isListening ? '#10b981' : '#0dd9b8'}
+          transparent
+          opacity={isListening ? 0.6 : 0.2}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// ── Dynamic 3D Robot State Controller ──
 function RobotModel({ isSpeaking, isListening, isThinking }) {
   const groupRef     = useRef();
   const headRef      = useRef();
   const visorRef     = useRef();
   const mouthRef     = useRef();
+  const leftEyeRef   = useRef();
+  const rightEyeRef  = useRef();
   const leftArmRef   = useRef();
   const rightArmRef  = useRef();
   const chestGlowRef = useRef();
@@ -226,94 +315,170 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
   useFrame((state) => {
     try {
       const t = state.clock.elapsedTime;
+      const robotState = isSpeaking ? 'SPEAKING' : isListening ? 'LISTENING' : 'IDLE';
 
-      if (groupRef.current) {
-        if (isSpeaking) {
-          groupRef.current.position.y = Math.sin(t * 3.2) * 0.05;
-          groupRef.current.rotation.y = Math.sin(t * 0.5) * 0.06;
-        } else if (isListening) {
-          groupRef.current.position.y = Math.sin(t * 1.5) * 0.02;
-          groupRef.current.position.z = 0.06;
-          groupRef.current.rotation.y = Math.sin(t * 0.4) * 0.03;
-        } else {
-          groupRef.current.position.y = Math.sin(t * 1.2) * 0.02;
+      // ── a) 'IDLE' State:
+      // Gentle sinusoidal breathing float (head & torso bobbing smoothly) and periodic eye blinking.
+      if (robotState === 'IDLE') {
+        if (groupRef.current) {
+          groupRef.current.position.y = -0.35 + Math.sin(t * 1.6) * 0.035;
           groupRef.current.position.z = 0;
+          groupRef.current.rotation.x = 0;
           groupRef.current.rotation.y = Math.sin(t * 0.3) * 0.04;
         }
-      }
 
-      if (headRef.current) {
-        if (isSpeaking) {
-          headRef.current.rotation.x = Math.sin(t * 4.2) * 0.08;
-          headRef.current.rotation.y = Math.sin(t * 0.8) * 0.12;
-        } else if (isListening) {
-          headRef.current.rotation.x = 0.05 + Math.sin(t * 1.8) * 0.04;
-          headRef.current.rotation.y = Math.sin(t * 0.6) * 0.05;
-        } else {
-          headRef.current.rotation.x = Math.sin(t * 0.6) * 0.02;
-          headRef.current.rotation.y = Math.sin(t * 0.4) * 0.08;
+        if (headRef.current) {
+          headRef.current.position.y = 0.9 + Math.sin(t * 1.6 + 0.3) * 0.012;
+          headRef.current.position.z = 0;
+          headRef.current.rotation.x = Math.sin(t * 0.8) * 0.025;
+          headRef.current.rotation.y = Math.sin(t * 0.5) * 0.06;
         }
-      }
 
-      if (mouthRef.current) {
-        if (isSpeaking) {
-          const mouthScale = 1 + Math.abs(Math.sin(t * 14)) * 1.8;
-          mouthRef.current.scale.set(1, mouthScale, 1);
-        } else {
+        // Periodic eye blinking (every 3.8s, blink for 140ms)
+        const blinkCycle = t % 3.8;
+        const isBlinking = blinkCycle > 3.65 && blinkCycle < 3.79;
+        const eyeScaleY = isBlinking ? 0.08 : 1.0;
+        if (leftEyeRef.current && rightEyeRef.current) {
+          leftEyeRef.current.scale.set(1, eyeScaleY, 1);
+          rightEyeRef.current.scale.set(1, eyeScaleY, 1);
+        }
+
+        // Mouth closed at rest
+        if (mouthRef.current) {
+          mouthRef.current.position.y = -0.12;
           mouthRef.current.scale.set(1, 1, 1);
         }
-      }
 
-      const visorMat = visorRef.current?.material;
-      const chestMat = chestGlowRef.current?.material;
+        // Arms breathing gently at sides
+        if (leftArmRef.current && rightArmRef.current) {
+          leftArmRef.current.rotation.z = 0.12 + Math.sin(t * 1.6) * 0.03;
+          rightArmRef.current.rotation.z = -0.12 - Math.sin(t * 1.6) * 0.03;
+        }
 
-      if (visorMat && chestMat) {
-        if (isSpeaking) {
+        // Gentle ambient cyan breathing glow
+        const visorMat = visorRef.current?.material;
+        const chestMat = chestGlowRef.current?.material;
+        if (visorMat && chestMat) {
           visorMat.color?.set?.('#00e5ff');
           visorMat.emissive?.set?.('#00e5ff');
-          visorMat.emissiveIntensity = 2.4 + Math.sin(t * 8) * 0.8;
+          visorMat.emissiveIntensity = 1.6 + Math.sin(t * 1.6) * 0.35;
 
           chestMat.color?.set?.('#0dd9b8');
           chestMat.emissive?.set?.('#0dd9b8');
-          chestMat.emissiveIntensity = 1.5 + Math.sin(t * 7) * 0.6;
-        } else if (isListening) {
+          chestMat.emissiveIntensity = 1.0 + Math.sin(t * 1.6) * 0.25;
+        }
+      }
+
+      // ── b) 'LISTENING' State (when student mic is active):
+      // Head leans forward slightly, eyes lock onto center, and subtle emerald-green aura ring pulses beneath
+      else if (robotState === 'LISTENING') {
+        if (groupRef.current) {
+          groupRef.current.position.y = -0.35 + Math.sin(t * 2.0) * 0.015;
+          groupRef.current.position.z = 0.08;
+          groupRef.current.rotation.x = 0.035;
+          groupRef.current.rotation.y = 0;
+        }
+
+        if (headRef.current) {
+          // Head leans forward slightly towards candidate
+          headRef.current.position.y = 0.9;
+          headRef.current.position.z = 0.05;
+          headRef.current.rotation.x = 0.13;
+          // Eyes lock onto center
+          headRef.current.rotation.y = 0;
+        }
+
+        // Eyes locked onto center: wide open, zero blinking
+        if (leftEyeRef.current && rightEyeRef.current) {
+          leftEyeRef.current.scale.set(1, 1.0, 1);
+          rightEyeRef.current.scale.set(1, 1.0, 1);
+        }
+
+        // Mouth closed attentive
+        if (mouthRef.current) {
+          mouthRef.current.position.y = -0.12;
+          mouthRef.current.scale.set(1, 1, 1);
+        }
+
+        // Arms steady attentive posture
+        if (leftArmRef.current && rightArmRef.current) {
+          leftArmRef.current.rotation.z = 0.18;
+          rightArmRef.current.rotation.z = -0.18;
+        }
+
+        // Visor & chest emerald-green focus glow
+        const visorMat = visorRef.current?.material;
+        const chestMat = chestGlowRef.current?.material;
+        if (visorMat && chestMat) {
           visorMat.color?.set?.('#10b981');
           visorMat.emissive?.set?.('#10b981');
-          visorMat.emissiveIntensity = 2.0 + Math.sin(t * 4.5) * 0.7;
+          visorMat.emissiveIntensity = 2.0 + Math.sin(t * 4.0) * 0.5;
 
           chestMat.color?.set?.('#10b981');
           chestMat.emissive?.set?.('#10b981');
-          chestMat.emissiveIntensity = 1.6 + Math.sin(t * 4) * 0.5;
-        } else if (isThinking) {
-          visorMat.color?.set?.('#38bdf8');
-          visorMat.emissive?.set?.('#38bdf8');
-          visorMat.emissiveIntensity = 1.8 + Math.sin(t * 6) * 0.6;
-
-          chestMat.color?.set?.('#38bdf8');
-          chestMat.emissive?.set?.('#38bdf8');
-          chestMat.emissiveIntensity = 1.4 + Math.sin(t * 5) * 0.5;
-        } else {
-          visorMat.color?.set?.('#00e5ff');
-          visorMat.emissive?.set?.('#00e5ff');
-          visorMat.emissiveIntensity = 1.5 + Math.sin(t * 1.5) * 0.3;
-
-          chestMat.color?.set?.('#0dd9b8');
-          chestMat.emissive?.set?.('#0dd9b8');
-          chestMat.emissiveIntensity = 0.8 + Math.sin(t * 1.5) * 0.2;
+          chestMat.emissiveIntensity = 1.7 + Math.sin(t * 4.0) * 0.4;
         }
       }
 
-      if (leftArmRef.current && rightArmRef.current) {
-        if (isSpeaking) {
-          leftArmRef.current.rotation.z = 0.32 + Math.sin(t * 2.5) * 0.22;
-          rightArmRef.current.rotation.z = -0.32 - Math.sin(t * 2.5) * 0.22;
-        } else {
-          leftArmRef.current.rotation.z = 0.12 + Math.sin(t * 0.6) * 0.04;
-          rightArmRef.current.rotation.z = -0.12 - Math.sin(t * 0.6) * 0.04;
+      // ── c) 'SPEAKING' State (when AI is talking via TTS):
+      // Lower mouth mesh moves up and down synchronized with speech output intervals, and visor glow pulses with cyan/teal emission
+      else if (robotState === 'SPEAKING') {
+        if (groupRef.current) {
+          groupRef.current.position.y = -0.35 + Math.sin(t * 3.5) * 0.04;
+          groupRef.current.position.z = 0.03;
+          groupRef.current.rotation.x = 0;
+          groupRef.current.rotation.y = Math.sin(t * 0.8) * 0.05;
+        }
+
+        if (headRef.current) {
+          // Expressive speaking head gestures
+          headRef.current.position.y = 0.9;
+          headRef.current.position.z = 0.02;
+          headRef.current.rotation.x = Math.sin(t * 4.8) * 0.07;
+          headRef.current.rotation.y = Math.sin(t * 1.8) * 0.12;
+        }
+
+        // Lower mouth mesh moves up and down synchronized with speech output intervals
+        if (mouthRef.current) {
+          const mouthPulse = Math.abs(Math.sin(t * 15));
+          mouthRef.current.position.y = -0.12 - mouthPulse * 0.035;
+          mouthRef.current.scale.set(1, 1 + mouthPulse * 2.2, 1);
+        }
+
+        // Eyes open & expressive
+        if (leftEyeRef.current && rightEyeRef.current) {
+          leftEyeRef.current.scale.set(1, 1.0, 1);
+          rightEyeRef.current.scale.set(1, 1.0, 1);
+        }
+
+        // Expressive arm communicative gestures
+        if (leftArmRef.current && rightArmRef.current) {
+          leftArmRef.current.rotation.z = 0.35 + Math.sin(t * 2.8) * 0.22;
+          rightArmRef.current.rotation.z = -0.35 - Math.sin(t * 2.8) * 0.22;
+        }
+
+        // Visor glow pulses with cyan/teal emission
+        const visorMat = visorRef.current?.material;
+        const chestMat = chestGlowRef.current?.material;
+        const mouthMat = mouthRef.current?.material;
+
+        if (visorMat) {
+          visorMat.color?.set?.('#00e5ff');
+          visorMat.emissive?.set?.('#00e5ff');
+          visorMat.emissiveIntensity = 2.6 + Math.sin(t * 12) * 1.0;
+        }
+        if (chestMat) {
+          chestMat.color?.set?.('#0dd9b8');
+          chestMat.emissive?.set?.('#0dd9b8');
+          chestMat.emissiveIntensity = 1.8 + Math.sin(t * 8) * 0.6;
+        }
+        if (mouthMat) {
+          mouthMat.color?.set?.('#0dd9b8');
+          mouthMat.emissive?.set?.('#0dd9b8');
+          mouthMat.emissiveIntensity = 2.2 + Math.abs(Math.sin(t * 15)) * 1.5;
         }
       }
     } catch (e) {
-      // Prevent frame animation crash from bubbling up
       console.debug('Animation frame handled:', e);
     }
   });
@@ -328,7 +493,13 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
       <Arm side="left" armRef={leftArmRef} />
       <Arm side="right" armRef={rightArmRef} />
       <Neck />
-      <Head headRef={headRef} visorRef={visorRef} mouthRef={mouthRef} />
+      <Head
+        headRef={headRef}
+        visorRef={visorRef}
+        mouthRef={mouthRef}
+        leftEyeRef={leftEyeRef}
+        rightEyeRef={rightEyeRef}
+      />
     </group>
   );
 }
@@ -401,7 +572,6 @@ export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
   const [webGLError, setWebGLError] = useState(false);
 
   useEffect(() => {
-    // Check if WebGL is supported
     try {
       const canvas = document.createElement('canvas');
       const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -427,7 +597,7 @@ export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
         onError={() => setWebGLError(true)}
         style={{ width: '100%', height: '100%', background: 'transparent' }}
       >
-        <ambientLight intensity={0.5} />
+        <ambientLight intensity={0.55} />
         <directionalLight
           position={[4, 6, 4]}
           intensity={1.4}
@@ -440,23 +610,17 @@ export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
         <pointLight position={[0, 3, -3]} intensity={0.45} color="#00e5ff" />
         <fog attach="fog" args={['#070b12', 7, 24]} />
 
+        {/* Dynamic 3D Low-Poly Golden Robot */}
         <RobotModel isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} />
 
+        {/* Stage Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.36, 0]} receiveShadow>
           <planeGeometry args={[12, 12]} />
           <meshStandardMaterial color="#080d16" roughness={0.85} metalness={0.15} />
         </mesh>
 
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.35, 0]}>
-          <ringGeometry args={[0.5, 1.25, 32]} />
-          <meshStandardMaterial
-            color={isListening ? '#10b981' : '#0dd9b8'}
-            emissive={isListening ? '#10b981' : '#0dd9b8'}
-            emissiveIntensity={0.25}
-            transparent
-            opacity={0.45}
-          />
-        </mesh>
+        {/* Dynamic Floor Aura Ring - emerald green pulse when listening */}
+        <AuraFloorRing isListening={isListening} isSpeaking={isSpeaking} />
 
         <OrbitControls
           enablePan={false}
