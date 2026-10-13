@@ -59,8 +59,11 @@ export default function App() {
   // ── Metrics Tracking in background
   const statsRef = useRef({ turnCount: 0, wordCounts: [], totalWords: 0, fillersCount: 0 });
 
+  // ── Live Interim Speech Feedback
+  const [interimTranscript, setInterimTranscript] = useState('');
+
   // ── Webcam Hook
-  const { videoRef, isActive: cameraActive, hasPermission, toggleCamera } = useWebcam(true);
+  const { videoRef, stream, isActive: cameraActive, hasPermission, error: cameraError, toggleCamera } = useWebcam(true);
 
   // ── Real-Time Vision Posture & Mistake Detection Hook
   useVisionPostureTracker({
@@ -93,6 +96,7 @@ export default function App() {
   const triggerAIResponse = useCallback((speechText) => {
     setIsThinking(true);
     setIsListening(false);
+    setInterimTranscript('');
 
     // Track filler words count
     const fillers = (speechText.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically)\b/g) || []).length;
@@ -106,7 +110,11 @@ export default function App() {
 
   // ── STT Hook
   const { startListening, stopListening, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
+    onInterim: (text) => {
+      setInterimTranscript(text);
+    },
     onResult: (finalText) => {
+      setInterimTranscript('');
       if (!finalText || !finalText.trim()) return;
 
       const words = finalText.trim().split(/\s+/).length;
@@ -128,6 +136,14 @@ export default function App() {
 
   startListeningRef.current = startListening;
   stopListeningRef.current = stopListening;
+
+  // ── Interrupt AI and speak immediately
+  const handleImmediateSpeak = useCallback(() => {
+    stopTTS();
+    startListeningRef.current?.();
+    setIsListening(true);
+    setHasStartedVoice(true);
+  }, [stopTTS]);
 
   // ── Enter Arena View ("kebal bo and me dheku")
   const handleStartArena = useCallback((modeId) => {
@@ -370,6 +386,17 @@ export default function App() {
 
             {/* Live Status Pill with Speech Detection Alert */}
             <div className="flex items-center gap-3">
+              {isSpeaking && (
+                <button
+                  onClick={handleImmediateSpeak}
+                  className="px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/50 text-cyan-300 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5"
+                  title="Interrupt AI and speak right away"
+                >
+                  <span>Tap to Speak</span>
+                  <span>🎙️</span>
+                </button>
+              )}
+
               <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-700/70 backdrop-blur-md text-xs font-semibold shadow-lg">
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
@@ -396,8 +423,8 @@ export default function App() {
                   {isSpeaking
                     ? 'AI Speaking...'
                     : isListening
-                    ? audioLevel > 15
-                      ? 'Listening to you (Speech detected)...'
+                    ? audioLevel > 10
+                      ? 'Listening to you (Voice Detected)...'
                       : 'Listening to you...'
                     : isThinking
                     ? 'AI Thinking...'
@@ -406,6 +433,14 @@ export default function App() {
               </div>
             </div>
           </header>
+
+          {/* Live Real-Time Speech Bubble (Proof that voice is being captured) */}
+          {isListening && interimTranscript && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 max-w-[85vw] px-6 py-3 rounded-2xl bg-slate-900/90 border border-teal-500/50 text-teal-200 text-sm font-semibold shadow-2xl backdrop-blur-md text-center pointer-events-none transition-all">
+              <span className="text-teal-400 text-xs font-bold block uppercase tracking-wider mb-0.5">Hearing you:</span>
+              <span>"{interimTranscript}"</span>
+            </div>
+          )}
 
           {/* Full-Screen 3D Robot Evaluator ("bo") */}
           <main className="w-full h-full absolute inset-0 z-10">
@@ -447,8 +482,10 @@ export default function App() {
       ══════════════════════════════════════════════════════════════ */}
       <WebcamPIP
         videoRef={videoRef}
+        stream={stream}
         isActive={cameraActive}
         hasPermission={hasPermission}
+        error={cameraError}
         screenVideoRef={screenVideoRef}
         screenActive={screenActive}
         onToggleCamera={toggleCamera}
