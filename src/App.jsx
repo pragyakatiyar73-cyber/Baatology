@@ -59,8 +59,8 @@ export default function App() {
   // ── Metrics Tracking in background
   const statsRef = useRef({ turnCount: 0, wordCounts: [], totalWords: 0, fillersCount: 0 });
 
-  // ── Live Interim Speech Feedback
-  const [interimTranscript, setInterimTranscript] = useState('');
+  // ── Internal Spoken Speech Memory (Zero-Text: never rendered to DOM)
+  const spokenMemoryRef = useRef('');
 
   // ── Webcam Hook
   const { videoRef, stream, isActive: cameraActive, hasPermission, error: cameraError, toggleCamera } = useWebcam(true);
@@ -86,16 +86,16 @@ export default function App() {
       // Immediately stop listening so the microphone doesn't capture the AI's own speaker output
       stopListeningRef.current?.();
       setIsListening(false);
-      setInterimTranscript('');
+      spokenMemoryRef.current = '';
     },
     onEnd: () => {
       setIsSpeaking(false);
-      // Resume listening after 700ms acoustic settle delay so room echo dissipates
+      // Automatically reactivate microphone listener and set 3D Robot state to 'LISTENING'
       if (currentView === 'arena' && !showScoreModal) {
         setTimeout(() => {
           startListeningRef.current?.();
           setIsListening(true);
-        }, 700);
+        }, 600);
       }
     },
   });
@@ -120,7 +120,7 @@ export default function App() {
 
     setIsThinking(true);
     setIsListening(false);
-    setInterimTranscript('');
+    spokenMemoryRef.current = '';
 
     // Track filler words count
     const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically)\b/g) || []).length;
@@ -133,13 +133,13 @@ export default function App() {
     }, 380);
   }, [currentMode, isSpeaking, speak, userName]);
 
-  // ── STT Hook
+  // ── STT Hook (webkitSpeechRecognition continuous listening in background)
   const { startListening, stopListening, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
     onInterim: (text) => {
-      setInterimTranscript(text);
+      spokenMemoryRef.current = text;
     },
     onResult: (finalText) => {
-      setInterimTranscript('');
+      spokenMemoryRef.current = '';
       if (!finalText || !finalText.trim()) return;
 
       const words = finalText.trim().split(/\s+/).length;
@@ -383,89 +383,59 @@ export default function App() {
       ══════════════════════════════════════════════════════════════ */}
       {currentView === 'arena' && (
         <div className="w-full h-screen relative overflow-hidden">
-          {/* Top Minimal HUD with Arena Status & Back to Dashboard */}
-          <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-8 py-5 pointer-events-auto">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleBackToDashboard}
-                className="px-4 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/70 text-xs font-bold text-slate-200 hover:text-white transition-all flex items-center gap-2 shadow-lg"
-              >
-                <span>←</span>
-                <span>Dashboard</span>
-              </button>
+          {/* ── Top Minimal Floating Controls ── */}
+          {/* Top-Left: Minimal Return Button */}
+          <div className="absolute top-6 left-6 z-30 pointer-events-auto">
+            <button
+              onClick={handleBackToDashboard}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 shadow-lg backdrop-blur-md"
+              title="Return to Dashboard"
+            >
+              <span>←</span>
+              <span>Dashboard</span>
+            </button>
+          </div>
 
-              <div className="text-xl font-black tracking-tight leading-none ml-2">
-                <span className="text-white">Aura</span>
-                <span className="text-teal-400">GD</span>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-teal-950/70 border border-teal-500/30 text-teal-300 text-xs font-bold uppercase tracking-wider">
-                {currentMode === MODES.PRESENTATION
-                  ? 'Project Presentation Arena'
-                  : currentMode === MODES.SELF_INTRO
-                  ? 'Self Introduction Arena'
-                  : currentMode === MODES.CASUAL
-                  ? 'Casual Talk Arena'
-                  : 'Group Discussion Arena'}
+          {/* Top-Right: Subtle Minimal Floating Voice HUD Pill */}
+          <div className="absolute top-6 right-6 z-30 pointer-events-auto flex items-center gap-2">
+            {isSpeaking && (
+              <button
+                onClick={handleImmediateSpeak}
+                className="px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/50 text-cyan-300 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 backdrop-blur-md"
+                title="Interrupt AI and speak right away"
+              >
+                <span>Tap to Speak</span>
+                <span>🎙️</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 backdrop-blur-md shadow-xl text-xs font-bold">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isSpeaking
+                    ? 'bg-cyan-400 pulse-dot shadow-[0_0_8px_#00e5ff]'
+                    : isListening
+                    ? 'bg-emerald-400 pulse-dot shadow-[0_0_8px_#10b981]'
+                    : isThinking
+                    ? 'bg-sky-400 pulse-dot shadow-[0_0_8px_#38bdf8]'
+                    : 'bg-emerald-400'
+                }`}
+              />
+              <span
+                className={
+                  isSpeaking
+                    ? 'text-cyan-300'
+                    : isListening
+                    ? 'text-emerald-300'
+                    : isThinking
+                    ? 'text-sky-300'
+                    : 'text-slate-300'
+                }
+              >
+                {isSpeaking ? 'AI Speaking...' : isListening ? '● Listening...' : '● AI Voice Active'}
               </span>
             </div>
-
-            {/* Live Status Pill with Speech Detection Alert */}
-            <div className="flex items-center gap-3">
-              {isSpeaking && (
-                <button
-                  onClick={handleImmediateSpeak}
-                  className="px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/50 text-cyan-300 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5"
-                  title="Interrupt AI and speak right away"
-                >
-                  <span>Tap to Speak</span>
-                  <span>🎙️</span>
-                </button>
-              )}
-
-              <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-700/70 backdrop-blur-md text-xs font-semibold shadow-lg">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    isSpeaking
-                      ? 'bg-cyan-400 pulse-dot'
-                      : isListening
-                      ? 'bg-emerald-400 pulse-dot'
-                      : isThinking
-                      ? 'bg-sky-400 pulse-dot'
-                      : 'bg-slate-500'
-                  }`}
-                />
-                <span
-                  className={
-                    isSpeaking
-                      ? 'text-cyan-300 font-bold'
-                      : isListening
-                      ? 'text-emerald-300 font-bold'
-                      : isThinking
-                      ? 'text-sky-300'
-                      : 'text-slate-400'
-                  }
-                >
-                  {isSpeaking
-                    ? 'AI Speaking...'
-                    : isListening
-                    ? audioLevel > 10
-                      ? 'Listening to you (Voice Detected)...'
-                      : 'Listening to you...'
-                    : isThinking
-                    ? 'AI Thinking...'
-                    : 'Standby'}
-                </span>
-              </div>
-            </div>
-          </header>
-
-          {/* Live Real-Time Speech Bubble (Proof that voice is being captured) */}
-          {isListening && interimTranscript && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 max-w-[85vw] px-6 py-3 rounded-2xl bg-slate-900/90 border border-teal-500/50 text-teal-200 text-sm font-semibold shadow-2xl backdrop-blur-md text-center pointer-events-none transition-all">
-              <span className="text-teal-400 text-xs font-bold block uppercase tracking-wider mb-0.5">Hearing you:</span>
-              <span>"{interimTranscript}"</span>
-            </div>
-          )}
+          </div>
 
           {/* Full-Screen 3D Robot Evaluator ("bo") */}
           <main className="w-full h-full absolute inset-0 z-10">
