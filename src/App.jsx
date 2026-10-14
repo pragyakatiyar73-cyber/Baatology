@@ -65,15 +65,15 @@ export default function App() {
   // ── Webcam Hook
   const { videoRef, stream, isActive: cameraActive, hasPermission, error: cameraError, toggleCamera } = useWebcam(true);
 
-  // ── Real-Time Vision Posture & Mistake Detection Hook
-  useVisionPostureTracker({
+  // ── Real-Time Vision Posture & Mistake Detection Hook (Feature 3)
+  const { getEyeContactPercentage, resetTelemetry } = useVisionPostureTracker({
     videoRef,
     isActive: cameraActive && currentView === 'arena',
     onAlert: (alertMsg) => {
       setPostureAlert(alertMsg);
       postureCountRef.current++;
     },
-    intervalMs: 3800,
+    intervalMs: 500,
   });
 
   const lastAITextRef = useRef('');
@@ -175,26 +175,22 @@ export default function App() {
     setCurrentMode(modeId);
     setCurrentView('arena');
     setHasStartedVoice(true);
+    resetTelemetry();
+    postureCountRef.current = 0;
+    setPostureAlert(null);
     stopTTS();
 
-    let announcement = '';
-    if (modeId === MODES.PRESENTATION) {
-      announcement = `Welcome ${userName} to the Project Presentation Arena! Walk me through your architecture and technical stack whenever you are ready. You can also share your slides. I am listening attentively.`;
-    } else if (modeId === MODES.SELF_INTRO) {
-      announcement = `Welcome ${userName} to the Self Introduction Arena. Please introduce yourself naturally. I will evaluate your opening, structure, and eliminate filler words.`;
-    } else if (modeId === MODES.CASUAL) {
-      announcement = `Welcome to Casual Talk ${userName}. Take a calm breath. If you are feeling placement anxiety or stress, feel free to talk. I am here as your friend.`;
-    } else {
-      announcement = `Welcome to the Group Discussion Arena. Today's debate topic is: "${getCurrentTopic()}". Share your perspective whenever you are ready.`;
-    }
+    // ── Feature 4: Smart Time-Aware Greeting & Welcoming
+    const greeting = getSmartMorningGreeting();
 
-    setTimeout(() => {
-      speak(announcement, () => {
-        startListening();
-        setIsListening(true);
-      });
-    }, 400);
-  }, [speak, startListening, stopTTS, userName]);
+    // Seamless Audio Triggering: Consume the user gesture immediately to invoke speech synthesis
+    speak(greeting, () => {
+      // On utterance.onend (or fallback):
+      // Smoothly switch 3D Robot to 'LISTENING' and automatically open the microphone stream
+      startListeningRef.current?.();
+      setIsListening(true);
+    });
+  }, [resetTelemetry, speak, stopTTS]);
 
   // ── Return to Dashboard
   const handleBackToDashboard = useCallback(() => {
@@ -296,6 +292,7 @@ export default function App() {
 
     const { turnCount, wordCounts, totalWords, fillersCount } = statsRef.current;
     const avgWordsPerTurn = wordCounts.length > 0 ? Math.round(totalWords / wordCounts.length) : 15;
+    const measuredEyeContact = getEyeContactPercentage();
 
     const computed = calculateScores({
       turnCount: Math.max(turnCount, 1),
@@ -303,13 +300,14 @@ export default function App() {
       avgWordsPerTurn,
       mode: currentMode,
       postureAlertCount: postureCountRef.current,
+      eyeContactPercentage: measuredEyeContact,
     });
 
-    // Save session to Date-Wise Progress History
+    // Save session to Date-Wise Progress History with tracked telemetry
     recordNewSession({
       mode: currentMode,
       score: computed.overall,
-      eyeContact: computed.eyeContact || computed.deliveryAndGaze || 88,
+      eyeContact: measuredEyeContact,
       fillers: Math.max(fillersCount, 1),
     });
 
@@ -484,6 +482,8 @@ export default function App() {
         screenVideoRef={screenVideoRef}
         screenActive={screenActive}
         onToggleCamera={toggleCamera}
+        hasMistake={!!postureAlert}
+        alert={postureAlert}
       />
 
       {/* ══════════════════════════════════════════════════════════════

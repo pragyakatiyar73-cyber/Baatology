@@ -9,6 +9,8 @@ export default function WebcamPIP({
   screenVideoRef,
   screenActive,
   onToggleCamera,
+  hasMistake = false,
+  alert = null,
 }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -45,7 +47,7 @@ export default function WebcamPIP({
   const dimensionClass = isExpanded ? 'w-[340px] h-[255px]' : 'w-[240px] h-[180px]';
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3 select-none">
+    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2.5 select-none">
       {/* ── Screen Share PIP Preview (if presenting slides) ── */}
       {screenActive && (
         <div
@@ -66,11 +68,25 @@ export default function WebcamPIP({
         </div>
       )}
 
-      {/* ── Candidate Webcam Self-View ── */}
+      {/* ── Feature 3: Non-Intrusive HUD Warning Badge above PIP ── */}
+      {hasMistake && alert && (
+        <div className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-950/95 via-red-950/90 to-amber-950/95 border border-amber-500/80 text-amber-200 text-xs font-bold shadow-[0_0_20px_rgba(245,158,11,0.5)] flex items-center gap-2 backdrop-blur-md animate-bounce">
+          <span>⚠️</span>
+          <span>{alert}</span>
+        </div>
+      )}
+
+      {/* ── Candidate Webcam Self-View with Flashing Amber/Red Neon Border on Mistake ── */}
       <div
-        className={`rounded-2xl overflow-hidden border border-slate-700/80 shadow-2xl relative transition-all duration-300 bg-[#090e17] ${dimensionClass}`}
+        className={`rounded-2xl overflow-hidden shadow-2xl relative transition-all duration-300 bg-[#090e17] ${dimensionClass} ${
+          hasMistake
+            ? 'border-2 border-amber-400 animate-pulse'
+            : 'border border-slate-700/80'
+        }`}
         style={{
-          boxShadow: isActive
+          boxShadow: hasMistake
+            ? '0 0 25px rgba(245, 158, 11, 0.7), 0 0 45px rgba(239, 68, 68, 0.45)'
+            : isActive
             ? '0 0 0 1px rgba(20, 184, 166, 0.4), 0 20px 48px rgba(0, 0, 0, 0.85)'
             : '0 10px 30px rgba(0, 0, 0, 0.6)',
         }}

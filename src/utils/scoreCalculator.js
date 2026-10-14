@@ -8,19 +8,23 @@ export function calculateScores({
   avgWordsPerTurn = 15,
   mode = 'gd',
   postureAlertCount = 0,
+  eyeContactPercentage = null,
 }) {
   const tc = Math.max(turnCount, 1);
   const awpt = Math.max(avgWordsPerTurn, 8);
 
   // Common baseline calculations
   const penalty = Math.min(postureAlertCount * 3, 20);
+  const trackedEyeContact = eyeContactPercentage !== null
+    ? clamp(Math.round(eyeContactPercentage), 50, 98)
+    : clamp(Math.round(86 - penalty + jitter(3)), 55, 96);
 
   if (mode === 'presentation') {
     // Project Presentation: STAR & Architecture Scoring
     const starAlignment = clamp(Math.round(62 + Math.min(awpt * 0.9, 25) + jitter(4) - penalty * 0.5), 55, 96);
     const techDepth = clamp(Math.round(58 + Math.min(tc * 6 + awpt * 0.6, 32) + jitter(5)), 50, 95);
     const articulation = clamp(Math.round(65 + Math.min(awpt * 0.8, 26) + jitter(4) - penalty * 0.3), 55, 98);
-    const deliveryAndGaze = clamp(Math.round(80 - penalty + jitter(5)), 45, 94);
+    const deliveryAndGaze = trackedEyeContact;
 
     return {
       mode: 'presentation',
@@ -44,7 +48,7 @@ export function calculateScores({
 
   // Standard GD / Intro / Casual Scoring
   const articulation = clamp(Math.round(55 + Math.min(awpt * 1.5, 30) + tc * 2.5 + jitter(5) - penalty * 0.4), 48, 96);
-  const eyeContact = clamp(Math.round(78 - penalty + jitter(6)), 45, 95);
+  const eyeContact = trackedEyeContact;
   const confidenceAndTurn = clamp(Math.round(60 + Math.min(tc * 5.5, 30) + jitter(5)), 52, 97);
 
   const overall = Math.round((articulation + eyeContact + confidenceAndTurn) / 3);

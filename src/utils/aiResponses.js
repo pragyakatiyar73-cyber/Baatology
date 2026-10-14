@@ -43,11 +43,11 @@ function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-// ── Smart Greetings ──────────────────────────────────────────
-export function getSmartMorningGreeting(userName = 'Pragya') {
+// ── Smart Time-Aware Greeting (Feature 4) ────────────────────
+export function getSmartMorningGreeting() {
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  return `${greeting} ${userName}! I am listening attentively to your voice. Ask me anything, or start your presentation or discussion whenever you are ready!`;
+  const salutation = hour < 12 ? 'Good morning!' : hour < 17 ? 'Good afternoon!' : 'Good evening!';
+  return `${salutation} How has your day been going so far? I am right here with you. What would you like to talk about today?`;
 }
 
 // ── 1. Tech Knowledge Base & Concept Explanations ─────────────

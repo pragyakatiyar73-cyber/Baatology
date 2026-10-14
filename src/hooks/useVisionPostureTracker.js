@@ -1,22 +1,51 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { playPostureChime } from '../utils/chime';
 
 /**
- * Computer Vision-assisted Posture & Nervous Mistake Detection Hook
- * Analyzes video frames from candidate's webcam for:
- * 1. Face-touching (hands raised into lower face quadrant)
- * 2. Slouching (head dropping into lower half of frame)
- * 3. Gaze drift / looking away from screen & camera
+ * Feature 3: Real-Time Webcam Posture & Mistake Detection (Vision HUD)
+ *
+ * Client-Side Heuristics:
+ * a) Slouching: Face vertical anchor drops below baseline by >15%
+ * b) Face-Touching: Hand/fingers overlap face coordinates in lower quadrant
+ * c) Eye-Contact Loss: Horizontal gaze drifts off-center for >3 continuous seconds
+ *
+ * Telemetry:
+ * - Logs steady gaze seconds vs total session duration -> eyeContactPercentage
  */
 export function useVisionPostureTracker({
   videoRef,
   isActive,
   onAlert,
-  intervalMs = 3500,
+  intervalMs = 500, // 500ms frame sample rate for sub-second precision
 }) {
   const canvasRef = useRef(null);
   const prevFrameDataRef = useRef(null);
   const alertCooldownRef = useRef(0);
+
+  // Baseline calibration
+  const baselineYRef = useRef(null);
+  const calibrationSamplesRef = useRef([]);
+
+  // Eye-contact continuous drift tracker (3 seconds = 6 samples at 500ms)
+  const offCenterCountRef = useRef(0);
+
+  // Telemetry: Steady gaze vs total duration
+  const totalSamplesRef = useRef(0);
+  const steadyGazeSamplesRef = useRef(0);
+
+  const getEyeContactPercentage = useCallback(() => {
+    if (totalSamplesRef.current === 0) return 88; // Default qualified baseline
+    const ratio = steadyGazeSamplesRef.current / totalSamplesRef.current;
+    return Math.max(50, Math.min(98, Math.round(ratio * 100)));
+  }, []);
+
+  const resetTelemetry = useCallback(() => {
+    totalSamplesRef.current = 0;
+    steadyGazeSamplesRef.current = 0;
+    offCenterCountRef.current = 0;
+    baselineYRef.current = null;
+    calibrationSamplesRef.current = [];
+  }, []);
 
   useEffect(() => {
     if (!isActive || !videoRef.current) return;
@@ -30,26 +59,23 @@ export function useVisionPostureTracker({
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-    const checkPosture = () => {
+    const checkFrame = () => {
       const video = videoRef.current;
       if (!video || video.readyState < 2) return;
 
       const now = Date.now();
-      if (now - alertCooldownRef.current < 7000) return; // Prevent spamming alerts
 
       try {
         ctx.drawImage(video, 0, 0, 64, 48);
         const frame = ctx.getImageData(0, 0, 64, 48);
         const data = frame.data;
 
-        // Calculate brightness and motion across regions:
-        // Top region: eyes / forehead (y: 8 to 24)
-        // Mid-lower region: mouth / chin / hand proximity (y: 28 to 44)
-        let topMass = 0;
-        let bottomMass = 0;
-        let leftMass = 0;
-        let rightMass = 0;
-        let totalMotion = 0;
+        let totalMass = 0;
+        let weightedX = 0;
+        let weightedY = 0;
+
+        let lowerFaceMotion = 0;
+        let lowerFaceMass = 0;
 
         for (let y = 0; y < 48; y++) {
           for (let x = 0; x < 64; x++) {
@@ -57,22 +83,29 @@ export function useVisionPostureTracker({
             const r = data[idx];
             const g = data[idx + 1];
             const b = data[idx + 2];
+            // Luminance
             const luma = 0.299 * r + 0.587 * g + 0.114 * b;
 
-            if (y < 24) topMass += luma;
-            else bottomMass += luma;
+            // Simple skin-tone presence weighting
+            const isSkin = r > 55 && g > 35 && b > 20 && r > b;
+            const weight = isSkin ? luma * 1.5 : luma;
 
-            if (x < 32) leftMass += luma;
-            else rightMass += luma;
+            totalMass += weight;
+            weightedX += x * weight;
+            weightedY += y * weight;
 
-            if (prevFrameDataRef.current) {
-              const diff = Math.abs(luma - prevFrameDataRef.current[idx / 4]);
-              if (diff > 25) totalMotion += diff;
+            // Lower face region: y between 24 and 44
+            if (y >= 24 && y <= 44 && x >= 16 && x <= 48) {
+              lowerFaceMass += weight;
+              if (prevFrameDataRef.current) {
+                const diff = Math.abs(luma - prevFrameDataRef.current[idx / 4]);
+                if (diff > 20) lowerFaceMotion += diff;
+              }
             }
           }
         }
 
-        // Cache grayscale frame for motion diffing
+        // Cache frame for motion diffing
         if (!prevFrameDataRef.current) {
           prevFrameDataRef.current = new Float32Array(64 * 48);
         }
@@ -81,33 +114,62 @@ export function useVisionPostureTracker({
             0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
         }
 
-        const totalMass = topMass + bottomMass;
-        if (totalMass === 0) return;
+        if (totalMass < 1000) return; // Empty or black frame
 
-        const verticalRatio = bottomMass / (topMass + 1);
-        const horizontalBalance = Math.abs(leftMass - rightMass) / (totalMass + 1);
+        const currentX = weightedX / totalMass; // 0 to 63 (center ~ 32)
+        const currentY = weightedY / totalMass; // 0 to 47 (center ~ 24)
 
-        // Condition 1: Slouching (candidate has slumped down, heavy bottom mass)
-        if (verticalRatio > 1.65) {
+        // Baseline Calibration: capture first 6 frames (~3 seconds)
+        if (calibrationSamplesRef.current.length < 6) {
+          calibrationSamplesRef.current.push(currentY);
+          if (calibrationSamplesRef.current.length === 6) {
+            const sum = calibrationSamplesRef.current.reduce((a, b) => a + b, 0);
+            baselineYRef.current = sum / calibrationSamplesRef.current.length;
+          }
+        }
+
+        const baselineY = baselineYRef.current || 22;
+
+        // Telemetry Logging: Check if gaze & posture are currently steady
+        const horizontalDrift = Math.abs(currentX - 32) / 32;
+        const isSlouching = currentY > baselineY * 1.15;
+        const isOffCenterGaze = horizontalDrift > 0.18;
+
+        totalSamplesRef.current += 1;
+        if (!isSlouching && !isOffCenterGaze) {
+          steadyGazeSamplesRef.current += 1;
+        }
+
+        const canTriggerAlert = now - alertCooldownRef.current > 4000;
+
+        // ── Heuristic c: Eye-Contact Loss (>3 continuous seconds)
+        // 6 consecutive samples at 500ms = 3.0 continuous seconds
+        if (isOffCenterGaze) {
+          offCenterCountRef.current += 1;
+          if (offCenterCountRef.current >= 6 && canTriggerAlert) {
+            alertCooldownRef.current = now;
+            offCenterCountRef.current = 0;
+            playPostureChime();
+            onAlert?.('Keep steady posture & maintain eye contact');
+            return;
+          }
+        } else {
+          offCenterCountRef.current = 0;
+        }
+
+        // ── Heuristic a: Slouching (face anchor drops >15% below baseline)
+        if (isSlouching && canTriggerAlert) {
           alertCooldownRef.current = now;
           playPostureChime();
-          onAlert?.('Posture Alert: Sit upright with shoulders relaxed and chin up!');
+          onAlert?.('Keep steady posture & maintain eye contact');
           return;
         }
 
-        // Condition 2: Head turned away or looking down (high horizontal imbalance)
-        if (horizontalBalance > 0.32) {
+        // ── Heuristic b: Face-Touching (hand/finger overlap in lower face region)
+        if (lowerFaceMotion > 5500 && canTriggerAlert) {
           alertCooldownRef.current = now;
           playPostureChime();
-          onAlert?.('Eye Contact Alert: Keep your gaze steady on the camera lens!');
-          return;
-        }
-
-        // Condition 3: Face touching (sudden concentrated movement in the lower-face region)
-        if (totalMotion > 18000) {
-          alertCooldownRef.current = now;
-          playPostureChime();
-          onAlert?.('Mistake Detected: Avoid touching your face or resting chin on hands!');
+          onAlert?.('Avoid touching face');
           return;
         }
       } catch (e) {
@@ -115,7 +177,12 @@ export function useVisionPostureTracker({
       }
     };
 
-    const interval = setInterval(checkPosture, intervalMs);
+    const interval = setInterval(checkFrame, intervalMs);
     return () => clearInterval(interval);
   }, [isActive, videoRef, onAlert, intervalMs]);
+
+  return {
+    getEyeContactPercentage,
+    resetTelemetry,
+  };
 }
