@@ -46,20 +46,22 @@ export default function DualVideoMentorshipRoom({
     toggleScreenShare,
   } = useWebRTCInterview({ autoStart: true });
 
-  // ── Realistic AI Mentor Avatar Hook ──
+  // ── Realistic AI Mentor Avatar Hook (HeyGen WebRTC Stream) ──
   const {
-    avatarVideoRef,
+    videoRef: avatarVideoRef,
+    hasLiveWebRTC,
+    isConnected: isAvatarConnected,
     avatarState,
     setAvatarState,
     speakingText,
-    mouthShape,
-    isBlinking,
-    isNodding,
     speakText,
     interrupt,
     mentorName,
+    streamError: avatarError,
+    reconnect: reconnectAvatar,
   } = useRealisticAvatarStream({
-    mentorName: 'Elena Vance',
+    mentorName: 'Dr. Ann Vance',
+    avatarId: 'Ann_Doctor_Sitting',
     onSpeechStart: () => {},
     onSpeechEnd: () => {
       // Resume listening
@@ -281,18 +283,17 @@ export default function DualVideoMentorshipRoom({
         {layoutMode === 'split' && !showCodeOverlay ? (
           /* ── 50/50 Split Screen Grid (Left Mentor, Right Candidate) ── */
           <div className="w-full h-full max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Left Panel: Photo-realistic AI Mentor Video */}
+            {/* Left Panel: Photo-realistic Real AI Mentor Video (HeyGen Streaming Video) */}
             <div className="w-full h-full min-h-[300px]">
               <MentorVideoPanel
                 avatarState={avatarState}
                 speakingText={speakingText}
-                mouthShape={mouthShape}
-                isBlinking={isBlinking}
-                isNodding={isNodding}
                 mentorName={mentorName}
                 mentorRole="Staff Software Engineer & Interviewer"
                 avatarVideoRef={avatarVideoRef}
-                hasLiveWebRTC={false}
+                hasLiveWebRTC={hasLiveWebRTC}
+                streamError={avatarError}
+                onReconnect={reconnectAvatar}
               />
             </div>
 
@@ -312,18 +313,17 @@ export default function DualVideoMentorshipRoom({
         ) : (
           /* ── Focus Desk & Code View with Floating Candidate PIP ── */
           <div className="w-full h-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 relative">
-            {/* Left/Center: Photo-realistic AI Mentor View (7 cols) */}
+            {/* Left/Center: Photo-realistic Real AI Mentor View (HeyGen Streaming Video) */}
             <div className="lg:col-span-6 w-full h-full min-h-[340px]">
               <MentorVideoPanel
                 avatarState={avatarState}
                 speakingText={speakingText}
-                mouthShape={mouthShape}
-                isBlinking={isBlinking}
-                isNodding={isNodding}
                 mentorName={mentorName}
                 mentorRole="Staff Software Engineer & Interviewer"
                 avatarVideoRef={avatarVideoRef}
-                hasLiveWebRTC={false}
+                hasLiveWebRTC={hasLiveWebRTC}
+                streamError={avatarError}
+                onReconnect={reconnectAvatar}
               />
             </div>
 
