@@ -11,17 +11,11 @@ import StreamingAvatar, {
  * useRealisticAvatarStream
  *
  * Connects directly to HeyGen Interactive Avatar SDK (@heygen/streaming-avatar):
- * 1. Requests HeyGen streaming session token from backend POST /api/get-heygen-token
- * 2. Initializes StreamingAvatar with the session token
- * 3. Connects WebRTC video/audio stream and binds directly to videoRef.current.srcObject
- * 4. Uses photorealistic female avatar (Ann_Doctor_Sitting or Angela_Office)
- * 5. Handles live speech articulation, lip-sync, and interruption
- * 6. Completely replaces any cartoon SVG with an actual HTML <video> element
+ * 1. Step 1 (Token Fetch): Requests HeyGen session token from POST /api/get-heygen-token
+ * 2. Step 2 (Session Creation): Registers StreamingEvents.STREAM_READY listener BEFORE createStartAvatar
+ * 3. Step 3 (STREAM_READY): Attaches event.detail directly to videoRef.current.srcObject and plays video
+ * 4. Error Handling: Records exact error message for UI display
  */
-
-// Fallback high-definition photorealistic human female mentor video (Used if HeyGen API key tier lacks streaming)
-const REALISTIC_FEMALE_MENTOR_VIDEO_URL =
-  'https://assets.mixkit.co/videos/preview/mixkit-woman-in-an-office-talking-on-a-video-call-42999-large.mp4';
 
 export function useRealisticAvatarStream({
   onSpeechStart,
@@ -50,7 +44,8 @@ export function useRealisticAvatarStream({
     setStreamError(null);
 
     try {
-      console.log('[HeyGen Stream] Fetching session token from /api/get-heygen-token...');
+      // Step 1: Token fetch
+      console.log('[useRealisticAvatarStream] 1. Token fetch: Requesting HeyGen token from /api/get-heygen-token...');
       const tokenResponse = await fetch('/api/get-heygen-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,20 +54,34 @@ export function useRealisticAvatarStream({
       const tokenData = await tokenResponse.json();
 
       if (!tokenResponse.ok || !tokenData?.token) {
-        throw new Error(
-          tokenData?.error || 'Unable to generate HeyGen session token. Ensure HEYGEN_API_KEY is active.'
-        );
+        const errorMsg =
+          tokenData?.error ||
+          (tokenResponse.status === 404
+            ? 'HeyGen API 404: Your current plan lacks the Interactive Streaming Avatar feature.'
+            : `Failed to fetch HeyGen streaming token (HTTP ${tokenResponse.status}).`);
+        throw new Error(errorMsg);
       }
 
       const token = tokenData.token;
-      console.log('[HeyGen Stream] Token acquired. Initializing @heygen/streaming-avatar SDK...');
+      console.log(
+        '[useRealisticAvatarStream] 2. Token fetch SUCCESS: Acquired token:',
+        token.slice(0, 10) + '...'
+      );
 
+      // Initialize StreamingAvatar SDK instance
       const avatar = new StreamingAvatar({ token });
       avatarSdkRef.current = avatar;
 
-      // Event: WebRTC Media Stream delivered
+      // Step 2 & 3: Register STREAM_READY event listener BEFORE createStartAvatar
+      console.log(
+        '[useRealisticAvatarStream] 3. Session creation: Registering STREAM_READY event listener BEFORE createStartAvatar...'
+      );
+
       avatar.on(StreamingEvents.STREAM_READY, (event) => {
-        console.log('[HeyGen Stream] STREAM_READY received from WebRTC:', event);
+        console.log(
+          '[useRealisticAvatarStream] 5. STREAM_READY event fired! Binding media stream to videoRef.current.srcObject:',
+          event.detail
+        );
         const stream = event.detail;
         setMediaStream(stream);
         setHasLiveWebRTC(true);
@@ -83,28 +92,33 @@ export function useRealisticAvatarStream({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch((err) => {
-            console.debug('[HeyGen Stream] Video play handled:', err);
+            console.warn('[useRealisticAvatarStream] video.play() warning:', err);
+            // Autoplay fallback if browser audio restriction triggers
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current.play().catch(console.error);
+            }
           });
         }
       });
 
       // Event: Avatar start talking
       avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
-        console.log('[HeyGen Stream] Avatar started talking');
+        console.log('[useRealisticAvatarStream] Avatar started talking');
         setAvatarState('speaking');
         onSpeechStart?.();
       });
 
       // Event: Avatar stop talking
       avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
-        console.log('[HeyGen Stream] Avatar stopped talking');
+        console.log('[useRealisticAvatarStream] Avatar stopped talking');
         setAvatarState('listening');
         onSpeechEnd?.();
       });
 
       // Event: Stream disconnected
       avatar.on(StreamingEvents.STREAM_DISCONNECTED, (reason) => {
-        console.warn('[HeyGen Stream] STREAM_DISCONNECTED:', reason);
+        console.warn('[useRealisticAvatarStream] STREAM_DISCONNECTED:', reason);
         setHasLiveWebRTC(false);
         setIsConnected(false);
         setAvatarState('idle');
@@ -114,7 +128,10 @@ export function useRealisticAvatarStream({
       const selectedAvatar =
         import.meta.env.VITE_HEYGEN_AVATAR_NAME || avatarId || 'Ann_Doctor_Sitting';
 
-      console.log('[HeyGen Stream] Creating start session with avatar:', selectedAvatar);
+      console.log(
+        '[useRealisticAvatarStream] 4. Session creation: Calling createStartAvatar with avatar ID:',
+        selectedAvatar
+      );
 
       const sessionInfo = await avatar.createStartAvatar({
         quality: AvatarQuality.High,
@@ -127,23 +144,15 @@ export function useRealisticAvatarStream({
       });
 
       sessionInfoRef.current = sessionInfo;
+      console.log('[useRealisticAvatarStream] Session creation SUCCESS:', sessionInfo);
       setIsConnected(true);
+      setIsInitializing(false);
     } catch (err) {
-      console.warn('[HeyGen Stream] Notice: HeyGen WebRTC live handshake info:', err.message);
+      console.error('[useRealisticAvatarStream] WebRTC connection error:', err.message);
       setStreamError(err.message);
       setIsInitializing(false);
-
-      // Fallback: Bind real human video directly to HTML <video> element (NEVER cartoon or SVG)
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-        videoRef.current.src = REALISTIC_FEMALE_MENTOR_VIDEO_URL;
-        videoRef.current.loop = true;
-        videoRef.current.muted = true;
-        videoRef.current.play().catch(console.debug);
-        setHasLiveWebRTC(true);
-        setIsConnected(true);
-        setAvatarState('listening');
-      }
+      setHasLiveWebRTC(false);
+      setIsConnected(false);
     } finally {
       isConnectingRef.current = false;
     }
@@ -181,11 +190,11 @@ export function useRealisticAvatarStream({
           });
           return;
         } catch (err) {
-          console.warn('[HeyGen Stream] SDK speak fallback to speech synthesis:', err.message);
+          console.warn('[useRealisticAvatarStream] SDK speak failed, falling back to speech synthesis:', err.message);
         }
       }
 
-      // Synchronized speech synthesis if WebRTC SDK task is unavailable
+      // Synchronized speech synthesis fallback if SDK task is unavailable
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);

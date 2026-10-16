@@ -80,26 +80,66 @@ export default function MentorVideoPanel({
           autoPlay
           playsInline
           muted={false}
-          className="w-full h-full object-cover relative z-10 transition-opacity duration-500"
+          className={`w-full h-full object-cover relative z-10 transition-opacity duration-500 ${
+            hasLiveWebRTC ? 'opacity-100 block' : 'hidden'
+          }`}
+          style={{ width: '100%', height: '100%', display: hasLiveWebRTC ? 'block' : 'none' }}
         />
 
+        {/* ── Error State UI (Displayed if stream fails instead of black screen) ── */}
+        {!hasLiveWebRTC && (
+          <div className="relative z-20 max-w-md w-[92%] p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-white/15 backdrop-blur-2xl shadow-2xl flex flex-col items-center text-center gap-3 animate-fade-in">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <AlertCircle className="w-6 h-6 text-amber-400" />
+            </div>
+
+            <div>
+              <h4 className="text-sm font-extrabold text-white">HeyGen WebRTC Stream Notice</h4>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Connecting to HeyGen Interactive Avatar endpoint via /api/get-heygen-token.
+              </p>
+            </div>
+
+            {streamError && (
+              <div className="w-full text-left p-3 rounded-xl bg-black/60 border border-red-500/30 text-[11px] font-mono text-red-200 break-words">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-red-400 block mb-0.5">
+                  Exact Error Details:
+                </span>
+                {streamError}
+              </div>
+            )}
+
+            {onReconnect && (
+              <button
+                onClick={onReconnect}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer mt-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry Connection</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Live Audio Glow Aura around video border */}
-        <div
-          className={`absolute inset-0 pointer-events-none z-20 transition-opacity duration-500 ${
-            isSpeaking
-              ? 'ring-2 ring-cyan-500/50 shadow-[inset_0_0_50px_rgba(6,182,212,0.25)]'
-              : isListening
-              ? 'ring-1 ring-emerald-500/30 shadow-[inset_0_0_30px_rgba(16,185,129,0.15)]'
-              : ''
-          }`}
-        />
+        {hasLiveWebRTC && (
+          <div
+            className={`absolute inset-0 pointer-events-none z-20 transition-opacity duration-500 ${
+              isSpeaking
+                ? 'ring-2 ring-cyan-500/50 shadow-[inset_0_0_50px_rgba(6,182,212,0.25)]'
+                : isListening
+                ? 'ring-1 ring-emerald-500/30 shadow-[inset_0_0_30px_rgba(16,185,129,0.15)]'
+                : ''
+            }`}
+          />
+        )}
 
         {/* Dynamic Spoken Dialogue Subtitle Banner */}
         {isSpeaking && speakingText && (
-          <div className="absolute bottom-28 left-6 right-6 z-30 flex justify-center pointer-events-none animate-fade-in">
+          <div className="absolute bottom-24 left-6 right-6 z-30 flex justify-center pointer-events-none animate-fade-in">
             <div className="max-w-xl px-5 py-2.5 rounded-2xl bg-black/85 border border-cyan-400/40 backdrop-blur-xl shadow-2xl text-center">
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-400 block mb-0.5">
-                Elena Vance • Real-Time Voice
+                {mentorName} • Real-Time Voice
               </span>
               <p className="text-xs sm:text-sm font-semibold text-cyan-100 leading-relaxed">
                 "{speakingText}"

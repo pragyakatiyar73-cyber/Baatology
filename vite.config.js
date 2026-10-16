@@ -50,13 +50,18 @@ export default defineConfig(({ mode }) => {
                   data = { message: text.slice(0, 200) };
                 }
 
+                const is404 = response.status === 404 || text.includes('404 Not Found');
                 if (!response.ok || !data?.data?.token) {
                   res.statusCode = response.status || 500;
                   res.end(
                     JSON.stringify({
-                      error: data?.message || data?.error || 'Failed to generate token from HeyGen.',
-                      details: data,
+                      error: is404
+                        ? 'HeyGen API 404 Not Found: Your HeyGen account currently lacks the Interactive Streaming Avatar add-on tier, or streaming.create_token is restricted on this plan.'
+                        : (data?.message || data?.error || 'Failed to generate token from HeyGen.'),
+                      status: response.status,
+                      raw: text.slice(0, 300),
                       hasApiKey: true,
+                      apiKeyPreview: `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`,
                     })
                   );
                   return;
