@@ -7,12 +7,12 @@ import * as THREE from 'three';
  * SeatedFemaleMentorModel
  *
  * Highly Realistic Human Female Mentor:
- * - Natural skin tones on hands & arms (restoring original human texture on Wolf3D_Body)
- * - Hands & forearms settled naturally on top of the executive desk pad
+ * - Natural skin tones on hands & arms (preserved natural texture on Wolf3D_Body)
+ * - Hands & forearms stably and naturally settled on top of the executive desk pad (palms down, resting normally like a seated professional)
+ * - Stable posture: zero erratic hand waving or flailing
  * - Phonetic speech lip-sync matching syllables with distinct vowels and clean closures
  * - Natural eye-blinking every 4-6 seconds
- * - Continuous subtle chest & shoulder breathing
- * - Warm attentive listening nods & resting empathetic smile
+ * - Continuous subtle chest breathing & warm attentive listening nods
  * - Enhanced PBR materials for realistic skin, corneal moisture, glasses, and hair
  */
 function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isThinking = false }) {
@@ -37,8 +37,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
         // Cinematic Material Enhancements (Skin softness, cornea gloss, metallic frames)
         if (child.material) {
           const mat = child.material;
-          // IMPORTANT: Wolf3D_Body contains the arms and hands. Treat as human skin with neutral color #ffffff
-          // so the original skin texture displays with natural human flesh tones!
+          // Wolf3D_Body contains arms and hands: keep white neutral base to preserve natural skin tones
           if (mat.name === 'Wolf3D_Skin' || mat.name === 'Wolf3D_Body') {
             mat.roughness = 0.65; // Soft human skin matte texture
             mat.metalness = 0.0;
@@ -76,17 +75,21 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     return { bones, meshes };
   }, [scene]);
 
-  // Capture pristine rest quaternions of all upper-body bones to prevent drift
+  // Capture pristine rest quaternions of all bones to guarantee mathematical stability
   const restQuats = useMemo(() => {
     const quats = {};
     const names = [
       'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm',
       'LeftHand', 'RightHand', 'LeftShoulder', 'RightShoulder',
       'Spine', 'Spine1', 'Head',
-      'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandMiddle1', 'LeftHandMiddle2',
-      'LeftHandRing1', 'LeftHandRing2', 'LeftHandPinky1', 'LeftHandPinky2',
-      'RightHandIndex1', 'RightHandIndex2', 'RightHandMiddle1', 'RightHandMiddle2',
-      'RightHandRing1', 'RightHandRing2', 'RightHandPinky1', 'RightHandPinky2'
+      'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandIndex3', 'LeftHandIndex4',
+      'LeftHandMiddle1', 'LeftHandMiddle2', 'LeftHandMiddle3', 'LeftHandMiddle4',
+      'LeftHandRing1', 'LeftHandRing2', 'LeftHandRing3', 'LeftHandRing4',
+      'LeftHandPinky1', 'LeftHandPinky2', 'LeftHandPinky3', 'LeftHandPinky4',
+      'RightHandIndex1', 'RightHandIndex2', 'RightHandIndex3', 'RightHandIndex4',
+      'RightHandMiddle1', 'RightHandMiddle2', 'RightHandMiddle3', 'RightHandMiddle4',
+      'RightHandRing1', 'RightHandRing2', 'RightHandRing3', 'RightHandRing4',
+      'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3', 'RightHandPinky4'
     ];
     names.forEach((name) => {
       if (rig.bones[name]) {
@@ -104,81 +107,71 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     const t = state.clock.getElapsedTime();
     const { bones, meshes } = rig;
 
-    // ── 1. Subtle Chest & Shoulder Breathing Loops ──
+    // ── 1. Subtle Chest Breathing Loops (Only torso breathes gently) ──
     const breatheCycle = Math.sin(t * 1.6);
     const chestRise = breatheCycle * 0.008;
-    const shoulderBreath = breatheCycle * 0.004;
 
     if (bones.Spine && restQuats.Spine) {
       bones.Spine.quaternion.copy(restQuats.Spine);
       bones.Spine.rotateX(0.02 + chestRise);
-      bones.Spine.rotateZ(Math.sin(t * 0.5) * 0.004);
     }
     if (bones.Spine1 && restQuats.Spine1) {
       bones.Spine1.quaternion.copy(restQuats.Spine1);
       bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    if (bones.LeftShoulder && restQuats.LeftShoulder) {
-      bones.LeftShoulder.quaternion.copy(restQuats.LeftShoulder);
-      bones.LeftShoulder.rotateZ(-shoulderBreath);
-    }
-    if (bones.RightShoulder && restQuats.RightShoulder) {
-      bones.RightShoulder.quaternion.copy(restQuats.RightShoulder);
-      bones.RightShoulder.rotateZ(shoulderBreath);
-    }
-
     // ── 2. Natural Table-Rested Arm & Hand Posture ──
-    // Arms drape naturally from shoulders, forearms angle forward onto the desk,
-    // and hands rest comfortably flat/relaxed on the executive desk pad
-    const speechGesture = isSpeaking ? Math.sin(t * 3.2) * 0.015 : 0;
+    // Hands & forearms rest stably and comfortably on the desk pad like a real human seated at a meeting table.
+    // 100% stable: no waving, no twitching, no floating!
 
-    // Left Arm & Hand on Desk Pad
+    // Left Arm & Forearm: Drapes from left shoulder, forearm extends forward onto desk pad
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateX(0.55 + chestRise * 0.3);
-      bones.LeftArm.rotateZ(0.05);
+      bones.LeftArm.rotateX(0.32);
+      bones.LeftArm.rotateZ(-0.20);
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(0.35 + speechGesture);
-      bones.LeftForeArm.rotateZ(0.70);
+      bones.LeftForeArm.rotateZ(1.22);
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(0.12);
-      bones.LeftHand.rotateZ(-0.22);
+      // Gentle flat orientation so palm rests naturally down on the desk pad
+      bones.LeftHand.rotateX(-0.10);
+      bones.LeftHand.rotateZ(0.05);
     }
 
-    // Right Arm & Hand on Desk Pad (Symmetrical)
+    // Right Arm & Forearm: Drapes from right shoulder, forearm extends forward onto desk pad (Mirrored)
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateX(0.55 + chestRise * 0.3);
-      bones.RightArm.rotateZ(-0.05);
+      bones.RightArm.rotateX(0.32);
+      bones.RightArm.rotateZ(0.20);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(0.35 - speechGesture);
-      bones.RightForeArm.rotateZ(-0.70);
+      bones.RightForeArm.rotateZ(-1.22);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(0.12);
-      bones.RightHand.rotateZ(0.22);
+      // Gentle flat orientation so palm rests naturally down on the desk pad
+      bones.RightHand.rotateX(-0.10);
+      bones.RightHand.rotateZ(-0.05);
     }
 
-    // Fingers gently relaxed and resting naturally on the desk pad
+    // Fingers remain in their natural relaxed hand rest pose (clean & stable on desk pad)
     const fingerNames = [
-      'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandMiddle1', 'LeftHandMiddle2',
-      'LeftHandRing1', 'LeftHandRing2', 'LeftHandPinky1', 'LeftHandPinky2',
-      'RightHandIndex1', 'RightHandIndex2', 'RightHandMiddle1', 'RightHandMiddle2',
-      'RightHandRing1', 'RightHandRing2', 'RightHandPinky1', 'RightHandPinky2'
+      'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandIndex3',
+      'LeftHandMiddle1', 'LeftHandMiddle2', 'LeftHandMiddle3',
+      'LeftHandRing1', 'LeftHandRing2', 'LeftHandRing3',
+      'LeftHandPinky1', 'LeftHandPinky2', 'LeftHandPinky3',
+      'RightHandIndex1', 'RightHandIndex2', 'RightHandIndex3',
+      'RightHandMiddle1', 'RightHandMiddle2', 'RightHandMiddle3',
+      'RightHandRing1', 'RightHandRing2', 'RightHandRing3',
+      'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3'
     ];
     fingerNames.forEach((name) => {
       if (bones[name] && restQuats[name]) {
         bones[name].quaternion.copy(restQuats[name]);
-        bones[name].rotateX(0.16);
-        bones[name].rotateZ(name.startsWith('Left') ? 0.08 : -0.08);
       }
     });
 
@@ -493,17 +486,14 @@ function RealExecutiveOfficeChair() {
       {/* ── 4. Executive 4D Armrests (Flanking the mentor) ── */}
       {/* Left Armrest */}
       <group position={[-0.28, -0.16, 0.05]}>
-        {/* Die-Cast Chrome Armrest Support Upright */}
         <mesh position={[0, -0.07, -0.08]} castShadow>
           <cylinderGeometry args={[0.012, 0.015, 0.18, 16]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
         </mesh>
-        {/* Chrome Horizontal Cantilever */}
         <mesh position={[0.02, -0.01, -0.03]} rotation={[0, 0, -0.15]}>
           <boxGeometry args={[0.05, 0.02, 0.14]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
         </mesh>
-        {/* Contoured Cushioned Armrest Pad */}
         <RoundedBox args={[0.085, 0.032, 0.26]} radius={0.014} smoothness={4} position={[0.02, 0.01, 0.0]} castShadow>
           <meshStandardMaterial color="#1a1c22" roughness={0.52} metalness={0.1} />
         </RoundedBox>
@@ -511,17 +501,14 @@ function RealExecutiveOfficeChair() {
 
       {/* Right Armrest */}
       <group position={[0.28, -0.16, 0.05]}>
-        {/* Die-Cast Chrome Armrest Support Upright */}
         <mesh position={[0, -0.07, -0.08]} castShadow>
           <cylinderGeometry args={[0.012, 0.015, 0.18, 16]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
         </mesh>
-        {/* Chrome Horizontal Cantilever */}
         <mesh position={[-0.02, -0.01, -0.03]} rotation={[0, 0, 0.15]}>
           <boxGeometry args={[0.05, 0.02, 0.14]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
         </mesh>
-        {/* Contoured Cushioned Armrest Pad */}
         <RoundedBox args={[0.085, 0.032, 0.26]} radius={0.014} smoothness={4} position={[-0.02, 0.01, 0.0]} castShadow>
           <meshStandardMaterial color="#1a1c22" roughness={0.52} metalness={0.1} />
         </RoundedBox>
@@ -547,14 +534,14 @@ function RealExecutiveOfficeChair() {
  *
  * Professional executive consultation desk placed directly in front of the mentor:
  * - Rich dark walnut / espresso wooden tabletop with chamfered smooth beveled edge
- * - Center executive Napa leather desk pad (where her hands and forearms rest naturally)
+ * - Center executive Napa leather desk pad (where her hands and forearms rest stably & naturally)
  * - Modern executive laptop (space grey slim aluminum chassis angled to the side)
  * - Fine executive accessories: sleek metal pen, ceramic espresso mug with saucer
  * - Front modesty panel in dark matte graphite / wood grain
  */
 function ExecutiveConsultationDesk() {
   return (
-    <group position={[0, -0.31, 0.22]}>
+    <group position={[0, -0.20, 0.16]}>
       {/* ── 1. Main Executive Wooden Desktop (Rich dark walnut with satin bevel) ── */}
       <RoundedBox args={[2.2, 0.038, 0.75]} radius={0.012} smoothness={4} position={[0, 0, 0]} receiveShadow castShadow>
         <meshStandardMaterial
@@ -571,12 +558,12 @@ function ExecutiveConsultationDesk() {
       </mesh>
 
       {/* ── 2. Executive Napa Leather Desk Pad / Blotter ── */}
-      {/* Hands and forearms rest directly on this desk mat */}
+      {/* Both hands rest directly and stably on this spacious desk mat */}
       <RoundedBox
-        args={[0.74, 0.007, 0.38]}
+        args={[0.82, 0.007, 0.40]}
         radius={0.008}
         smoothness={4}
-        position={[0, 0.022, -0.08]}
+        position={[0, 0.022, -0.05]}
         receiveShadow
       >
         <meshStandardMaterial
@@ -586,8 +573,8 @@ function ExecutiveConsultationDesk() {
         />
       </RoundedBox>
 
-      {/* ── 3. Ultra-Slim Executive Laptop (Angled on the left) ── */}
-      <group position={[-0.46, 0.024, -0.02]} rotation={[0, 0.26, 0]}>
+      {/* ── 3. Ultra-Slim Executive Laptop (Angled on the left of desk pad) ── */}
+      <group position={[-0.48, 0.024, -0.02]} rotation={[0, 0.28, 0]}>
         {/* Base Chassis (Space Grey Aluminum) */}
         <RoundedBox args={[0.26, 0.008, 0.18]} radius={0.004} smoothness={4} castShadow receiveShadow>
           <meshStandardMaterial color="#2c3038" metalness={0.88} roughness={0.22} />
@@ -602,12 +589,12 @@ function ExecutiveConsultationDesk() {
           <planeGeometry args={[0.23, 0.09]} />
           <meshStandardMaterial color="#181a1f" metalness={0.2} roughness={0.7} />
         </mesh>
-        {/* Open Display Lid (Tilted at 105 degrees) */}
+        {/* Open Display Lid */}
         <group position={[0, 0.004, -0.09]} rotation={[-0.26, 0, 0]}>
           <RoundedBox args={[0.26, 0.17, 0.006]} radius={0.004} smoothness={4} position={[0, 0.085, 0]} castShadow>
             <meshStandardMaterial color="#2c3038" metalness={0.88} roughness={0.22} />
           </RoundedBox>
-          {/* Glowing Retina Screen */}
+          {/* Glowing Screen */}
           <mesh position={[0, 0.085, 0.0035]}>
             <planeGeometry args={[0.245, 0.155]} />
             <meshStandardMaterial
@@ -622,7 +609,7 @@ function ExecutiveConsultationDesk() {
 
       {/* ── 4. Executive Accessories on the Right ── */}
       {/* Matte Black Ceramic Mug & Saucer */}
-      <group position={[0.42, 0.024, -0.04]}>
+      <group position={[0.45, 0.024, -0.04]}>
         <mesh position={[0, 0.0035, 0]}>
           <cylinderGeometry args={[0.048, 0.038, 0.007, 24]} />
           <meshStandardMaterial color="#1a1c22" roughness={0.4} metalness={0.1} />
@@ -638,7 +625,7 @@ function ExecutiveConsultationDesk() {
       </group>
 
       {/* Sleek Titanium Executive Pen beside the desk pad */}
-      <group position={[0.26, 0.024, 0.06]} rotation={[0, -0.35, 0]}>
+      <group position={[0.32, 0.024, 0.06]} rotation={[0, -0.35, 0]}>
         <mesh position={[0, 0.004, 0]} castShadow>
           <cylinderGeometry args={[0.004, 0.004, 0.13, 16]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
@@ -681,10 +668,10 @@ function ModelLoader() {
  * - 100% Fixed, Full-Screen, Non-Moving Photorealistic Background Image
  * - Symmetrical straight-on executive room (bookshelves, warm lamps, daylight windows)
  * - Mentor seated naturally in a Luxury Executive Ergonomic Chair
- * - Executive Consultation Desk in foreground with her hands resting comfortably on the leather pad
+ * - Hands & arms settled stably on the executive desk pad (normal human resting posture)
  * - Natural human skin tones preserved on hands & arms (no black gloves!)
  * - Realistic phonetic syllable lip-sync synchronized to speech cadence with clean closures
- * - Eye-level camera: position [0, 0, 1.4], fov 40
+ * - Eye-level camera: position [0, 0.04, 1.45], fov 42
  * - OrbitControls locked (enableRotate=false) to ensure zero unwanted movement
  */
 export default function FemaleMentor3DAvatar({
@@ -720,8 +707,8 @@ export default function FemaleMentor3DAvatar({
         <Canvas
           shadows
           camera={{
-            position: [0, 0, 1.4], // Perfectly eye-level straight-on with the seated mentor
-            fov: 40,               // Standard 40 fov (avoids wide-angle fish-eye distortion)
+            position: [0, 0.04, 1.45], // Perfectly eye-level straight-on with the seated mentor and desk
+            fov: 42,                  // Standard 42 fov
             near: 0.1,
             far: 20,
           }}
@@ -784,7 +771,7 @@ export default function FemaleMentor3DAvatar({
 
           {/* ── Soft Floor / Desk Contact Shadows ── */}
           <ContactShadows
-            position={[0, -0.32, 0.2]}
+            position={[0, -0.22, 0.16]}
             opacity={0.65}
             scale={2.6}
             blur={2.0}
@@ -794,7 +781,7 @@ export default function FemaleMentor3DAvatar({
 
           {/* ── Orbit Controls (Locked so neither avatar nor background ever moves) ── */}
           <OrbitControls
-            target={[0, 0.08, 0]}  // Natural eye-level target
+            target={[0, 0.02, 0]}  // Natural eye-level target
             enableRotate={false}   // 100% Fixed: will not rotate on mouse drag!
             enableZoom={false}     // Fixed natural interview distance
             enablePan={false}      // No panning
