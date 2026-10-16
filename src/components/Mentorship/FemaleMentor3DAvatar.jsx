@@ -6,19 +6,19 @@ import * as THREE from 'three';
 /**
  * SeatedFemaleMentorModel
  *
- * Highly realistic, human-like female mentor seated at an executive desk:
- * - Natural seated posture with relaxed arms resting on the desk
- * - Continuous subtle breathing loops (chest & shoulders)
- * - Random eye-blinking every 4-6 seconds
- * - Attentive listening head nods & micro-tilts when listening/idle
- * - Multi-viseme audio-paced speech lip-sync with synchronized jaw & head vibrations
- * - Enhanced PBR materials for realistic skin, glossy eyes, sleek glasses, and hair sheen
+ * Cinematic Photorealistic Female Mentor:
+ * - Natural waist-up seated desk posture with relaxed arms
+ * - Realistic PBR skin, specular eye moisture, sleek metallic glasses & hair sheen
+ * - Continuous subtle chest/shoulder breathing
+ * - Random natural eye-blinking every 4-6 seconds
+ * - Attentive listening head tilt & empathetic resting smile
+ * - Dynamic speech lip-sync with synchronized head and jaw vibrations
  */
 function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isThinking = false }) {
-  // Load official female Ready Player Me model with glasses and formal business attire
+  // Load local high-resolution female Ready Player Me model (Aurora with formal blazer & glasses)
   const { scene } = useGLTF('/models/female_mentor.glb');
 
-  // Traverse and enhance PBR materials for cinematic human realism
+  // Traverse meshes and enhance materials for cinematic human realism
   const rig = useMemo(() => {
     const bones = {};
     const meshes = {};
@@ -29,29 +29,39 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
         child.receiveShadow = true;
         meshes[child.name] = child;
 
+        // Hide footwear so shoes can never accidentally poke up
+        if (child.name === 'Wolf3D_Outfit_Footwear') {
+          child.visible = false;
+        }
+
         // Cinematic Material Enhancements (Skin softness, cornea gloss, metallic frames)
         if (child.material) {
           const mat = child.material;
           if (mat.name === 'Wolf3D_Skin') {
-            mat.roughness = 0.55; // Natural human skin texture
-            mat.metalness = 0.02;
+            mat.roughness = 0.62; // Soft human skin matte texture
+            mat.metalness = 0.0;
+            mat.color = new THREE.Color('#fdede2'); // Warm, healthy human skin tone
           } else if (mat.name === 'Wolf3D_Eye' || mat.name === 'EyeLeft' || mat.name === 'EyeRight') {
-            mat.roughness = 0.05; // Glossy reflective cornea moisture
+            mat.roughness = 0.05; // Moist reflective cornea
             mat.metalness = 0.15;
           } else if (mat.name === 'Wolf3D_Glasses') {
-            mat.roughness = 0.08; // Sleek designer metallic frame
-            mat.metalness = 0.85;
+            mat.roughness = 0.12;
+            mat.metalness = 0.85; // Designer executive titanium glasses frame
+            mat.color = new THREE.Color('#1e2430');
             mat.transparent = true;
-            mat.opacity = 0.92;
+            mat.opacity = 0.95;
           } else if (mat.name === 'Wolf3D_Hair') {
-            mat.roughness = 0.45; // Soft natural hair specular highlight
-            mat.metalness = 0.06;
+            mat.roughness = 0.48; // Rich natural hair with soft specular highlight
+            mat.metalness = 0.12;
+            mat.color = new THREE.Color('#221a15');
           } else if (mat.name === 'Wolf3D_Teeth') {
-            mat.roughness = 0.25;
+            mat.roughness = 0.22;
             mat.metalness = 0.0;
-          } else if (mat.name?.includes('Outfit') || mat.name === 'Wolf3D_Outfit_Top') {
-            mat.roughness = 0.82; // Fine tailored suit fabric
-            mat.metalness = 0.04;
+            mat.color = new THREE.Color('#fcfbf7');
+          } else if (mat.name?.includes('Outfit') || mat.name === 'Wolf3D_Outfit_Top' || mat.name === 'Wolf3D_Body') {
+            mat.roughness = 0.88; // Professional executive blazer fabric
+            mat.metalness = 0.05;
+            mat.color = new THREE.Color('#192231');
           }
           mat.needsUpdate = true;
         }
@@ -67,102 +77,94 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
   // Random eye blink tracker (every 4-6 seconds)
   const blinkTimerRef = useRef({ nextBlink: 3.5, isBlinking: false });
 
-  // Real-time animation frame loop
+  // Frame animation loop: posture, breathing, head movement, lip-sync
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
     const { bones, meshes } = rig;
 
     // ── 1. Continuous Subtle Breathing Loops (Chest & Shoulders) ──
-    const breatheCycle = Math.sin(t * 1.8);
-    const chestRise = breatheCycle * 0.012;
-    const shoulderBreath = breatheCycle * 0.008;
+    const breatheCycle = Math.sin(t * 1.6);
+    const chestRise = breatheCycle * 0.01;
+    const shoulderBreath = breatheCycle * 0.006;
 
     if (bones.Spine) {
-      bones.Spine.rotation.x = 0.03 + chestRise; // Gentle chest breathing
-      bones.Spine.rotation.z = Math.sin(t * 0.6) * 0.005; // Subtle natural torso sway
+      bones.Spine.rotation.x = 0.02 + chestRise; // Gentle breathing rise
+      bones.Spine.rotation.z = Math.sin(t * 0.5) * 0.004; // Natural micro-sway
     }
     if (bones.Spine1) {
-      bones.Spine1.rotation.x = chestRise * 0.8;
-    }
-    if (bones.Spine2) {
-      bones.Spine2.rotation.x = chestRise * 0.6;
+      bones.Spine1.rotation.x = chestRise * 0.7;
     }
 
-    // Gentle shoulder breathing movement
-    if (bones.LeftShoulder) {
-      bones.LeftShoulder.rotation.z = -shoulderBreath;
-    }
-    if (bones.RightShoulder) {
-      bones.RightShoulder.rotation.z = shoulderBreath;
-    }
+    // Subtle shoulder breathing
+    if (bones.LeftShoulder) bones.LeftShoulder.rotation.z = -shoulderBreath;
+    if (bones.RightShoulder) bones.RightShoulder.rotation.z = shoulderBreath;
 
     // ── 2. Natural Sitting Pose & Relaxed Arms on Desk (No rigid A-pose) ──
-    // Relax upper arms comfortably down to the sides and slightly forward
     if (bones.LeftArm) {
-      bones.LeftArm.rotation.x = 0.32 + chestRise * 0.5;
-      bones.LeftArm.rotation.y = 0.12;
-      bones.LeftArm.rotation.z = -0.58;
+      bones.LeftArm.rotation.x = 0.35 + chestRise * 0.5;
+      bones.LeftArm.rotation.y = 0.15;
+      bones.LeftArm.rotation.z = -0.55;
     }
     if (bones.RightArm) {
-      bones.RightArm.rotation.x = 0.32 + chestRise * 0.5;
-      bones.RightArm.rotation.y = -0.12;
-      bones.RightArm.rotation.z = 0.58;
+      bones.RightArm.rotation.x = 0.35 + chestRise * 0.5;
+      bones.RightArm.rotation.y = -0.15;
+      bones.RightArm.rotation.z = 0.55;
     }
 
     // Forearms bent naturally forward resting on the executive desk
     if (bones.LeftForeArm) {
-      bones.LeftForeArm.rotation.x = 0.72;
-      bones.LeftForeArm.rotation.y = 0.28;
-      bones.LeftForeArm.rotation.z = -0.18;
+      bones.LeftForeArm.rotation.x = 0.75;
+      bones.LeftForeArm.rotation.y = 0.25;
+      bones.LeftForeArm.rotation.z = -0.15;
     }
     if (bones.RightForeArm) {
-      bones.RightForeArm.rotation.x = 0.72;
-      bones.RightForeArm.rotation.y = -0.28;
-      bones.RightForeArm.rotation.z = 0.18;
+      bones.RightForeArm.rotation.x = 0.75;
+      bones.RightForeArm.rotation.y = -0.25;
+      bones.RightForeArm.rotation.z = 0.15;
     }
 
-    // Hands relaxed flat on the desk surface
+    // Hands resting naturally
     if (bones.LeftHand) {
-      bones.LeftHand.rotation.x = 0.15;
-      bones.LeftHand.rotation.y = -0.08;
-      bones.LeftHand.rotation.z = -0.05;
+      bones.LeftHand.rotation.x = 0.12;
+      bones.LeftHand.rotation.y = -0.05;
+      bones.LeftHand.rotation.z = -0.04;
     }
     if (bones.RightHand) {
-      bones.RightHand.rotation.x = 0.15;
-      bones.RightHand.rotation.y = 0.08;
-      bones.RightHand.rotation.z = 0.05;
+      bones.RightHand.rotation.x = 0.12;
+      bones.RightHand.rotation.y = 0.05;
+      bones.RightHand.rotation.z = 0.04;
     }
 
-    // ── 3. Head & Gaze: Attentive Listening, Nods & Head Vibrations ──
+    // ── 3. Head & Gaze: Attentive Eye-Level Listening & Micro-Tilts ──
     if (bones.Head) {
       if (isSpeaking) {
-        // Natural head movement & vibrations synchronized to speech cadence
-        const speechPitch = Math.sin(t * 8.5) * 0.02 + Math.sin(t * 4.2) * 0.015;
-        const speechYaw = Math.sin(t * 2.5) * 0.025;
-        const speechRoll = Math.cos(t * 3.8) * 0.01;
+        // Natural conversational head movement synced to speech cadence
+        const pitch = Math.sin(t * 7.5) * 0.018 + Math.sin(t * 3.5) * 0.012;
+        const yaw = Math.sin(t * 2.2) * 0.02;
+        const roll = Math.cos(t * 3.1) * 0.008;
 
-        bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, speechPitch, 0.12);
-        bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, speechYaw, 0.12);
-        bones.Head.rotation.z = THREE.MathUtils.lerp(bones.Head.rotation.z, speechRoll, 0.12);
+        bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, pitch, 0.12);
+        bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, yaw, 0.12);
+        bones.Head.rotation.z = THREE.MathUtils.lerp(bones.Head.rotation.z, roll, 0.12);
       } else if (isListening) {
-        // Active attentive nodding loop showing she is engaged with the candidate
-        const nodMotion = 0.03 + Math.sin(t * 2.2) * 0.035 + Math.sin(t * 1.1) * 0.015;
-        const subtleGazeYaw = Math.sin(t * 0.8) * 0.03;
-        const subtleTilt = Math.sin(t * 1.4) * 0.018;
+        // Active attentive nodding loop showing she is listening warmly to the student
+        const nod = 0.02 + Math.sin(t * 1.8) * 0.028 + Math.sin(t * 0.9) * 0.012;
+        const gazeYaw = Math.sin(t * 0.7) * 0.022;
+        const subtleTilt = Math.sin(t * 1.2) * 0.015;
 
-        bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, nodMotion, 0.06);
-        bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, subtleGazeYaw, 0.06);
+        bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, nod, 0.06);
+        bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, gazeYaw, 0.06);
         bones.Head.rotation.z = THREE.MathUtils.lerp(bones.Head.rotation.z, subtleTilt, 0.06);
       } else if (isThinking) {
-        // Thoughtful upward-lateral gaze tilt during code evaluation
-        bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, -0.04, 0.06);
-        bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, 0.05, 0.06);
-        bones.Head.rotation.z = THREE.MathUtils.lerp(bones.Head.rotation.z, 0.02, 0.06);
+        // Thoughtful gaze tilt during code analysis
+        bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, -0.03, 0.06);
+        bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, 0.04, 0.06);
+        bones.Head.rotation.z = THREE.MathUtils.lerp(bones.Head.rotation.z, 0.015, 0.06);
       } else {
-        // Natural idle eye contact drift facing directly at the student
-        const idlePitch = Math.sin(t * 1.2) * 0.018;
-        const idleYaw = Math.sin(t * 0.7) * 0.025;
-        const idleRoll = Math.sin(t * 0.9) * 0.01;
+        // Calm eye-level eye contact straight forward toward the student
+        const idlePitch = Math.sin(t * 1.0) * 0.014;
+        const idleYaw = Math.sin(t * 0.6) * 0.02;
+        const idleRoll = Math.sin(t * 0.8) * 0.008;
 
         bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, idlePitch, 0.06);
         bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, idleYaw, 0.06);
@@ -181,21 +183,17 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
 
       if (t > blinkTimerRef.current.nextBlink) {
         blinkTimerRef.current.isBlinking = true;
-        // Natural human blink duration is ~140ms
+        // Blink duration is ~140ms
         if (t > blinkTimerRef.current.nextBlink + 0.14) {
           blinkTimerRef.current.isBlinking = false;
-          // Schedule next blink in 4 to 6 seconds
+          // Random interval between 4.0 and 6.0 seconds
           blinkTimerRef.current.nextBlink = t + 4.0 + Math.random() * 2.0;
         }
       }
 
       const blinkValue = blinkTimerRef.current.isBlinking ? 1.0 : 0.0;
-      if (blinkLIdx !== undefined) {
-        influences[blinkLIdx] = THREE.MathUtils.lerp(influences[blinkLIdx], blinkValue, 0.55);
-      }
-      if (blinkRIdx !== undefined) {
-        influences[blinkRIdx] = THREE.MathUtils.lerp(influences[blinkRIdx], blinkValue, 0.55);
-      }
+      if (blinkLIdx !== undefined) influences[blinkLIdx] = THREE.MathUtils.lerp(influences[blinkLIdx], blinkValue, 0.6);
+      if (blinkRIdx !== undefined) influences[blinkRIdx] = THREE.MathUtils.lerp(influences[blinkRIdx], blinkValue, 0.6);
 
       // ── 5. Human-Like Multi-Viseme Speech Lip-Sync & Jaw Articulation ──
       const teethMesh = meshes.Wolf3D_Teeth;
@@ -212,7 +210,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       const smileRIdx = dict['mouthSmileRight'];
 
       if (isSpeaking) {
-        // Natural speech pacing with harmonically varying vowel & consonant open/shut shapes
+        // Natural speech pacing with phonetic vowel and consonant mouth movements
         const harmonic1 = Math.max(0, Math.sin(t * 14.5));
         const harmonic2 = Math.max(0, Math.cos(t * 10.8));
         const syllablePulse = Math.max(0, Math.sin(t * 7.2));
@@ -233,18 +231,14 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
           teethInfluences[aaIdx] = mouthOpen * 0.75;
         }
 
-        // Slight conversational smile while speaking
+        // Slight conversational warmth
         if (smileLIdx !== undefined) influences[smileLIdx] = 0.22;
         if (smileRIdx !== undefined) influences[smileRIdx] = 0.22;
       } else {
-        // Warm, attentive resting smile while listening to student
+        // Warm, empathetic resting smile while listening to student
         const targetSmile = isListening ? 0.35 : 0.22;
-        if (smileLIdx !== undefined) {
-          influences[smileLIdx] = THREE.MathUtils.lerp(influences[smileLIdx], targetSmile, 0.08);
-        }
-        if (smileRIdx !== undefined) {
-          influences[smileRIdx] = THREE.MathUtils.lerp(influences[smileRIdx], targetSmile, 0.08);
-        }
+        if (smileLIdx !== undefined) influences[smileLIdx] = THREE.MathUtils.lerp(influences[smileLIdx], targetSmile, 0.08);
+        if (smileRIdx !== undefined) influences[smileRIdx] = THREE.MathUtils.lerp(influences[smileRIdx], targetSmile, 0.08);
 
         // Smoothly decay speech visemes back to closed resting mouth
         if (mouthOpenIdx !== undefined) influences[mouthOpenIdx] = THREE.MathUtils.lerp(influences[mouthOpenIdx], 0, 0.22);
@@ -264,44 +258,35 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
 
   return (
     /* 
-      Root Avatar Model Group:
-      - Outer Group: position={[0, -1.6, 0]}, rotation={[0, 0, 0]}, scale={1.8}
-      - Inner Model: positioned at [0, -0.63, 0] so the female mentor's face, eyes, and smile
-        are centered precisely at world Y = 0.20 looking directly at camera target [0, 0.2, 0]
+      Exact Requested Transform:
+      - position={[0, -1.4, -0.2]} (Moves avatar down slightly to capture waist-up posture)
+      - rotation={[0, 0, 0]} (Facing forward directly towards student)
+      - scale={1.0}
     */
-    <group position={[0, -1.6, 0]} rotation={[0, 0, 0]} scale={1.8}>
-      <primitive object={scene} position={[0, -0.63, 0]} />
+    <group position={[0, -1.4, -0.2]} rotation={[0, 0, 0]} scale={1.0}>
+      <primitive object={scene} />
 
       {/* ── Executive Seating Environment ── */}
-      {/* High-back Executive Ergonomic Chair Backrest */}
-      <mesh position={[0, 0.32, -0.24]} castShadow receiveShadow>
-        <boxGeometry args={[0.56, 0.88, 0.09]} />
-        <meshStandardMaterial color="#1a1c24" roughness={0.7} metalness={0.2} />
+      {/* High-back Executive Chair Backrest */}
+      <mesh position={[0, 1.35, -0.22]} castShadow receiveShadow>
+        <boxGeometry args={[0.55, 0.82, 0.08]} />
+        <meshStandardMaterial color="#181a22" roughness={0.7} metalness={0.2} />
       </mesh>
       {/* Executive Headrest */}
-      <mesh position={[0, 0.82, -0.22]} castShadow>
-        <boxGeometry args={[0.34, 0.18, 0.09]} />
-        <meshStandardMaterial color="#12141a" roughness={0.65} metalness={0.2} />
-      </mesh>
-      {/* Chair Side Ergonomic Wings */}
-      <mesh position={[-0.28, 0.22, -0.18]}>
-        <boxGeometry args={[0.06, 0.68, 0.16]} />
-        <meshStandardMaterial color="#12141a" roughness={0.7} />
-      </mesh>
-      <mesh position={[0.28, 0.22, -0.18]}>
-        <boxGeometry args={[0.06, 0.68, 0.16]} />
-        <meshStandardMaterial color="#12141a" roughness={0.7} />
+      <mesh position={[0, 1.82, -0.20]} castShadow>
+        <boxGeometry args={[0.32, 0.16, 0.08]} />
+        <meshStandardMaterial color="#111319" roughness={0.65} metalness={0.2} />
       </mesh>
 
-      {/* Modern Executive Desk Surface (Forearms rest directly on top) */}
-      <mesh position={[0, -0.22, 0.36]} receiveShadow>
-        <boxGeometry args={[1.6, 0.06, 0.55]} />
-        <meshStandardMaterial color="#221812" roughness={0.35} metalness={0.15} />
+      {/* Modern Executive Walnut Desk Surface (Forearms rest directly on top) */}
+      <mesh position={[0, 0.98, 0.28]} receiveShadow>
+        <boxGeometry args={[1.5, 0.05, 0.50]} />
+        <meshStandardMaterial color="#241913" roughness={0.35} metalness={0.15} />
       </mesh>
-      {/* Executive Desk Edge Bevel Accent */}
-      <mesh position={[0, -0.22, 0.09]}>
-        <boxGeometry args={[1.6, 0.02, 0.02]} />
-        <meshStandardMaterial color="#543c2c" roughness={0.4} />
+      {/* Desk Edge Accent Trim */}
+      <mesh position={[0, 0.98, 0.04]}>
+        <boxGeometry args={[1.5, 0.02, 0.02]} />
+        <meshStandardMaterial color="#523b2b" roughness={0.4} />
       </mesh>
     </group>
   );
@@ -319,7 +304,7 @@ function ModelLoader() {
       <div className="flex flex-col items-center justify-center gap-3 p-5 rounded-2xl bg-black/85 border border-teal-500/40 backdrop-blur-md shadow-2xl text-center">
         <div className="w-8 h-8 rounded-full border-2 border-teal-400 border-t-transparent animate-spin" />
         <span className="text-xs font-bold text-teal-300 tracking-wider">
-          Initializing 3D Mentor Avatar...
+          Connecting to AI Mentor...
         </span>
       </div>
     </Html>
@@ -329,13 +314,15 @@ function ModelLoader() {
 /**
  * FemaleMentor3DAvatar
  *
- * Cinematic Realism & Soft Studio Lighting Setup:
- * - Ambient light 1.5 with warm color
- * - Directional light 2.0 for soft face shadows
- * - Soft back/rim light catching hair detail
- * - Contact shadows and warm desk bounce fill
- * - Waist-up interview camera: position [0, 0.4, 1.8], fov 40
- * - OrbitControls target [0, 0.2, 0] directly framing the face, eyes, and mentor smile
+ * Professional Eye-Level Front Camera Setup:
+ * - Camera: position [0, 0, 1.4], fov 40 (eye-level straight-on with seated mentor)
+ * - Avatar: position [0, -1.4, -0.2], rotation [0, 0, 0]
+ * - OrbitControls: target [0, 0.1, 0], enableZoom={false}, limited angles
+ * - Cinematic Real-Life Multi-Source Lighting:
+ *   - ambientLight intensity 0.8
+ *   - directionalLight position [1, 1.5, 2] intensity 1.8 castShadow
+ *   - pointLight position [-1.5, 1, 0.5] intensity 0.5 color="#ffd4a3" for warm cheek & ear illumination
+ *   - top hair rim light for depth
  */
 export default function FemaleMentor3DAvatar({
   isSpeaking = false,
@@ -344,61 +331,46 @@ export default function FemaleMentor3DAvatar({
   mentorName = 'Dr. Ann Vance',
 }) {
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gradient-to-b from-[#090e1a] via-[#0d1627] to-[#070b13] flex items-center justify-center select-none">
+    <div className="relative w-full h-full overflow-hidden bg-gradient-to-b from-[#0b101c] via-[#0e172a] to-[#080d18] flex items-center justify-center select-none">
       <Canvas
         shadows
         camera={{
-          position: [0, 0.4, 1.8], // Exact waist-up camera position requested
-          fov: 40,                 // Exact fov requested
+          position: [0, 0, 1.4], // Perfectly eye-level straight-on with the mentor seated at desk
+          fov: 40,               // Standard 40 fov (avoids wide-angle fish-eye distortion)
           near: 0.1,
           far: 20,
         }}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
+        className="w-full h-full cursor-default"
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
-        {/* ── Soft Warm Studio Lighting Setup ── */}
-        {/* 1. Warm Ambient Light (Intensity 1.5) */}
-        <ambientLight intensity={1.5} color="#fff6ed" />
+        {/* ── Cinematic Real-Life Multi-Source Lighting ── */}
+        {/* 1. Base Ambient Light */}
+        <ambientLight intensity={0.8} />
 
-        {/* 2. Key Directional Light (Intensity 2.0) for soft face shadows */}
+        {/* 2. Key Directional Light for natural facial definition */}
         <directionalLight
-          position={[1.5, 2.5, 2.0]}
-          intensity={2.0}
-          color="#fffaf5"
+          position={[1, 1.5, 2]}
+          intensity={1.8}
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
           shadow-bias={-0.0001}
         />
 
-        {/* 3. Soft Left Fill Light */}
-        <directionalLight
-          position={[-1.8, 1.2, 1.5]}
-          intensity={0.9}
-          color="#dbeafe"
-        />
-
-        {/* 4. Back/Rim Light Catching Hair Detail */}
+        {/* 3. Warm Cheek & Ear Point Light */}
         <pointLight
-          position={[0, 1.8, -1.2]}
-          intensity={1.6}
-          color="#38bdf8"
+          position={[-1.5, 1, 0.5]}
+          intensity={0.5}
+          color="#ffd4a3"
           distance={4.0}
         />
 
-        {/* 5. Warm Facial Key Point Light for skin & eye highlights */}
+        {/* 4. Subtle Top/Hair Backlight for silhouette separation */}
         <pointLight
-          position={[0, 0.4, 1.2]}
-          intensity={0.8}
-          color="#ffedd5"
-          distance={3.0}
-        />
-
-        {/* 6. Warm Desk Bounce Light */}
-        <directionalLight
-          position={[0, -0.6, 0.8]}
-          intensity={0.45}
-          color="#d4a373"
+          position={[0, 1.6, -1.0]}
+          intensity={0.65}
+          color="#dbeafe"
+          distance={3.5}
         />
 
         {/* ── 3D Seated Avatar Model ── */}
@@ -410,25 +382,25 @@ export default function FemaleMentor3DAvatar({
           />
         </Suspense>
 
-        {/* ── Soft Floor & Desk Contact Shadows ── */}
+        {/* ── Soft Contact Shadow ── */}
         <ContactShadows
-          position={[0, -0.6, 0]}
-          opacity={0.65}
-          scale={4.0}
-          blur={2.2}
-          far={2.5}
+          position={[0, -0.42, 0]}
+          opacity={0.6}
+          scale={3.5}
+          blur={2.0}
+          far={2.0}
           color="#000000"
         />
 
-        {/* ── Orbit Controls Centered Directly on Mentor's Face & Upper Body ── */}
+        {/* ── Orbit Controls Fixed Directly at Face Level ── */}
         <OrbitControls
-          target={[0, 0.2, 0]} // Exact target requested focusing on face & upper body from FRONT
-          enableZoom={false}
+          target={[0, 0.1, 0]} // Face level target
+          enableZoom={false}   // Fixed natural interview distance
           enablePan={false}
-          minPolarAngle={Math.PI / 2.6}
-          maxPolarAngle={Math.PI / 1.7}
-          minAzimuthAngle={-Math.PI / 6}
-          maxAzimuthAngle={Math.PI / 6}
+          minPolarAngle={Math.PI / 2.05} // Locked so camera stays naturally fixed in front of her
+          maxPolarAngle={Math.PI / 1.95}
+          minAzimuthAngle={-Math.PI / 18}
+          maxAzimuthAngle={Math.PI / 18}
           dampingFactor={0.08}
         />
       </Canvas>
