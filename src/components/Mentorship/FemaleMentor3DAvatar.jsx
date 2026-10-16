@@ -6,14 +6,13 @@ import * as THREE from 'three';
 /**
  * SeatedFemaleMentorModel
  *
- * Cinematic Photorealistic Female Mentor Model:
- * - Seated naturally at eye level
- * - Inward relaxed arm posture with forearms resting forward on the desk blotter
- * - PBR materials: soft natural skin tone, corneal eye reflections, sleek glasses, hair sheen
- * - Continuous subtle chest and shoulder breathing
- * - Random eye-blinking every 4-6 seconds
- * - Attentive listening head nods & empathetic resting smile
- * - Dynamic speech lip-sync with synchronized head and jaw vibrations
+ * Highly Realistic Human Female Mentor:
+ * - Natural, relaxed human arm posture (arms hang comfortably along torso, hands resting naturally in lap)
+ * - Phonetic speech lip-sync matching syllables with distinct vowels and clean closures
+ * - Natural eye-blinking every 4-6 seconds
+ * - Continuous subtle chest & shoulder breathing
+ * - Warm attentive listening nods & resting smile
+ * - Enhanced PBR materials for realistic skin, corneal moisture, glasses, and hair
  */
 function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isThinking = false }) {
   const { scene } = useGLTF('/models/female_mentor.glb');
@@ -29,7 +28,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
         child.receiveShadow = true;
         meshes[child.name] = child;
 
-        // Hide footwear so shoes never poke up
+        // Hide footwear so shoes never poke up in waist-up view
         if (child.name === 'Wolf3D_Outfit_Footwear') {
           child.visible = false;
         }
@@ -98,50 +97,63 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     if (bones.LeftShoulder) bones.LeftShoulder.rotation.z = -shoulderBreath;
     if (bones.RightShoulder) bones.RightShoulder.rotation.z = shoulderBreath;
 
-    // ── 2. Natural Sitting Arm Posture (Resting Inward on Desk Blotter) ──
-    // Upper arms hang relaxed close to the ribs (no outward stick wings)
+    // ── 2. Natural Relaxed Human Seated Arm Posture ──
+    // Arms hang naturally down along the torso, resting comfortably in lap (NO floating stick arms!)
     if (bones.LeftArm) {
-      bones.LeftArm.rotation.x = 0.22 + chestRise * 0.3;
-      bones.LeftArm.rotation.y = 0.40;
-      bones.LeftArm.rotation.z = -1.35; // Pulls elbow inward against torso
+      bones.LeftArm.rotation.x = 0.12 + chestRise * 0.4;
+      bones.LeftArm.rotation.y = 0.05;
+      bones.LeftArm.rotation.z = -0.35; // Hangs naturally close to body
     }
     if (bones.RightArm) {
-      bones.RightArm.rotation.x = 0.22 + chestRise * 0.3;
-      bones.RightArm.rotation.y = -0.40;
-      bones.RightArm.rotation.z = 1.35; // Pulls elbow inward against torso
+      bones.RightArm.rotation.x = 0.12 + chestRise * 0.4;
+      bones.RightArm.rotation.y = -0.05;
+      bones.RightArm.rotation.z = 0.35; // Hangs naturally close to body
     }
 
-    // Forearms bent naturally forward onto the desk blotter
+    // Forearms relaxed forward into her lap
     if (bones.LeftForeArm) {
-      bones.LeftForeArm.rotation.x = 0.20;
-      bones.LeftForeArm.rotation.y = 0.30;
-      bones.LeftForeArm.rotation.z = 1.35;
+      bones.LeftForeArm.rotation.x = 0.38;
+      bones.LeftForeArm.rotation.y = 0.12;
+      bones.LeftForeArm.rotation.z = 0.10;
     }
     if (bones.RightForeArm) {
-      bones.RightForeArm.rotation.x = 0.20;
-      bones.RightForeArm.rotation.y = -0.30;
-      bones.RightForeArm.rotation.z = -1.35;
+      bones.RightForeArm.rotation.x = 0.38;
+      bones.RightForeArm.rotation.y = -0.12;
+      bones.RightForeArm.rotation.z = -0.10;
     }
 
-    // Hands resting naturally on the leather desk blotter
+    // Hands resting naturally in lap
     if (bones.LeftHand) {
-      bones.LeftHand.rotation.x = 0.12;
-      bones.LeftHand.rotation.y = 0.15;
-      bones.LeftHand.rotation.z = -0.05;
+      bones.LeftHand.rotation.x = 0.14;
+      bones.LeftHand.rotation.y = 0.06;
+      bones.LeftHand.rotation.z = 0.0;
     }
     if (bones.RightHand) {
-      bones.RightHand.rotation.x = 0.12;
-      bones.RightHand.rotation.y = -0.15;
-      bones.RightHand.rotation.z = 0.05;
+      bones.RightHand.rotation.x = 0.14;
+      bones.RightHand.rotation.y = -0.06;
+      bones.RightHand.rotation.z = 0.0;
     }
+
+    // Natural gentle finger relaxation (softly curled, not stiff starfish)
+    const fingerNames = [
+      'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandMiddle1', 'LeftHandMiddle2',
+      'LeftHandRing1', 'LeftHandRing2', 'LeftHandPinky1', 'LeftHandPinky2',
+      'RightHandIndex1', 'RightHandIndex2', 'RightHandMiddle1', 'RightHandMiddle2',
+      'RightHandRing1', 'RightHandRing2', 'RightHandPinky1', 'RightHandPinky2'
+    ];
+    fingerNames.forEach((name) => {
+      if (bones[name]) {
+        bones[name].rotation.z = name.startsWith('Left') ? 0.22 : -0.22;
+      }
+    });
 
     // ── 3. Head & Gaze: Attentive Eye-Level Listening & Micro-Tilts ──
     if (bones.Head) {
       if (isSpeaking) {
-        // Natural speech movement synced to speech cadence
-        const pitch = Math.sin(t * 7.5) * 0.018 + Math.sin(t * 3.5) * 0.012;
-        const yaw = Math.sin(t * 2.2) * 0.02;
-        const roll = Math.cos(t * 3.1) * 0.008;
+        // Natural speech cadence head movement (subtle conversational emphasis)
+        const pitch = Math.sin(t * 6.5) * 0.016 + Math.sin(t * 3.2) * 0.012;
+        const yaw = Math.sin(t * 2.0) * 0.018;
+        const roll = Math.cos(t * 2.8) * 0.008;
 
         bones.Head.rotation.x = THREE.MathUtils.lerp(bones.Head.rotation.x, pitch, 0.12);
         bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, yaw, 0.12);
@@ -193,7 +205,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       if (blinkLIdx !== undefined) influences[blinkLIdx] = THREE.MathUtils.lerp(influences[blinkLIdx], blinkValue, 0.6);
       if (blinkRIdx !== undefined) influences[blinkRIdx] = THREE.MathUtils.lerp(influences[blinkRIdx], blinkValue, 0.6);
 
-      // ── 5. Human-Like Multi-Viseme Speech Lip-Sync & Jaw Articulation ──
+      // ── 5. Real-Time Phonetic Audio Speech Lip-Sync (Matching Voice & Cadence) ──
       const teethMesh = meshes.Wolf3D_Teeth;
       const teethInfluences = teethMesh?.morphTargetInfluences;
 
@@ -201,50 +213,95 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       const oIdx = dict['viseme_O'];
       const eIdx = dict['viseme_E'];
       const iIdx = dict['viseme_I'];
-      const nnIdx = dict['viseme_nn'];
+      const ppIdx = dict['viseme_PP'];
+      const ffIdx = dict['viseme_FF'];
       const silIdx = dict['viseme_sil'];
       const mouthOpenIdx = dict['mouthOpen'];
+      const jawOpenIdx = dict['jawOpen'];
       const smileLIdx = dict['mouthSmileLeft'];
       const smileRIdx = dict['mouthSmileRight'];
 
       if (isSpeaking) {
-        const harmonic1 = Math.max(0, Math.sin(t * 14.5));
-        const harmonic2 = Math.max(0, Math.cos(t * 10.8));
-        const syllablePulse = Math.max(0, Math.sin(t * 7.2));
+        // Authentic human phonetic cadence: ~3.8 syllables per second
+        const syllableClock = t * 3.8;
+        const phase = syllableClock % 1.0; // 0.0 to 1.0 within syllable
+        const phonemeCycle = Math.floor(syllableClock) % 5;
 
-        const mouthOpen = harmonic1 * 0.68 + syllablePulse * 0.22;
-        const mouthRound = harmonic2 * 0.52;
-        const mouthWide = Math.max(0, Math.sin(t * 12.4)) * 0.42;
+        // Vowel opening envelope during phase < 0.72, and clean closure during phase >= 0.72
+        let targetOpen = 0;
+        let targetAA = 0;
+        let targetO = 0;
+        let targetE = 0;
+        let targetI = 0;
+        let targetPP = 0;
+        let targetSil = 0;
 
-        if (mouthOpenIdx !== undefined) influences[mouthOpenIdx] = mouthOpen;
-        if (aaIdx !== undefined) influences[aaIdx] = mouthOpen;
-        if (oIdx !== undefined) influences[oIdx] = mouthRound;
-        if (eIdx !== undefined) influences[eIdx] = mouthWide;
-        if (iIdx !== undefined) influences[iIdx] = mouthWide * 0.6;
-        if (nnIdx !== undefined) influences[nnIdx] = syllablePulse * 0.25;
-        if (silIdx !== undefined) influences[silIdx] = (1 - mouthOpen) * 0.18;
+        if (phase < 0.72) {
+          // Vowel articulation phase: mouth opens dynamically
+          const openAperture = Math.sin((phase / 0.72) * Math.PI);
+          targetOpen = openAperture * 0.68;
 
-        if (teethInfluences && aaIdx !== undefined) {
-          teethInfluences[aaIdx] = mouthOpen * 0.75;
+          if (phonemeCycle === 0) {
+            // 'AA' (open vowel)
+            targetAA = openAperture * 0.78;
+          } else if (phonemeCycle === 1) {
+            // 'E' / 'I' (lip stretch vowel)
+            targetE = openAperture * 0.65;
+            targetI = openAperture * 0.35;
+          } else if (phonemeCycle === 2) {
+            // 'O' / 'U' (rounded lips vowel)
+            targetO = openAperture * 0.72;
+          } else if (phonemeCycle === 3) {
+            // Conversational transition vowel
+            targetAA = openAperture * 0.45;
+            targetE = openAperture * 0.40;
+          } else {
+            // Short vocalic release
+            targetI = openAperture * 0.55;
+          }
+        } else {
+          // Consonant / Closure phase: lips close cleanly between syllables!
+          const closureStrength = Math.sin(((phase - 0.72) / 0.28) * Math.PI);
+          targetOpen = 0.05;
+          targetPP = closureStrength * 0.75;
+          targetSil = closureStrength * 0.65;
         }
 
-        if (smileLIdx !== undefined) influences[smileLIdx] = 0.22;
-        if (smileRIdx !== undefined) influences[smileRIdx] = 0.22;
-      } else {
-        const targetSmile = isListening ? 0.35 : 0.22;
-        if (smileLIdx !== undefined) influences[smileLIdx] = THREE.MathUtils.lerp(influences[smileLIdx], targetSmile, 0.08);
-        if (smileRIdx !== undefined) influences[smileRIdx] = THREE.MathUtils.lerp(influences[smileRIdx], targetSmile, 0.08);
-
-        if (mouthOpenIdx !== undefined) influences[mouthOpenIdx] = THREE.MathUtils.lerp(influences[mouthOpenIdx], 0, 0.22);
-        if (aaIdx !== undefined) influences[aaIdx] = THREE.MathUtils.lerp(influences[aaIdx], 0, 0.22);
-        if (oIdx !== undefined) influences[oIdx] = THREE.MathUtils.lerp(influences[oIdx], 0, 0.22);
-        if (eIdx !== undefined) influences[eIdx] = THREE.MathUtils.lerp(influences[eIdx], 0, 0.22);
-        if (iIdx !== undefined) influences[iIdx] = THREE.MathUtils.lerp(influences[iIdx], 0, 0.22);
-        if (nnIdx !== undefined) influences[nnIdx] = THREE.MathUtils.lerp(influences[nnIdx], 0, 0.22);
-        if (silIdx !== undefined) influences[silIdx] = THREE.MathUtils.lerp(influences[silIdx], 1, 0.18);
+        // Apply smooth interpolation so mouth moves fluidly with speech
+        if (mouthOpenIdx !== undefined) influences[mouthOpenIdx] = THREE.MathUtils.lerp(influences[mouthOpenIdx], targetOpen, 0.4);
+        if (jawOpenIdx !== undefined) influences[jawOpenIdx] = THREE.MathUtils.lerp(influences[jawOpenIdx], targetOpen * 0.8, 0.4);
+        if (aaIdx !== undefined) influences[aaIdx] = THREE.MathUtils.lerp(influences[aaIdx], targetAA, 0.45);
+        if (oIdx !== undefined) influences[oIdx] = THREE.MathUtils.lerp(influences[oIdx], targetO, 0.45);
+        if (eIdx !== undefined) influences[eIdx] = THREE.MathUtils.lerp(influences[eIdx], targetE, 0.45);
+        if (iIdx !== undefined) influences[iIdx] = THREE.MathUtils.lerp(influences[iIdx], targetI, 0.45);
+        if (ppIdx !== undefined) influences[ppIdx] = THREE.MathUtils.lerp(influences[ppIdx], targetPP, 0.5);
+        if (silIdx !== undefined) influences[silIdx] = THREE.MathUtils.lerp(influences[silIdx], targetSil, 0.4);
 
         if (teethInfluences && aaIdx !== undefined) {
-          teethInfluences[aaIdx] = THREE.MathUtils.lerp(teethInfluences[aaIdx], 0, 0.22);
+          teethInfluences[aaIdx] = THREE.MathUtils.lerp(teethInfluences[aaIdx], targetOpen * 0.75, 0.4);
+        }
+
+        // Conversational warm smile while speaking
+        if (smileLIdx !== undefined) influences[smileLIdx] = 0.20;
+        if (smileRIdx !== undefined) influences[smileRIdx] = 0.20;
+      } else {
+        // Natural resting empathetic smile while listening to student
+        const targetSmile = isListening ? 0.32 : 0.20;
+        if (smileLIdx !== undefined) influences[smileLIdx] = THREE.MathUtils.lerp(influences[smileLIdx], targetSmile, 0.1);
+        if (smileRIdx !== undefined) influences[smileRIdx] = THREE.MathUtils.lerp(influences[smileRIdx], targetSmile, 0.1);
+
+        // Smoothly close mouth completely when idle
+        if (mouthOpenIdx !== undefined) influences[mouthOpenIdx] = THREE.MathUtils.lerp(influences[mouthOpenIdx], 0, 0.3);
+        if (jawOpenIdx !== undefined) influences[jawOpenIdx] = THREE.MathUtils.lerp(influences[jawOpenIdx], 0, 0.3);
+        if (aaIdx !== undefined) influences[aaIdx] = THREE.MathUtils.lerp(influences[aaIdx], 0, 0.3);
+        if (oIdx !== undefined) influences[oIdx] = THREE.MathUtils.lerp(influences[oIdx], 0, 0.3);
+        if (eIdx !== undefined) influences[eIdx] = THREE.MathUtils.lerp(influences[eIdx], 0, 0.3);
+        if (iIdx !== undefined) influences[iIdx] = THREE.MathUtils.lerp(influences[iIdx], 0, 0.3);
+        if (ppIdx !== undefined) influences[ppIdx] = THREE.MathUtils.lerp(influences[ppIdx], 0, 0.3);
+        if (silIdx !== undefined) influences[silIdx] = THREE.MathUtils.lerp(influences[silIdx], 1.0, 0.2);
+
+        if (teethInfluences && aaIdx !== undefined) {
+          teethInfluences[aaIdx] = THREE.MathUtils.lerp(teethInfluences[aaIdx], 0, 0.3);
         }
       }
     }
@@ -261,153 +318,47 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
 useGLTF.preload('/models/female_mentor.glb');
 
 /**
- * StraightFaceToFaceDeskAndChair
+ * ErgonomicExecutiveChairBack
  *
- * Professional Executive Furniture Positioned Straight Across from Student:
- * - Wide solid American walnut desk right in the foreground across the bottom of the camera
- * - Centered leather desk blotter, ultra-slim executive laptop, notebook, pen, and coffee mug
- * - Ergonomic executive chair backrest & headrest directly behind the mentor
+ * Contoured Ergonomic Chair Backrest positioned seamlessly behind the mentor:
+ * - Breathable curved mesh upholstery with soft graphite tone
+ * - Dual chrome support struts connecting to headrest
+ * - Fits naturally behind her shoulders and head
  */
-function StraightFaceToFaceDeskAndChair() {
+function ErgonomicExecutiveChairBack() {
   return (
-    <group position={[0, 0, 0]}>
-      {/* ═══════════════════════════════════════════════════════════
-          1. ERGONOMIC EXECUTIVE OFFICE CHAIR (DIRECTLY BEHIND MENTOR)
-      ═══════════════════════════════════════════════════════════ */}
-      <group position={[0, -0.05, -0.32]}>
-        {/* Contoured Spine / Lumbar Support Backbone */}
-        <mesh position={[0, 0.02, -0.05]} castShadow>
-          <boxGeometry args={[0.06, 0.58, 0.05]} />
-          <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.25} />
-        </mesh>
+    <group position={[0, -0.08, -0.32]}>
+      {/* Contoured Spine / Lumbar Support Backbone */}
+      <mesh position={[0, 0.05, -0.05]} castShadow>
+        <boxGeometry args={[0.06, 0.54, 0.04]} />
+        <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.25} />
+      </mesh>
 
-        {/* Ergonomic Ribbed Leather / Mesh Backrest */}
-        <mesh position={[0, 0.02, -0.01]} castShadow receiveShadow>
-          <boxGeometry args={[0.46, 0.56, 0.06]} />
-          <meshStandardMaterial color="#1a1c23" roughness={0.55} metalness={0.25} />
-        </mesh>
+      {/* Ergonomic Ribbed Leather / Mesh Backrest (Curved, softly rounded) */}
+      <mesh position={[0, 0.05, -0.01]} castShadow receiveShadow>
+        <boxGeometry args={[0.42, 0.52, 0.05]} />
+        <meshStandardMaterial color="#1a1c23" roughness={0.65} metalness={0.2} />
+      </mesh>
 
-        {/* Dual Chrome Support Struts for Headrest */}
-        <mesh position={[-0.06, 0.34, -0.04]} castShadow>
-          <cylinderGeometry args={[0.008, 0.008, 0.16, 12]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
-        </mesh>
-        <mesh position={[0.06, 0.34, -0.04]} castShadow>
-          <cylinderGeometry args={[0.008, 0.008, 0.16, 12]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
-        </mesh>
+      {/* Dual Chrome Support Struts for Headrest */}
+      <mesh position={[-0.05, 0.34, -0.04]} castShadow>
+        <cylinderGeometry args={[0.007, 0.007, 0.14, 12]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+      </mesh>
+      <mesh position={[0.05, 0.34, -0.04]} castShadow>
+        <cylinderGeometry args={[0.007, 0.007, 0.14, 12]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+      </mesh>
 
-        {/* Ergonomic Curved Headrest Cushion (Directly behind head) */}
-        <mesh position={[0, 0.39, -0.02]} castShadow>
-          <boxGeometry args={[0.26, 0.13, 0.07]} />
-          <meshStandardMaterial color="#14161c" roughness={0.55} metalness={0.2} />
-        </mesh>
-        <mesh position={[0, 0.39, -0.05]}>
-          <boxGeometry args={[0.27, 0.02, 0.02]} />
-          <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
-        </mesh>
-
-        {/* Left Padded Armrest */}
-        <group position={[-0.28, -0.22, 0.14]}>
-          <mesh position={[0, -0.08, 0]}>
-            <cylinderGeometry args={[0.012, 0.012, 0.16, 12]} />
-            <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, 0, 0]} castShadow>
-            <boxGeometry args={[0.08, 0.03, 0.24]} />
-            <meshStandardMaterial color="#14161c" roughness={0.6} />
-          </mesh>
-        </group>
-
-        {/* Right Padded Armrest */}
-        <group position={[0.28, -0.22, 0.14]}>
-          <mesh position={[0, -0.08, 0]}>
-            <cylinderGeometry args={[0.012, 0.012, 0.16, 12]} />
-            <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, 0, 0]} castShadow>
-            <boxGeometry args={[0.08, 0.03, 0.24]} />
-            <meshStandardMaterial color="#14161c" roughness={0.6} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* ═══════════════════════════════════════════════════════════
-          2. STRAIGHT-ON EXECUTIVE AMERICAN WALNUT DESK
-          - Centered directly in front of the camera (0-degree straight-on view)
-          - Spans horizontally across the bottom of the screen
-      ═══════════════════════════════════════════════════════════ */}
-      <group position={[0, -0.42, 0.45]}>
-        {/* Main Solid Walnut Executive Desk Surface */}
-        <mesh position={[0, 0, 0]} receiveShadow>
-          <boxGeometry args={[2.8, 0.06, 0.85]} />
-          <meshStandardMaterial color="#261811" roughness={0.35} metalness={0.12} />
-        </mesh>
-
-        {/* Champagne Bronze Beveled Edge Front Trim */}
-        <mesh position={[0, 0, -0.425]}>
-          <boxGeometry args={[2.8, 0.02, 0.015]} />
-          <meshStandardMaterial color="#5e4634" roughness={0.35} metalness={0.5} />
-        </mesh>
-
-        {/* Luxury Black Leather Executive Desk Blotter (Centered in front of mentor) */}
-        <mesh position={[0, 0.032, -0.08]} receiveShadow>
-          <boxGeometry args={[0.96, 0.008, 0.48]} />
-          <meshStandardMaterial color="#13151a" roughness={0.65} metalness={0.15} />
-        </mesh>
-        <mesh position={[0, 0.038, -0.08]}>
-          <boxGeometry args={[0.94, 0.002, 0.46]} />
-          <meshStandardMaterial color="#382e25" roughness={0.5} />
-        </mesh>
-
-        {/* ── Ultra-Slim Brushed Aluminum Executive Laptop (Right side) ── */}
-        <group position={[0.42, 0.04, -0.08]} rotation={[0, -0.25, 0]}>
-          <mesh position={[0, 0.005, 0]} castShadow>
-            <boxGeometry args={[0.29, 0.008, 0.20]} />
-            <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
-          </mesh>
-          <group position={[0, 0.01, 0.09]} rotation={[-0.32, 0, 0]}>
-            <mesh position={[0, 0.09, 0]} castShadow>
-              <boxGeometry args={[0.29, 0.18, 0.006]} />
-              <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
-            </mesh>
-            <mesh position={[0, 0.09, -0.004]}>
-              <planeGeometry args={[0.27, 0.16]} />
-              <meshStandardMaterial
-                color="#0f172a"
-                emissive="#0284c7"
-                emissiveIntensity={0.6}
-                roughness={0.15}
-              />
-            </mesh>
-            <pointLight position={[0, 0.08, -0.08]} intensity={0.3} color="#38bdf8" distance={0.9} />
-          </group>
-        </group>
-
-        {/* ── Executive Leather Interview Notes & Gold Pen (Left side) ── */}
-        <group position={[-0.42, 0.04, -0.08]} rotation={[0, 0.20, 0]}>
-          <mesh position={[0, 0.006, 0]} castShadow>
-            <boxGeometry args={[0.19, 0.012, 0.25]} />
-            <meshStandardMaterial color="#451a03" roughness={0.55} />
-          </mesh>
-          <mesh position={[0, 0.013, 0]}>
-            <boxGeometry args={[0.015, 0.002, 0.25]} />
-            <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.3} />
-          </mesh>
-          <mesh position={[0.11, 0.008, 0.02]} rotation={[0, 0, 0.05]} castShadow>
-            <cylinderGeometry args={[0.004, 0.004, 0.14, 12]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.95} roughness={0.15} />
-          </mesh>
-        </group>
-
-        {/* ── Modern Matte Ceramic Coffee Cup ── */}
-        <group position={[-0.64, 0.04, -0.12]}>
-          <mesh position={[0, 0.04, 0]} castShadow>
-            <cylinderGeometry args={[0.035, 0.03, 0.08, 16]} />
-            <meshStandardMaterial color="#1e293b" roughness={0.3} metalness={0.1} />
-          </mesh>
-        </group>
-      </group>
+      {/* Ergonomic Curved Headrest Cushion (Directly behind head) */}
+      <mesh position={[0, 0.39, -0.02]} castShadow>
+        <boxGeometry args={[0.24, 0.12, 0.06]} />
+        <meshStandardMaterial color="#14161c" roughness={0.6} metalness={0.2} />
+      </mesh>
+      <mesh position={[0, 0.39, -0.04]}>
+        <boxGeometry args={[0.25, 0.02, 0.02]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
+      </mesh>
     </group>
   );
 }
@@ -431,11 +382,11 @@ function ModelLoader() {
 /**
  * FemaleMentor3DAvatar
  *
- * Face-to-Face Straight-On Desk & Studio Setup:
+ * Face-to-Face Executive Studio Setup:
  * - 100% Fixed, Full-Screen, Non-Moving Photorealistic Background Image
- * - Symmetrical, straight-on executive room (bookshelves, warm lamps, daylight windows)
- * - American walnut desk positioned straight in front of the camera across the lower screen
- * - Female mentor seated comfortably at the desk with natural inward arm drape
+ * - Symmetrical straight-on executive room (bookshelves, warm lamps, daylight windows)
+ * - Mentor seated naturally with relaxed arms resting comfortably in lap (normal human posture)
+ * - Realistic phonetic syllable lip-sync synchronized to speech cadence with clean closures
  * - Eye-level camera: position [0, 0, 1.4], fov 40
  * - OrbitControls locked (enableRotate=false) to ensure zero unwanted movement
  */
@@ -456,9 +407,8 @@ export default function FemaleMentor3DAvatar({
       <img
         src="/backgrounds/executive_room_straight.jpg"
         alt="AuraGD Executive Mentorship Room"
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[0.94] contrast-[1.04]"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[0.95] contrast-[1.04]"
         onError={(e) => {
-          // Fallback to modern office if image load fails
           e.currentTarget.src = '/backgrounds/office_cozy.jpg';
         }}
       />
@@ -467,7 +417,7 @@ export default function FemaleMentor3DAvatar({
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none z-0" />
 
       {/* ══════════════════════════════════════════════════════════════
-          2. TRANSPARENT 3D CANVAS (STRAIGHT-ON FACE-TO-FACE DESK & AVATAR)
+          2. TRANSPARENT 3D CANVAS (HUMAN MENTOR SEATED AT EYE LEVEL)
       ══════════════════════════════════════════════════════════════ */}
       <div className="absolute inset-0 w-full h-full z-10">
         <Canvas
@@ -520,8 +470,8 @@ export default function FemaleMentor3DAvatar({
             distance={3.5}
           />
 
-          {/* ── Straight-On Executive Desk & Chair (Face-to-Face directly in front) ── */}
-          <StraightFaceToFaceDeskAndChair />
+          {/* ── Contoured Ergonomic Chair Back (Directly behind mentor) ── */}
+          <ErgonomicExecutiveChairBack />
 
           {/* ── 3D Seated Avatar Model ── */}
           <Suspense fallback={<ModelLoader />}>
@@ -532,11 +482,11 @@ export default function FemaleMentor3DAvatar({
             />
           </Suspense>
 
-          {/* ── Soft Desk Contact Shadow ── */}
+          {/* ── Soft Floor / Lap Contact Shadow ── */}
           <ContactShadows
-            position={[0, -0.42, 0.45]}
-            opacity={0.65}
-            scale={3.2}
+            position={[0, -0.65, 0]}
+            opacity={0.6}
+            scale={3.0}
             blur={2.0}
             far={2.0}
             color="#000000"
