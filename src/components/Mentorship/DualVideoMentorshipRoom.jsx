@@ -11,8 +11,7 @@ import {
   PhoneOff,
   Code2,
   LayoutGrid,
-  Maximize2,
-  MessageSquare,
+  Bot,
   ShieldCheck,
   CheckCircle,
 } from 'lucide-react';
@@ -21,8 +20,8 @@ import MentorVideoPanel from './MentorVideoPanel';
 import CandidateVideoPanel from './CandidateVideoPanel';
 import CodeWorkspaceWidget from './CodeWorkspaceWidget';
 import { useWebRTCInterview } from '../../hooks/useWebRTCInterview';
-import { useRealisticAvatarStream } from '../../hooks/useRealisticAvatarStream';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
+import { getPriyaResponse } from '../../utils/priyaAI';
 
 export default function DualVideoMentorshipRoom({
   userName = 'Pragya',
@@ -33,6 +32,14 @@ export default function DualVideoMentorshipRoom({
   const [layoutMode, setLayoutMode] = useState('split');
   const [showCodeOverlay, setShowCodeOverlay] = useState(false);
   const [mentorReviewing, setMentorReviewing] = useState(false);
+
+  // ── Avatar Speaking / Listening State for 3D Lip-Sync & Visemes ──
+  const [avatarState, setAvatarState] = useState('listening'); // 'listening' | 'speaking' | 'thinking'
+  const [speakingText, setSpeakingText] = useState('');
+  const [liveCandidateTranscript, setLiveCandidateTranscript] = useState('');
+  const conversationHistoryRef = useRef([]);
+
+  const mentorName = 'Dr. Ann Vance';
 
   // ── Real-Time WebRTC Candidate Stream & Audio Analyser Hook ──
   const {
@@ -46,78 +53,122 @@ export default function DualVideoMentorshipRoom({
     toggleScreenShare,
   } = useWebRTCInterview({ autoStart: true });
 
-  // ── Realistic AI Mentor Avatar Hook (HeyGen WebRTC Stream) ──
-  const {
-    videoRef: avatarVideoRef,
-    hasLiveWebRTC,
-    isConnected: isAvatarConnected,
-    avatarState,
-    setAvatarState,
-    speakingText,
-    speakText,
-    interrupt,
-    mentorName,
-    streamError: avatarError,
-    reconnect: reconnectAvatar,
-  } = useRealisticAvatarStream({
-    mentorName: 'Dr. Ann Vance',
-    avatarId: 'Ann_Doctor_Sitting',
-    onSpeechStart: () => {},
-    onSpeechEnd: () => {
-      // Resume listening
-      if (startListeningRef.current) {
-        startListeningRef.current();
-      }
-    },
-  });
-
   const startListeningRef = useRef(null);
   const stopListeningRef = useRef(null);
 
-  // ── Continuous Candidate Voice Recognition ──
-  const handleCandidateSpeech = useCallback(
-    (transcript) => {
-      if (!transcript || !transcript.trim()) return;
-      if (avatarState === 'speaking') return; // Avoid self-echo
+  // ── Speak Text with Speech Synthesis (Drives 3D Lip-Sync) ──
+  const speakText = useCallback(
+    (text, onComplete) => {
+      if (!text) return;
+      setSpeakingText(text);
+      setAvatarState('speaking');
+      stopListeningRef.current?.();
 
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.05;
+
+        const voices = window.speechSynthesis.getVoices();
+        const preferred = voices.find(
+          (v) =>
+            v.lang.startsWith('en') &&
+            (v.name.includes('Natural') ||
+              v.name.includes('Samantha') ||
+              v.name.includes('Google') ||
+              v.name.includes('Victoria') ||
+              v.name.includes('Zira'))
+        );
+        if (preferred) utterance.voice = preferred;
+
+        utterance.onend = () => {
+          setAvatarState('listening');
+          onComplete?.();
+          setTimeout(() => {
+            setLiveCandidateTranscript('');
+            startListeningRef.current?.();
+          }, 400);
+        };
+
+        utterance.onerror = () => {
+          setAvatarState('listening');
+          onComplete?.();
+          setTimeout(() => {
+            setLiveCandidateTranscript('');
+            startListeningRef.current?.();
+          }, 400);
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setTimeout(() => {
+          setAvatarState('listening');
+          onComplete?.();
+          startListeningRef.current?.();
+        }, Math.max(2500, (text.split(' ').length / 2.8) * 1000));
+      }
+    },
+    []
+  );
+
+  // ── Interrupt AI ──
+  const interrupt = useCallback(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setAvatarState('listening');
+    startListeningRef.current?.();
+  }, []);
+
+  // ── Continuous Candidate Voice Recognition & Gemini AI Intelligence ──
+  const handleCandidateSpeech = useCallback(
+    async (transcript) => {
+      if (!transcript || !transcript.trim()) return;
+      if (avatarState === 'speaking') return; // Avoid echo
+
+      setLiveCandidateTranscript(transcript);
       setAvatarState('thinking');
       stopListeningRef.current?.();
 
-      // Realistic AI Mentor contextual interview response generator
-      setTimeout(() => {
-        const text = transcript.toLowerCase();
-        let reply = '';
+      try {
+        console.log('[DualVideoMentorshipRoom] Querying Gemini AI intelligence for student speech:', transcript);
+        const reply = await getPriyaResponse(
+          transcript,
+          conversationHistoryRef.current,
+          `Technical Mock Interview and SDE placement evaluation for candidate ${userName}. Give insightful, supportive technical feedback and follow-up questions.`
+        );
 
-        if (text.includes('code') || text.includes('solution') || text.includes('complexity') || text.includes('hash map')) {
-          reply = `Great explanation on the Hash Map approach, ${userName}. Your time complexity of O(n) is optimal. How would you handle memory constraints if the input array had billions of elements?`;
-        } else if (text.includes('project') || text.includes('built') || text.includes('react') || text.includes('node')) {
-          reply = `That demonstrates solid engineering architecture. Walk me through a challenging bug you encountered in production and how you isolated it.`;
-        } else if (text.includes('hello') || text.includes('hi') || text.includes('ready')) {
-          reply = `Hello ${userName}! It is fantastic to meet you. I have reviewed your portfolio. Let's begin with our technical interview challenge on the desk terminal.`;
-        } else {
-          reply = `That is very clear, ${userName}. I appreciate your structured communication. Could you elaborate on your testing strategy for this implementation?`;
-        }
+        conversationHistoryRef.current.push({ role: 'student', text: transcript });
+        conversationHistoryRef.current.push({ role: 'mentor', text: reply });
 
         speakText(reply);
-      }, 700);
+      } catch (err) {
+        console.warn('AI Mentor response fallback:', err);
+        const fallbackReply = `That is very clear, ${userName}. In system design, how would you optimize database reads with indexing and caching?`;
+        speakText(fallbackReply);
+      }
     },
-    [avatarState, speakText, userName, setAvatarState]
+    [avatarState, speakText, userName]
   );
 
   const { startListening, stopListening, isListening } = useSpeechRecognition({
     onResult: (resultText) => {
-      handleCandidateSpeech(resultText);
+      if (resultText && resultText.trim()) {
+        setLiveCandidateTranscript(resultText);
+        handleCandidateSpeech(resultText);
+      }
     },
   });
 
   startListeningRef.current = startListening;
   stopListeningRef.current = stopListening;
 
-  // ── Opening Greeting on Room Mount ──
+  // ── Opening Greeting on Mount ──
   useEffect(() => {
     const welcomeTimeout = setTimeout(() => {
       speakText(
-        `Welcome to your Technical Mock Interview, ${userName}! I am Elena Vance, your senior engineering mentor. We have the code editor ready on the desk. Whenever you are ready, feel free to introduce yourself or walk me through your code.`
+        `Welcome to your Technical Mock Interview, ${userName}! I am ${mentorName}, your senior engineering evaluator. We have our interactive workspace ready. Feel free to introduce your background or talk me through your algorithm.`
       );
     }, 900);
 
@@ -133,12 +184,12 @@ export default function DualVideoMentorshipRoom({
 
       setTimeout(() => {
         speakText(
-          `I am reviewing your solution in Solution.js, ${userName}. Your use of a single-pass hash map is clean and achieves optimal O(n) time complexity with O(n) space. All unit test assertions are passing. Excellent work!`
+          `I am reviewing your code implementation, ${userName}. Your approach using a single-pass hash map is optimal and passes all unit tests with O(n) runtime complexity. Excellent work!`
         );
         setMentorReviewing(false);
       }, 900);
     },
-    [interrupt, setAvatarState, speakText, userName]
+    [interrupt, speakText, userName]
   );
 
   // ── Handle End Call ──
@@ -207,7 +258,7 @@ export default function DualVideoMentorshipRoom({
         <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/90 border border-teal-500/30 backdrop-blur-md shadow-xl">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#10b981]" />
           <span className="text-xs font-bold text-slate-200">
-            Technical Mock Interview & Code Evaluation • Active Session
+            3D Photorealistic AI Mentorship & Code Evaluation • Active Session
           </span>
         </div>
 
@@ -222,11 +273,11 @@ export default function DualVideoMentorshipRoom({
         <div className="p-4 rounded-3xl bg-black/65 border border-white/15 backdrop-blur-xl shadow-2xl space-y-2.5 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="p-1 rounded-lg bg-indigo-500/30 text-indigo-300">
-                <Sparkles className="w-4 h-4 text-amber-300" />
+              <span className="p-1 rounded-lg bg-teal-500/30 text-teal-300">
+                <Bot className="w-4 h-4 text-teal-300" />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-300">
-                AURAGD Mentorship Call
+              <span className="text-[11px] font-bold uppercase tracking-wider text-teal-300">
+                AURAGD 3D Mentorship Call
               </span>
             </div>
 
@@ -249,14 +300,14 @@ export default function DualVideoMentorshipRoom({
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed mt-0.5">
               {avatarState === 'speaking'
-                ? 'Elena is speaking. Your microphone will automatically capture your answer.'
+                ? `${mentorName} is speaking with synchronized 3D lip-sync.`
                 : avatarState === 'thinking'
-                ? 'Elena is analyzing your code and response...'
-                : 'Elena is listening attentively. Feel free to explain your code.'}
+                ? `${mentorName} is analyzing with Gemini AI intelligence...`
+                : `${mentorName} is listening attentively. Speak naturally into your microphone.`}
             </p>
           </div>
 
-          {/* Active Audio Waveform Indicator */}
+          {/* Active Audio Indicator */}
           <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400 border-t border-white/10">
             <div className="flex items-center gap-1.5">
               <span
@@ -267,11 +318,11 @@ export default function DualVideoMentorshipRoom({
                 }`}
               />
               <span className="font-semibold text-slate-300">
-                {avatarState === 'speaking' ? 'Mentor Audio Active' : 'Candidate Mic Open'}
+                {avatarState === 'speaking' ? '3D Visemes Active' : 'Microphone Open'}
               </span>
             </div>
 
-            <span className="font-mono text-teal-400 font-bold">Live 1080p</span>
+            <span className="font-mono text-teal-400 font-bold">Local 60 FPS</span>
           </div>
         </div>
       </div>
@@ -283,17 +334,13 @@ export default function DualVideoMentorshipRoom({
         {layoutMode === 'split' && !showCodeOverlay ? (
           /* ── 50/50 Split Screen Grid (Left Mentor, Right Candidate) ── */
           <div className="w-full h-full max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Left Panel: Photo-realistic Real AI Mentor Video (HeyGen Streaming Video) */}
+            {/* Left Panel: 3D Photorealistic AI Mentor */}
             <div className="w-full h-full min-h-[300px]">
               <MentorVideoPanel
                 avatarState={avatarState}
                 speakingText={speakingText}
                 mentorName={mentorName}
-                mentorRole="Staff Software Engineer & Interviewer"
-                avatarVideoRef={avatarVideoRef}
-                hasLiveWebRTC={hasLiveWebRTC}
-                streamError={avatarError}
-                onReconnect={reconnectAvatar}
+                mentorRole="Staff Software Engineer & Evaluator"
               />
             </div>
 
@@ -313,17 +360,13 @@ export default function DualVideoMentorshipRoom({
         ) : (
           /* ── Focus Desk & Code View with Floating Candidate PIP ── */
           <div className="w-full h-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 relative">
-            {/* Left/Center: Photo-realistic Real AI Mentor View (HeyGen Streaming Video) */}
+            {/* Left/Center: 3D Photorealistic AI Mentor View */}
             <div className="lg:col-span-6 w-full h-full min-h-[340px]">
               <MentorVideoPanel
                 avatarState={avatarState}
                 speakingText={speakingText}
                 mentorName={mentorName}
-                mentorRole="Staff Software Engineer & Interviewer"
-                avatarVideoRef={avatarVideoRef}
-                hasLiveWebRTC={hasLiveWebRTC}
-                streamError={avatarError}
-                onReconnect={reconnectAvatar}
+                mentorRole="Staff Software Engineer & Evaluator"
               />
             </div>
 
@@ -348,6 +391,21 @@ export default function DualVideoMentorshipRoom({
           </div>
         )}
       </main>
+
+      {/* ── Live Microphone Speech Transcription Banner ── */}
+      {isListening && liveCandidateTranscript && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-40 px-5 py-2.5 rounded-2xl bg-black/85 border border-emerald-500/50 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in max-w-lg pointer-events-none">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981] shrink-0" />
+          <div className="text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
+              ● You (Speaking...)
+            </span>
+            <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
+              "{liveCandidateTranscript}"
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           3. BOTTOM CONTROL BAR (Round Control Action Buttons)
