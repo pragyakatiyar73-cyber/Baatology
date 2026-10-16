@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import Sidebar from './components/Dashboard/Sidebar';
 import HistoryView from './components/Dashboard/HistoryView';
 import ThreeAvatar from './components/AuraGD/ThreeAvatar';
+import HeyGenMentorAvatar from './components/AuraGD/HeyGenMentorAvatar';
 import WebcamPIP from './components/AuraGD/WebcamPIP';
 import ControlDock from './components/AuraGD/ControlDock';
 import PostureAlertBadge from './components/AuraGD/PostureAlertBadge';
@@ -148,8 +149,9 @@ export default function App() {
   // ── Live Speech & Subtitle States (Instant Speech Transcription & Listing)
   const [liveTranscript, setLiveTranscript] = useState('');
   const [aiSpeechSubtitle, setAiSpeechSubtitle] = useState('');
+  const heygenAvatarRef = useRef(null);
 
-  // ── Natural TTS Hook
+  // ── Natural TTS Hook (Fallback for Non-HeyGen views)
   const { speak: rawSpeak, stop: stopTTS } = useSpeechSynthesis({
     onStart: () => {
       setIsSpeaking(true);
@@ -161,7 +163,7 @@ export default function App() {
     },
     onEnd: () => {
       setIsSpeaking(false);
-      // Automatically reactivate microphone listener and set 3D Robot state to 'LISTENING'
+      // Automatically reactivate microphone listener and set mentor state to 'LISTENING'
       if (currentViewRef.current === 'arena' && !showScoreModalRef.current) {
         setTimeout(() => {
           setLiveTranscript('');
@@ -172,9 +174,14 @@ export default function App() {
     },
   });
 
+  // Connected Mentor Voice Response (Speaks via HeyGen Streaming Avatar when in Arena)
   const speak = useCallback((text, callback) => {
     setAiSpeechSubtitle(text);
-    rawSpeak(text, callback);
+    if (currentViewRef.current === 'arena' && heygenAvatarRef.current) {
+      heygenAvatarRef.current.speak(text, callback);
+    } else {
+      rawSpeak(text, callback);
+    }
   }, [rawSpeak]);
 
   // ── AI Response Trigger
@@ -308,6 +315,7 @@ export default function App() {
   // ── Interrupt AI and speak immediately
   const handleImmediateSpeak = useCallback(() => {
     stopTTS();
+    heygenAvatarRef.current?.interrupt();
     startListeningRef.current?.();
     setIsListening(true);
     setHasStartedVoice(true);
@@ -406,6 +414,7 @@ export default function App() {
   const handleBackToDashboard = useCallback(() => {
     stopListening();
     stopTTS();
+    heygenAvatarRef.current?.interrupt();
     setIsListening(false);
     setIsSpeaking(false);
     setIsThinking(false);
@@ -760,15 +769,33 @@ export default function App() {
             </div>
           </div>
 
-          {/* Full-Screen 3D Robot Evaluator ("bo") */}
+          {/* Photorealistic Interactive Human Female Mentor Video (HeyGen Streaming Avatar) */}
           <main className="w-full h-full absolute inset-0 z-10">
             <ErrorBoundary>
-              <ThreeAvatar
+              <HeyGenMentorAvatar
+                ref={heygenAvatarRef}
                 isSpeaking={isSpeaking}
                 isListening={isListening}
                 isThinking={isThinking}
                 isConcluding={isConcluding}
                 mode={currentMode}
+                mentorName="Elena Vance"
+                onSpeechStart={() => {
+                  setIsSpeaking(true);
+                  setIsThinking(false);
+                  stopListeningRef.current?.();
+                  setIsListening(false);
+                }}
+                onSpeechEnd={() => {
+                  setIsSpeaking(false);
+                  if (currentViewRef.current === 'arena' && !showScoreModalRef.current) {
+                    setTimeout(() => {
+                      setLiveTranscript('');
+                      startListeningRef.current?.();
+                      setIsListening(true);
+                    }, 350);
+                  }
+                }}
               />
             </ErrorBoundary>
           </main>
