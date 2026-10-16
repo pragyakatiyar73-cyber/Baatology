@@ -42,14 +42,15 @@ export function useSpeechSynthesis({ onStart, onEnd } = {}) {
 
   const timerRef = useRef(null);
 
-  // Chrome speech pause keeper
+  // Chrome speech pause keeper & resume guard
   useEffect(() => {
     const interval = setInterval(() => {
-      if (window.speechSynthesis && window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        if (window.speechSynthesis.speaking && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
       }
-    }, 4000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -115,7 +116,15 @@ export function useSpeechSynthesis({ onStart, onEnd } = {}) {
       }
     }, estimatedMs + 3000);
 
-    window.speechSynthesis.speak(utterance);
+    try {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('[TTS] Speech synthesis speak error:', err);
+      finish();
+    }
   }, []);
 
   const stop = useCallback(() => {

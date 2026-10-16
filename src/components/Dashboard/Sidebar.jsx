@@ -1,157 +1,171 @@
-import React, { useState } from 'react';
+import React from 'react';
+import {
+  Home,
+  Users,
+  User,
+  FileText,
+  MessageCircle,
+  BarChart2,
+  Settings,
+  Target,
+  ArrowRight,
+  Video,
+} from 'lucide-react';
 import { MODES } from '../../utils/aiResponses';
 
 export default function Sidebar({
   currentView,
   onNavigate,
   onStartArena,
+  onOpenSettings,
 }) {
-  const [mentorSpeech, setMentorSpeech] = useState(null);
-
-  const mainNav = [
-    { id: 'dashboard', label: 'Dashboard Overview', icon: '📊' },
-    { id: 'history', label: 'Journey & Growth History', icon: '📈' },
+  const navItems = [
+    {
+      id: 'dashboard',
+      label: 'Home',
+      icon: Home,
+      action: () => onNavigate('dashboard'),
+      isActive: currentView === 'dashboard',
+    },
+    {
+      id: 'mentorship',
+      label: 'Dual-Video Mentorship',
+      icon: Video,
+      action: () => onNavigate('mentorship'),
+      isActive: currentView === 'mentorship',
+    },
+    {
+      id: MODES.GD,
+      label: 'Group Discussion',
+      icon: Users,
+      action: () => onStartArena(MODES.GD),
+      isActive: false,
+    },
+    {
+      id: MODES.SELF_INTRO,
+      label: 'Self Introduction',
+      icon: User,
+      action: () => onStartArena(MODES.SELF_INTRO),
+      isActive: false,
+    },
+    {
+      id: MODES.PRESENTATION,
+      label: 'Project Presentation',
+      icon: FileText,
+      action: () => onStartArena(MODES.PRESENTATION),
+      isActive: false,
+    },
+    {
+      id: MODES.CASUAL,
+      label: 'Casual Talk',
+      icon: MessageCircle,
+      action: () => onStartArena(MODES.CASUAL),
+      isActive: false,
+    },
   ];
-
-  const arenaNav = [
-    { id: MODES.GD, label: 'Group Discussion', icon: '🗣️', tag: 'Debate' },
-    { id: MODES.SELF_INTRO, label: 'Self Introduction', icon: '🎯', tag: 'STAR' },
-    { id: MODES.PRESENTATION, label: 'Project Presentation', icon: '📽️', tag: 'Tech' },
-    { id: MODES.CASUAL, label: 'Casual Talk', icon: '☕', tag: 'Mentor' },
-  ];
-
-  const handleRobotClick = () => {
-    const tips = [
-      '“Remember Pragya, steady 85%+ eye contact conveys natural authority in interviews!”',
-      '“Pause for 1 second instead of saying ‘umm’ — silence creates positive suspense!”',
-      '“In project pitches, always quantify your impact with latency or benchmark metrics!”',
-    ];
-    const picked = tips[Math.floor(Math.random() * tips.length)];
-    setMentorSpeech(picked);
-    setTimeout(() => setMentorSpeech(null), 4500);
-  };
 
   return (
-    <aside className="w-72 h-full bg-[#0c1222] border-r border-slate-800/80 flex flex-col p-5 shrink-0 select-none z-20">
-      {/* ── 1. Interactive 3D Robot Mentor Badge Card ── */}
+    <aside className="w-64 h-full bg-white border-r border-[#eaecf0] flex flex-col p-5 shrink-0 select-none z-20">
+      {/* ── Logo & Brand ── */}
       <div
-        onClick={handleRobotClick}
-        className="p-4 rounded-2xl bg-gradient-to-b from-[#172238] to-[#0f172a] border border-amber-500/40 hover:border-amber-400 shadow-xl shadow-amber-500/10 cursor-pointer transition-all duration-300 group relative overflow-hidden"
+        onClick={() => onNavigate('dashboard')}
+        className="flex items-center gap-3 cursor-pointer py-1"
       >
-        {/* Ambient Top Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-12 bg-amber-500/20 blur-xl pointer-events-none" />
-
-        <div className="flex items-center gap-3.5 relative z-10">
-          {/* Golden Robot Icon with Glowing Cyan Visor */}
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-400 p-[2px] shadow-lg shadow-amber-500/30 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-[#111827] rounded-[10px] flex flex-col items-center justify-center relative overflow-hidden">
-              <span className="text-2xl leading-none">🤖</span>
-              {/* Cyan Visor Glimmer */}
-              <div className="w-5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff] mt-0.5" />
-            </div>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black text-white tracking-tight group-hover:text-amber-300 transition-colors truncate">
-                AuraGD
-              </span>
-              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                AI Mentor
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot shadow-[0_0_8px_#10b981]" />
-              <span className="text-[11px] text-emerald-400 font-bold tracking-tight">AI Active</span>
-            </div>
-          </div>
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#5b51e8] to-[#7c3aed] flex items-center justify-center text-white shadow-md shadow-indigo-200">
+          <svg
+            className="w-5 h-5 text-white"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            <path d="M8 11.5h8" strokeWidth="2.5" />
+            <path d="M8 15h5" strokeWidth="2.5" />
+          </svg>
         </div>
-
-        {/* Speech Balloon Bubble if clicked */}
-        {mentorSpeech && (
-          <div className="mt-3 p-2 rounded-xl bg-amber-950/80 border border-amber-500/40 text-[11px] text-amber-200 leading-snug fade-in">
-            {mentorSpeech}
-          </div>
-        )}
-      </div>
-
-      {/* ── Candidate Profile Card ── */}
-      <div className="mt-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center font-bold text-sm text-indigo-300">
-          P
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-100 truncate">Pragya</h3>
-            <span className="text-[10px] font-bold text-teal-400 bg-teal-950/80 px-1.5 py-0.5 rounded border border-teal-500/30">Candidate</span>
-          </div>
-          <p className="text-[11px] text-slate-400 truncate">Ready for Interview Rounds</p>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#1e1b4b] leading-tight">
+            AuraGD
+          </h1>
+          <p className="text-[10px] font-semibold text-[#6366f1] tracking-wider uppercase">
+            Speak • Learn • Grow
+          </p>
         </div>
       </div>
 
       {/* ── Navigation Links ── */}
-      <div className="flex-1 overflow-y-auto mt-6 space-y-6 pr-1">
-        {/* Main Section */}
-        <div>
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">
-            General
-          </p>
-          <div className="space-y-1">
-            {mainNav.map((item) => {
-              const isActive = currentView === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onNavigate(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-                    isActive
-                      ? 'bg-teal-500/15 text-teal-300 border border-teal-500/40 font-bold shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent'
-                  }`}
-                >
-                  <span className="text-base">{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      <nav className="flex-1 mt-7 space-y-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={item.action}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 ${
+                item.isActive
+                  ? 'bg-[#eff0fe] text-[#4f46e5] font-semibold shadow-xs'
+                  : 'text-[#475467] hover:bg-[#f9fafb] hover:text-[#1e1b4b] font-medium'
+              }`}
+            >
+              <Icon
+                className={`w-4 h-4 ${
+                  item.isActive ? 'text-[#4f46e5]' : 'text-[#667085]'
+                }`}
+              />
+              <span className="truncate">{item.label}</span>
+            </button>
+          );
+        })}
 
-        {/* Practice Arenas Section */}
-        <div>
-          <div className="flex items-center justify-between px-3 mb-2">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Live Practice Arenas
-            </p>
-            <span className="text-[10px] font-bold text-teal-400">1-on-1 AI</span>
-          </div>
-          <div className="space-y-1">
-            {arenaNav.map((arena) => (
-              <button
-                key={arena.id}
-                onClick={() => onStartArena(arena.id)}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent hover:border-slate-700/60 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-base">{arena.icon}</span>
-                  <span className="group-hover:text-teal-300 transition-colors">{arena.label}</span>
-                </div>
-                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 group-hover:bg-teal-950 group-hover:text-teal-300 border border-slate-700/60 transition-all">
-                  {arena.tag}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+        {/* Divider */}
+        <hr className="my-3 border-t border-[#f2f4f7]" />
 
-      {/* ── Sidebar Footer ── */}
-      <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-        <span className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          <span>Aura Core Online</span>
-        </span>
-        <span>AuraGD 2.5</span>
+        {/* My Progress */}
+        <button
+          onClick={() => onNavigate('history')}
+          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 ${
+            currentView === 'history'
+              ? 'bg-[#eff0fe] text-[#4f46e5] font-semibold shadow-xs'
+              : 'text-[#475467] hover:bg-[#f9fafb] hover:text-[#1e1b4b] font-medium'
+          }`}
+        >
+          <BarChart2
+            className={`w-4 h-4 ${
+              currentView === 'history' ? 'text-[#4f46e5]' : 'text-[#667085]'
+            }`}
+          />
+          <span className="truncate">My Progress</span>
+        </button>
+
+        {/* Settings */}
+        <button
+          onClick={onOpenSettings}
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm text-[#475467] hover:bg-[#f9fafb] hover:text-[#1e1b4b] font-medium transition-all duration-150"
+        >
+          <Settings className="w-4 h-4 text-[#667085]" />
+          <span className="truncate">Settings</span>
+        </button>
+      </nav>
+
+      {/* ── Bottom Promo Card: "Better Communication Brighter Opportunities" ── */}
+      <div
+        onClick={() => onStartArena(MODES.GD)}
+        className="mt-auto p-4 rounded-2xl bg-[#f0f3ff] border border-[#e0e7ff] relative cursor-pointer group hover:bg-[#e8edff] transition-all duration-200"
+      >
+        <div className="w-9 h-9 rounded-xl bg-white shadow-xs border border-indigo-100 flex items-center justify-center text-[#5b51e8] group-hover:scale-105 transition-transform">
+          <Target className="w-5 h-5 text-[#5b51e8]" />
+        </div>
+        <div className="mt-3 text-xs font-semibold text-[#1e1b4b] leading-snug">
+          Better<br />
+          Communication<br />
+          Brighter Opportunities
+        </div>
+        <div className="absolute bottom-4 right-4 text-[#5b51e8] group-hover:translate-x-1 transition-transform">
+          <ArrowRight className="w-4 h-4" />
+        </div>
       </div>
     </aside>
   );

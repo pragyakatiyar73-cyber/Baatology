@@ -1,293 +1,450 @@
 import React from 'react';
+import {
+  Users,
+  User,
+  FileText,
+  ArrowRight,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Trophy,
+  Bell,
+  ChevronDown,
+  Video,
+} from 'lucide-react';
 import { MODES } from '../../utils/aiResponses';
 import { getPracticeHistory } from '../../utils/progressHistory';
+import robotMascotImg from '../../assets/robot_mascot_transparent.png';
 
 export default function Dashboard({
+  userName = 'Pragya',
   onStartArena,
   onNavigate,
   cameraActive,
+  celebrationBanner,
+  onViewScorecard,
+  onOpenLoginModal,
+  onTriggerCelebration,
 }) {
-  // Real persistent data from localStorage
   const historyRecords = getPracticeHistory();
-  const latestSession = historyRecords[historyRecords.length - 1] || { score: 86, eyeContact: 88, fillers: 1 };
+  const latestSession = historyRecords[historyRecords.length - 1] || {
+    score: 86,
+    eyeContact: 88,
+    fillers: 1,
+  };
 
-  // Modern Practice Arenas
-  const arenas = [
-    {
-      id: MODES.GD,
-      title: 'Group Discussion',
-      icon: '🗣️',
-      badge: 'Debate & Rebuttals',
-      description: 'Practice placement GD rounds on topics like Agentic AI, with turn-taking and dynamic counter-arguments.',
-      borderColor: 'hover:border-teal-400/60',
-      btnColor: 'bg-teal-600 hover:bg-teal-500 shadow-teal-900/30',
-      tagColor: 'text-teal-300 bg-teal-950/60 border-teal-500/30',
-    },
-    {
-      id: MODES.SELF_INTRO,
-      title: 'Self Introduction',
-      icon: '🎯',
-      badge: 'Structure & Openings',
-      description: 'Evaluates your "Tell me about yourself" pitch, detects weak "Myself..." openings, and eliminates vocal filler words.',
-      borderColor: 'hover:border-indigo-400/60',
-      btnColor: 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/30',
-      tagColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-500/30',
-    },
-    {
-      id: MODES.PRESENTATION,
-      title: 'Project Presentation',
-      icon: '📽️',
-      badge: 'STAR Architecture',
-      description: 'Explain your engineering projects verbally or share demo slides; AI tests your architecture with deep cross-questions.',
-      borderColor: 'hover:border-cyan-400/60',
-      btnColor: 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-900/30',
-      tagColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
-    },
-    {
-      id: MODES.CASUAL,
-      title: 'Casual Talk',
-      icon: '☕',
-      badge: 'Anxiety & Poise',
-      description: 'Empathetic friend mode to share interview stress, placement anxiety, or speak freely to build vocal rhythm.',
-      borderColor: 'hover:border-amber-400/60',
-      btnColor: 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/30',
-      tagColor: 'text-amber-300 bg-amber-950/60 border-amber-500/30',
-    },
-  ];
+  const savedCelebration = typeof window !== 'undefined'
+    ? (() => {
+        try {
+          const raw = localStorage.getItem('aura_gd_latest_celebration');
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+          return null;
+        }
+      })()
+    : null;
+
+  const celebratoryText = celebrationBanner?.message
+    || savedCelebration?.message
+    || `Fantastic effort today! Look at your progress—your eye contact was steady at ${latestSession.eyeContact || 88}%, and you kept vocal hesitations down to just ${latestSession.fillers ?? 1}. Keep this confidence high for your campus placements!`;
 
   return (
-    <div className="flex-1 h-full overflow-y-auto px-10 py-8 space-y-10 bg-[#0a0f1d] text-slate-100 select-none pb-32">
-      {/* ════════════════ TOP WELCOME ROW ════════════════ */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black tracking-tight text-white">
-              Welcome Back, <span className="text-teal-400">Pragya</span>!
-            </h1>
-            <span className="text-2xl">🎓</span>
+    <div className="flex-1 h-full overflow-y-auto bg-[#f8faff] text-[#1e1b4b] select-none flex flex-col justify-between w-full">
+      {/* ── Top Header Bar ── */}
+      <header className="w-full px-8 lg:px-12 pt-6 pb-2 flex items-center justify-end gap-3 sm:gap-4 shrink-0">
+        {/* Replay Welcome Celebration Button */}
+        <button
+          onClick={onTriggerCelebration}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#eff0fe] to-[#f5f3ff] hover:from-[#e0e7ff] hover:to-[#ede9fe] border border-indigo-200 text-xs font-bold text-[#4f46e5] shadow-xs transition-all active:scale-95 cursor-pointer"
+          title="Blast welcome fireworks & AI greeting"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-[#f59e0b]" />
+          <span className="hidden sm:inline">Welcome Celebration</span>
+          <span className="sm:hidden">Celebrate</span>
+        </button>
+
+        {/* Notification Bell */}
+        <button
+          className="relative p-2 text-[#475467] hover:text-[#1e1b4b] hover:bg-white rounded-full transition-colors"
+          title="Notifications"
+        >
+          <Bell className="w-5 h-5" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#ef4444] ring-2 ring-white" />
+        </button>
+
+        {/* User Profile Pill */}
+        <div
+          onClick={onOpenLoginModal}
+          className="flex items-center gap-2.5 pl-2 py-1 pr-2 rounded-full hover:bg-white/90 border border-transparent hover:border-slate-200 cursor-pointer transition-all shadow-xs"
+          title="Candidate Profile (Click to switch user or edit name)"
+        >
+          <div className="w-9 h-9 rounded-full bg-[#4f46e5] text-white font-semibold flex items-center justify-center text-sm shadow-xs uppercase">
+            {userName ? userName.charAt(0) : 'P'}
           </div>
-          <p className="text-sm text-slate-400 mt-1">
-            Ready for placement season? Select an interactive arena below to test your verbal confidence and posture.
-          </p>
+          <span className="text-sm font-semibold text-[#1e1b4b]">
+            {userName}
+          </span>
+          <ChevronDown className="w-4 h-4 text-[#667085]" />
         </div>
+      </header>
 
-        {/* Status Indicators */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300">
-            <span className={`w-2.5 h-2.5 rounded-full ${cameraActive ? 'bg-emerald-400 pulse-dot' : 'bg-slate-500'}`} />
-            <span>{cameraActive ? 'Vision HUD Active' : 'Camera Ready'}</span>
-          </div>
-
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-950/70 border border-teal-500/30 text-xs font-semibold text-teal-300">
-            <span className="w-2.5 h-2.5 rounded-full bg-teal-400" />
-            <span>AI Voice Engine Ready</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ════════════════ TOP 3 STATS CARDS ════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Metric 1: Readiness Score */}
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800/90 shadow-xl flex items-center justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Placement Readiness</p>
-            <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-4xl font-black text-cyan-400 tabular-nums">{latestSession.score}</span>
-              <span className="text-base text-slate-500 font-bold">/100</span>
-            </div>
-            <p className="text-xs text-teal-400 font-semibold pt-1 flex items-center gap-1.5">
-              <span>✓</span>
-              <span>Interview Qualified Benchmark</span>
-            </p>
-          </div>
-
-          <div className="relative w-18 h-18 flex items-center justify-center">
-            <svg className="w-18 h-18 -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-800"
-                strokeWidth="3.2"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-cyan-400"
-                strokeDasharray={`${latestSession.score}, 100`}
-                strokeWidth="3.2"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
-            <span className="absolute text-xs font-black text-cyan-300">{latestSession.score}%</span>
-          </div>
-        </div>
-
-        {/* Metric 2: Consistency Streak */}
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800/90 shadow-xl flex items-center justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Consistency Streak</p>
-            <div className="flex items-baseline gap-2 pt-1">
-              <span className="text-4xl font-black text-amber-400 tabular-nums">{historyRecords.length}</span>
-              <span className="text-base text-amber-300/80 font-bold">Days Active</span>
-            </div>
-            <p className="text-xs text-amber-300/80 font-semibold pt-1">
-              🔥 Daily vocal habit established
-            </p>
-          </div>
-
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl shadow-inner">
-            🔥
-          </div>
-        </div>
-
-        {/* Metric 3: Eye Contact & Gaze */}
-        <div className="p-6 rounded-2xl bg-[#0f172a] border border-slate-800/90 shadow-xl flex items-center justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Average Eye Contact</p>
-            <div className="flex items-baseline gap-1.5 pt-1">
-              <span className="text-4xl font-black text-emerald-400 tabular-nums">{latestSession.eyeContact}%</span>
-            </div>
-            <p className="text-xs text-emerald-400 font-semibold pt-1 flex items-center gap-1.5">
-              <span>👁️</span>
-              <span>Vision HUD verified steady gaze</span>
-            </p>
-          </div>
-
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-3xl shadow-inner">
-            👁️
-          </div>
-        </div>
-      </div>
-
-      {/* ════════════════ PRACTICE ARENA (4 MAIN CARDS) ════════════════ */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* ── Main Full-Width Content Area (No restrictive max-w) ── */}
+      <main className="flex-1 px-8 lg:px-12 pb-8 space-y-6 w-full flex flex-col justify-between">
+        {/* Top Hero & Sessions Section */}
+        <div className="space-y-5">
+          {/* Hero Greeting */}
           <div>
-            <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <span>Interactive Practice Arenas</span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Pure voice-to-voice 1-on-1 simulations with the Embodied 3D Evaluator.
+            <h1 className="text-3xl lg:text-4xl font-extrabold text-[#1e1b4b] flex items-center gap-3 tracking-tight">
+              <span>👋</span>
+              <span>Hello {userName}!</span>
+            </h1>
+            <p className="text-sm text-[#475467] mt-1.5 font-normal max-w-3xl leading-relaxed">
+              Your AI Communication Coach is here to help you build confidence, improve your communication skills and get placement ready!
             </p>
           </div>
-          <span className="text-xs text-slate-400">Click any card to start call</span>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {arenas.map((arena) => (
-            <div
-              key={arena.id}
-              className={`p-6 rounded-2xl border border-slate-800 bg-[#0f172a] flex flex-col justify-between transition-all duration-200 shadow-xl hover:-translate-y-1 hover:shadow-2xl ${arena.borderColor}`}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-3xl">{arena.icon}</span>
-                  <span className={`text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${arena.tagColor}`}>
-                    {arena.badge}
-                  </span>
+          {/* Section: Choose Your Practice Session */}
+          <div>
+            <h2 className="text-xl lg:text-2xl font-bold text-[#1e1b4b] tracking-tight">
+              Choose Your Practice Session
+            </h2>
+            <p className="text-xs text-[#667085] mt-0.5">
+              Pick a feature and start practicing today!
+            </p>
+
+            {/* 2-Column Responsive Layout: Left (3 Cards + Banner), Right (Large Mascot) */}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-center w-full">
+              {/* Left Column (8 cols): 3 Cards Grid + Ready to Improve Banner */}
+              <div className="lg:col-span-8 flex flex-col gap-4 w-full">
+                {/* 3 Practice Session Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 xl:gap-5 w-full">
+                  {/* Card 1: Group Discussion */}
+                  <div
+                    onClick={() => onStartArena(MODES.GD)}
+                    className="bg-white rounded-[26px] p-6 border-2 border-[#ede9fe] shadow-xs hover:shadow-xl hover:border-[#8b5cf6] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-[#8b5cf6] flex items-center justify-center text-white shadow-md shadow-purple-200 group-hover:scale-105 transition-transform">
+                      <Users className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-base font-bold text-[#1e1b4b] mt-3">
+                      Group Discussion
+                    </h3>
+                    <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
+                      Discuss real-world topics with AI and other students. Build teamwork and confidence.
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStartArena(MODES.GD);
+                      }}
+                      className="mt-3 w-9 h-9 rounded-full bg-[#f3f0ff] hover:bg-[#ede9fe] text-[#7c3aed] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
+                      title="Start Group Discussion"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Card 2: Self Introduction */}
+                  <div
+                    onClick={() => onStartArena(MODES.SELF_INTRO)}
+                    className="bg-white rounded-[26px] p-6 border-2 border-[#e0f2fe] shadow-xs hover:shadow-xl hover:border-[#3b82f6] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-[#3b82f6] flex items-center justify-center text-white shadow-md shadow-blue-200 group-hover:scale-105 transition-transform">
+                      <User className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-base font-bold text-[#1e1b4b] mt-3">
+                      Self Introduction
+                    </h3>
+                    <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
+                      Practice your introduction and get instant feedback on your speaking &amp; confidence.
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStartArena(MODES.SELF_INTRO);
+                      }}
+                      className="mt-3 w-9 h-9 rounded-full bg-[#eff6ff] hover:bg-[#dbeafe] text-[#2563eb] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
+                      title="Start Self Introduction"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Card 3: Project Presentation */}
+                  <div
+                    onClick={() => onStartArena(MODES.PRESENTATION)}
+                    className="bg-white rounded-[26px] p-6 border-2 border-[#d1fae5] shadow-xs hover:shadow-xl hover:border-[#10b981] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-[#10b981] flex items-center justify-center text-white shadow-md shadow-emerald-200 group-hover:scale-105 transition-transform">
+                      <FileText className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-base font-bold text-[#1e1b4b] mt-3">
+                      Project Presentation
+                    </h3>
+                    <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
+                      Present your ideas, get improvement suggestions and learn to explain better.
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStartArena(MODES.PRESENTATION);
+                      }}
+                      className="mt-3 w-9 h-9 rounded-full bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#059669] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
+                      title="Start Project Presentation"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                    {arena.title}
-                  </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed mt-2 min-h-[54px]">
-                    {arena.description}
-                  </p>
+                {/* "Ready to Improve?" Banner - Directly positioned under the 3 cards */}
+                <div className="rounded-2xl bg-gradient-to-r from-[#f5f3ff] via-[#f0f3ff] to-[#eff6ff] border border-[#e0e7ff] p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs w-full">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-9 h-9 rounded-xl bg-white shadow-xs border border-indigo-100 flex items-center justify-center text-[#6366f1] shrink-0">
+                      <Sparkles className="w-5 h-5 text-[#6366f1]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-[#1e1b4b]">
+                        Ready to Improve?
+                      </h3>
+                      <p className="text-xs text-[#64748b] mt-0.5">
+                        Choose a feature above and start your first session now!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <button
+                      onClick={() => onNavigate('mentorship')}
+                      className="px-5 py-2.5 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold shadow-md shadow-teal-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Dual-Video Mentorship</span>
+                    </button>
+                    <button
+                      onClick={() => onStartArena(MODES.GD)}
+                      className="px-5 py-2.5 rounded-full bg-[#5b51e8] hover:bg-[#4a3ecc] text-white text-xs font-semibold shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <span>Start GD Arena</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <button
-                onClick={() => onStartArena(arena.id)}
-                className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-white transition-all mt-5 shadow-lg flex items-center justify-center gap-2 ${arena.btnColor}`}
-              >
-                <span>Launch Arena</span>
-                <span>→</span>
-              </button>
+              {/* Right Column (4 cols): Large Prominent 3D Robot Mascot */}
+              <div className="lg:col-span-4 flex items-center justify-center relative w-full h-full">
+                <div
+                  onClick={() => onStartArena(MODES.CASUAL)}
+                  className="cursor-pointer group relative flex items-center justify-center transition-transform hover:scale-105 duration-300 w-full"
+                  title="Click to talk with your AI Coach!"
+                >
+                  <img
+                    src={robotMascotImg}
+                    alt="AuraGD AI Mascot - Let's Communicate Better!"
+                    className="w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[420px] xl:max-w-[460px] h-auto object-contain drop-shadow-2xl"
+                  />
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ════════════════ DATE-WISE PROGRESS TABLE & VERBAL ENCOURAGEMENT BANNER ════════════════ */}
-      <div className="p-7 rounded-2xl bg-[#0f172a] border border-slate-800 shadow-xl space-y-5">
-        {/* Celebratory Highlight Banner */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-teal-950/70 via-slate-900 to-indigo-950/70 border border-teal-500/40 flex items-center gap-3.5 shadow-lg">
-          <span className="text-2xl shrink-0">🎉</span>
-          <div className="text-xs sm:text-sm text-slate-200 leading-snug">
-            <span className="font-black text-teal-300">Today's Win: </span>
-            Great progress! Fillers dropped down to 1 and eye contact reached 88%. Keep this momentum going!
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-          <div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2.5">
-              <span>📈</span>
-              <span>Date-Wise Progress &amp; Consistency Tracking</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Empirical breakdown of speech fluency, gaze stability, and hesitation reductions across sessions.
-            </p>
+        {/* ── Bottom 4 Feature Pillars (Spans the Full Viewport Width) ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full pt-4">
+          {/* Pillar 1 */}
+          <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white border border-[#f1f5f9] shadow-xs hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 rounded-full bg-[#fdf2f8] text-[#db2777] flex items-center justify-center shrink-0">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#1e1b4b]">Build Confidence</h4>
+              <p className="text-[11px] text-[#64748b]">Speak without fear</p>
+            </div>
           </div>
 
-          <button
-            onClick={() => onNavigate('history')}
-            className="text-xs font-bold text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1 shrink-0"
-          >
-            <span>View Full Journey Analytics</span>
-            <span>→</span>
-          </button>
+          {/* Pillar 2 */}
+          <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white border border-[#f1f5f9] shadow-xs hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 rounded-full bg-[#eff6ff] text-[#2563eb] flex items-center justify-center shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#1e1b4b]">Get Real Feedback</h4>
+              <p className="text-[11px] text-[#64748b]">Know your strengths</p>
+            </div>
+          </div>
+
+          {/* Pillar 3 */}
+          <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white border border-[#f1f5f9] shadow-xs hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 rounded-full bg-[#ecfdf5] text-[#059669] flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#1e1b4b]">Practice Anytime</h4>
+              <p className="text-[11px] text-[#64748b]">Your pace, your progress</p>
+            </div>
+          </div>
+
+          {/* Pillar 4 */}
+          <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white border border-[#f1f5f9] shadow-xs hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 rounded-full bg-[#fffbeb] text-[#d97706] flex items-center justify-center shrink-0">
+              <Trophy className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-[#1e1b4b]">Prepare for Placements</h4>
+              <p className="text-[11px] text-[#64748b]">Be job ready</p>
+            </div>
+          </div>
         </div>
 
-        <div className="w-full overflow-hidden rounded-xl border border-slate-800">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-[#1e293b]/60 text-slate-400 font-bold uppercase text-xs tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="py-3.5 px-5">Date</th>
-                <th className="py-3.5 px-5">Domain</th>
-                <th className="py-3.5 px-5">Score (/100)</th>
-                <th className="py-3.5 px-5">Eye Contact %</th>
-                <th className="py-3.5 px-5">Hesitation Fillers</th>
-                <th className="py-3.5 px-5">Milestone Badge</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80 font-medium">
-              {historyRecords.map((rec) => (
-                <tr key={rec.id} className="hover:bg-slate-800/30 transition-colors">
-                  <td className="py-4 px-5 font-bold text-slate-200">{rec.date}</td>
-                  <td className="py-4 px-5 text-white font-semibold flex items-center gap-2">
-                    <span>
-                      {rec.mode.includes('Discussion') ? '🗣️' : rec.mode.includes('Intro') ? '🎯' : rec.mode.includes('Presentation') ? '📽️' : '☕'}
-                    </span>
-                    <span>{rec.mode}</span>
-                  </td>
-                  <td className="py-4 px-5">
-                    <span className={`font-black text-base tabular-nums ${rec.score >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {rec.score}/100
-                    </span>
-                  </td>
-                  <td className="py-4 px-5 font-semibold text-slate-200">
-                    <span className="text-emerald-400 font-bold">{rec.eyeContact}%</span>
-                  </td>
-                  <td className="py-4 px-5">
-                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${rec.fillers <= 3 ? 'text-emerald-300 bg-emerald-950/60' : 'text-amber-300 bg-amber-950/60'}`}>
-                      {rec.fillers} hesitation fillers
-                    </span>
-                  </td>
-                  <td className="py-4 px-5">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${rec.badgeColor}`}>
-                      {rec.badge}
-                    </span>
-                  </td>
+        {/* ── Feature 10 & 9: Date-Wise Progress Tracking (Full Width) ── */}
+        <div className="mt-4 p-6 rounded-3xl bg-white border border-[#e2e8f0] shadow-sm space-y-5 w-full">
+          {/* Celebratory Banner (Feature 9) */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#eff6ff] via-[#f5f3ff] to-[#ecfdf5] border border-[#e0e7ff] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl p-2 rounded-xl bg-white border border-indigo-100 shadow-xs">
+                🎉
+              </span>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#4f46e5] bg-[#eff0fe] px-2.5 py-0.5 rounded-full border border-indigo-200">
+                  Today's Win &amp; Positive Reinforcement
+                </span>
+                <p className="text-xs sm:text-sm text-[#1e1b4b] font-medium leading-relaxed mt-1">
+                  {celebratoryText}
+                </p>
+              </div>
+            </div>
+
+            {onViewScorecard && (
+              <button
+                onClick={onViewScorecard}
+                className="px-4 py-1.5 rounded-xl bg-[#5b51e8] hover:bg-[#4a3ecc] text-white font-bold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
+              >
+                View Full Scorecard
+              </button>
+            )}
+          </div>
+
+          {/* Progress Section Header with "+31% Growth 🔥" Badge */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className="text-base font-bold text-[#1e1b4b] flex items-center gap-2">
+                <span>📈</span>
+                <span>Date-Wise Progress &amp; Consistency Tracking</span>
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-300 shadow-xs flex items-center gap-1">
+                +31% Growth 🔥
+              </span>
+            </div>
+
+            <button
+              onClick={() => onNavigate('history')}
+              className="text-xs font-semibold text-[#5b51e8] hover:text-[#4338ca] transition-colors flex items-center gap-1 shrink-0"
+            >
+              <span>View Full Journey Analytics</span>
+              <span>→</span>
+            </button>
+          </div>
+
+          {/* Clean 6-Column Full-Width Light Table */}
+          <div className="w-full overflow-hidden rounded-2xl border border-[#e2e8f0]">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-[#f8fafc] text-[#475467] font-bold uppercase tracking-wider border-b border-[#e2e8f0]">
+                <tr>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Practice Domain</th>
+                  <th className="py-3 px-4">Score (/100)</th>
+                  <th className="py-3 px-4">Eye Contact</th>
+                  <th className="py-3 px-4">Hesitation Fillers</th>
+                  <th className="py-3 px-4">Milestone Badge</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#f1f5f9] font-medium">
+                {historyRecords.map((rec) => {
+                  const isToday = rec.date === 'Today';
+                  return (
+                    <tr
+                      key={rec.id}
+                      className={`transition-colors duration-150 ${
+                        isToday
+                          ? 'bg-[#ecfdf5]/70 text-[#065f46] font-bold border-l-4 border-[#10b981]'
+                          : 'hover:bg-[#f8fafc] text-[#334155]'
+                      }`}
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          {isToday && (
+                            <span className="w-2 h-2 rounded-full bg-[#10b981] pulse-dot shrink-0" />
+                          )}
+                          <span className={isToday ? 'text-[#065f46] font-bold' : 'font-semibold text-[#1e293b]'}>
+                            {rec.date}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <span>
+                            {rec.mode.includes('Discussion') ? '🗣️' : rec.mode.includes('Intro') ? '🎯' : rec.mode.includes('Pitch') || rec.mode.includes('Presentation') ? '📽️' : rec.mode.includes('GD & Pitch') ? '🚀' : '☕'}
+                          </span>
+                          <span className={isToday ? 'text-[#065f46] font-bold' : 'text-[#334155] font-semibold'}>
+                            {rec.mode}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        {typeof rec.score === 'number' ? (
+                          <span className={`font-bold text-sm tabular-nums ${isToday ? 'text-[#059669]' : rec.score >= 80 ? 'text-[#059669]' : rec.score >= 70 ? 'text-[#0284c7]' : 'text-[#d97706]'}`}>
+                            {rec.score}/100
+                          </span>
+                        ) : (
+                          <span className="font-bold text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            {rec.score}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className={`font-semibold tabular-nums ${isToday ? 'text-[#059669]' : 'text-[#334155]'}`}>
+                          {rec.eyeContact}%
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                          isToday
+                            ? 'text-[#065f46] bg-[#d1fae5] border border-[#a7f3d0]'
+                            : rec.fillers <= 3
+                            ? 'text-[#059669] bg-[#ecfdf5]'
+                            : 'text-[#b45309] bg-[#fffbeb]'
+                        }`}>
+                          {rec.fillers} hesitation filler{rec.fillers === 1 ? '' : 's'}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                          isToday
+                            ? 'text-[#065f46] bg-[#d1fae5] border-[#6ee7b7]'
+                            : 'text-[#4338ca] bg-[#eff0fe] border-indigo-200'
+                        }`}>
+                          {rec.badge}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-[11px] text-[#64748b] pt-1 flex items-center gap-1.5">
+            <span className="text-[#5b51e8]">📊</span>
+            <span>Empirical breakdown of speech fluency, gaze stability, and hesitation reductions across sessions.</span>
+          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

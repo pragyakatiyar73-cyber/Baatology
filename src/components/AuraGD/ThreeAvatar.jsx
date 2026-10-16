@@ -233,8 +233,8 @@ function Head({ headRef, visorRef, mouthRef, leftEyeRef, rightEyeRef }) {
   );
 }
 
-// ── Floor Emerald-Green Aura Ring ──
-function AuraFloorRing({ isListening, isSpeaking }) {
+// ── Floor Emerald-Green / Warm Amber / Warm Teal Aura Ring ──
+function AuraFloorRing({ isListening, isSpeaking, isConcluding = false, isCasual = false }) {
   const ringRef = useRef();
   const matRef = useRef();
 
@@ -242,6 +242,43 @@ function AuraFloorRing({ isListening, isSpeaking }) {
     try {
       const t = state.clock.elapsedTime;
       if (!ringRef.current || !matRef.current) return;
+
+      if (isConcluding) {
+        // Feature 9: Warm teal pulse beneath the robot during encouraging conclusion
+        const scale = 1.05 + Math.sin(t * 3.2) * 0.06;
+        ringRef.current.scale.set(scale, scale, 1);
+        matRef.current.color.set('#0dd9b8');
+        matRef.current.emissive.set('#0dd9b8');
+        matRef.current.emissiveIntensity = 0.95 + Math.sin(t * 3.2) * 0.35;
+        matRef.current.opacity = 0.75 + Math.sin(t * 3.2) * 0.15;
+        return;
+      }
+
+      if (isCasual) {
+        // Feature 8: Warm ambient golden/amber floor aura
+        if (isListening) {
+          const scale = 1.0 + Math.sin(t * 3.2) * 0.08;
+          ringRef.current.scale.set(scale, scale, 1);
+          matRef.current.color.set('#f59e0b');
+          matRef.current.emissive.set('#f59e0b');
+          matRef.current.emissiveIntensity = 0.85 + Math.sin(t * 3.2) * 0.4;
+          matRef.current.opacity = 0.7 + Math.sin(t * 3.2) * 0.2;
+        } else if (isSpeaking) {
+          const scale = 1.0 + Math.sin(t * 2.4) * 0.05;
+          ringRef.current.scale.set(scale, scale, 1);
+          matRef.current.color.set('#fbbf24');
+          matRef.current.emissive.set('#fbbf24');
+          matRef.current.emissiveIntensity = 0.6 + Math.sin(t * 4) * 0.3;
+          matRef.current.opacity = 0.55;
+        } else {
+          ringRef.current.scale.set(1, 1, 1);
+          matRef.current.color.set('#d97706');
+          matRef.current.emissive.set('#d97706');
+          matRef.current.emissiveIntensity = 0.35 + Math.sin(t * 1.5) * 0.15;
+          matRef.current.opacity = 0.45;
+        }
+        return;
+      }
 
       if (isListening) {
         // Subtle emerald-green aura ring pulses beneath the robot
@@ -301,7 +338,7 @@ function AuraFloorRing({ isListening, isSpeaking }) {
 }
 
 // ── Dynamic 3D Robot State Controller ──
-function RobotModel({ isSpeaking, isListening, isThinking }) {
+function RobotModel({ isSpeaking, isListening, isThinking, isConcluding = false, isCasual = false }) {
   const groupRef     = useRef();
   const headRef      = useRef();
   const visorRef     = useRef();
@@ -315,7 +352,7 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
   useFrame((state) => {
     try {
       const t = state.clock.elapsedTime;
-      const robotState = isSpeaking ? 'SPEAKING' : isListening ? 'LISTENING' : 'IDLE';
+      const robotState = isConcluding ? 'CONCLUDING' : isSpeaking ? 'SPEAKING' : isListening ? 'LISTENING' : 'IDLE';
 
       // ── a) 'IDLE' State:
       // Gentle sinusoidal breathing float (head & torso bobbing smoothly) and periodic eye blinking.
@@ -355,22 +392,32 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
           rightArmRef.current.rotation.z = -0.12 - Math.sin(t * 1.6) * 0.03;
         }
 
-        // Gentle ambient cyan breathing glow
+        // Ambient breathing glow (amber/gold for casual wellness vs cyan for evaluation)
         const visorMat = visorRef.current?.material;
         const chestMat = chestGlowRef.current?.material;
         if (visorMat && chestMat) {
-          visorMat.color?.set?.('#00e5ff');
-          visorMat.emissive?.set?.('#00e5ff');
-          visorMat.emissiveIntensity = 1.6 + Math.sin(t * 1.6) * 0.35;
+          if (isCasual) {
+            visorMat.color?.set?.('#f59e0b');
+            visorMat.emissive?.set?.('#f59e0b');
+            visorMat.emissiveIntensity = 1.9 + Math.sin(t * 1.6) * 0.4;
 
-          chestMat.color?.set?.('#0dd9b8');
-          chestMat.emissive?.set?.('#0dd9b8');
-          chestMat.emissiveIntensity = 1.0 + Math.sin(t * 1.6) * 0.25;
+            chestMat.color?.set?.('#d97706');
+            chestMat.emissive?.set?.('#d97706');
+            chestMat.emissiveIntensity = 1.5 + Math.sin(t * 1.6) * 0.3;
+          } else {
+            visorMat.color?.set?.('#00e5ff');
+            visorMat.emissive?.set?.('#00e5ff');
+            visorMat.emissiveIntensity = 1.6 + Math.sin(t * 1.6) * 0.35;
+
+            chestMat.color?.set?.('#0dd9b8');
+            chestMat.emissive?.set?.('#0dd9b8');
+            chestMat.emissiveIntensity = 1.0 + Math.sin(t * 1.6) * 0.25;
+          }
         }
       }
 
       // ── b) 'LISTENING' State (when student mic is active):
-      // Head leans forward slightly, eyes lock onto center, and subtle emerald-green aura ring pulses beneath
+      // Head leans forward slightly, eyes lock onto center, and subtle aura ring pulses beneath
       else if (robotState === 'LISTENING') {
         if (groupRef.current) {
           groupRef.current.position.y = -0.35 + Math.sin(t * 2.0) * 0.015;
@@ -406,23 +453,33 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
           rightArmRef.current.rotation.z = -0.18;
         }
 
-        // Visor & chest emerald-green focus glow
+        // Visor & chest glow (golden amber for casual vs emerald for placement)
         const visorMat = visorRef.current?.material;
         const chestMat = chestGlowRef.current?.material;
         if (visorMat && chestMat) {
-          visorMat.color?.set?.('#10b981');
-          visorMat.emissive?.set?.('#10b981');
-          visorMat.emissiveIntensity = 2.0 + Math.sin(t * 4.0) * 0.5;
+          if (isCasual) {
+            visorMat.color?.set?.('#fbbf24');
+            visorMat.emissive?.set?.('#fbbf24');
+            visorMat.emissiveIntensity = 2.4 + Math.sin(t * 3.2) * 0.5;
 
-          chestMat.color?.set?.('#10b981');
-          chestMat.emissive?.set?.('#10b981');
-          chestMat.emissiveIntensity = 1.7 + Math.sin(t * 4.0) * 0.4;
+            chestMat.color?.set?.('#f59e0b');
+            chestMat.emissive?.set?.('#f59e0b');
+            chestMat.emissiveIntensity = 2.0 + Math.sin(t * 3.2) * 0.4;
+          } else {
+            visorMat.color?.set?.('#10b981');
+            visorMat.emissive?.set?.('#10b981');
+            visorMat.emissiveIntensity = 2.0 + Math.sin(t * 4.0) * 0.5;
+
+            chestMat.color?.set?.('#10b981');
+            chestMat.emissive?.set?.('#10b981');
+            chestMat.emissiveIntensity = 1.7 + Math.sin(t * 4.0) * 0.4;
+          }
         }
       }
 
-      // ── c) 'SPEAKING' State (when AI is talking via TTS):
-      // Lower mouth mesh moves up and down synchronized with speech output intervals, and visor glow pulses with cyan/teal emission
-      else if (robotState === 'SPEAKING') {
+      // ── c) 'SPEAKING' / 'CONCLUDING' State (when AI is talking via TTS):
+      // Lower mouth mesh moves up and down synchronized with speech output intervals
+      else if (robotState === 'SPEAKING' || robotState === 'CONCLUDING') {
         if (groupRef.current) {
           groupRef.current.position.y = -0.35 + Math.sin(t * 3.5) * 0.04;
           groupRef.current.position.z = 0.03;
@@ -431,11 +488,19 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
         }
 
         if (headRef.current) {
-          // Expressive speaking head gestures
-          headRef.current.position.y = 0.9;
-          headRef.current.position.z = 0.02;
-          headRef.current.rotation.x = Math.sin(t * 4.8) * 0.07;
-          headRef.current.rotation.y = Math.sin(t * 1.8) * 0.12;
+          if (isConcluding || robotState === 'CONCLUDING') {
+            // Feature 9: Encouraging gentle nod towards the student
+            headRef.current.position.y = 0.9;
+            headRef.current.position.z = 0.04;
+            headRef.current.rotation.x = 0.12 + Math.sin(t * 3.8) * 0.14;
+            headRef.current.rotation.y = Math.sin(t * 1.2) * 0.04;
+          } else {
+            // Expressive speaking head gestures
+            headRef.current.position.y = 0.9;
+            headRef.current.position.z = 0.02;
+            headRef.current.rotation.x = Math.sin(t * 4.8) * 0.07;
+            headRef.current.rotation.y = Math.sin(t * 1.8) * 0.12;
+          }
         }
 
         // Lower mouth mesh moves up and down synchronized with speech output intervals
@@ -457,24 +522,31 @@ function RobotModel({ isSpeaking, isListening, isThinking }) {
           rightArmRef.current.rotation.z = -0.35 - Math.sin(t * 2.8) * 0.22;
         }
 
-        // Visor glow pulses with cyan/teal emission
+        // Visor, chest, and mouth glow (Feature 9: warm teal glow in CONCLUDING state)
         const visorMat = visorRef.current?.material;
         const chestMat = chestGlowRef.current?.material;
         const mouthMat = mouthRef.current?.material;
 
         if (visorMat) {
-          visorMat.color?.set?.('#00e5ff');
-          visorMat.emissive?.set?.('#00e5ff');
-          visorMat.emissiveIntensity = 2.6 + Math.sin(t * 12) * 1.0;
+          const col = (isConcluding || robotState === 'CONCLUDING') ? '#0dd9b8' : (isCasual ? '#f59e0b' : '#00e5ff');
+          visorMat.color?.set?.(col);
+          visorMat.emissive?.set?.(col);
+          visorMat.emissiveIntensity = (isConcluding || robotState === 'CONCLUDING')
+            ? (2.8 + Math.sin(t * 6) * 0.5)
+            : (2.6 + Math.sin(t * 12) * 1.0);
         }
         if (chestMat) {
-          chestMat.color?.set?.('#0dd9b8');
-          chestMat.emissive?.set?.('#0dd9b8');
-          chestMat.emissiveIntensity = 1.8 + Math.sin(t * 8) * 0.6;
+          const col = (isConcluding || robotState === 'CONCLUDING') ? '#14b8a6' : (isCasual ? '#fbbf24' : '#0dd9b8');
+          chestMat.color?.set?.(col);
+          chestMat.emissive?.set?.(col);
+          chestMat.emissiveIntensity = (isConcluding || robotState === 'CONCLUDING')
+            ? (2.2 + Math.sin(t * 6) * 0.4)
+            : (1.8 + Math.sin(t * 8) * 0.6);
         }
         if (mouthMat) {
-          mouthMat.color?.set?.('#0dd9b8');
-          mouthMat.emissive?.set?.('#0dd9b8');
+          const col = (isConcluding || robotState === 'CONCLUDING') ? '#0dd9b8' : (isCasual ? '#f59e0b' : '#0dd9b8');
+          mouthMat.color?.set?.(col);
+          mouthMat.emissive?.set?.(col);
           mouthMat.emissiveIntensity = 2.2 + Math.abs(Math.sin(t * 15)) * 1.5;
         }
       }
@@ -568,8 +640,15 @@ function FallbackRobotAvatar({ isSpeaking, isListening, isThinking }) {
   );
 }
 
-export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
+export default function ThreeAvatar({
+  isSpeaking,
+  isListening,
+  isThinking,
+  isConcluding = false,
+  mode = 'presentation',
+}) {
   const [webGLError, setWebGLError] = useState(false);
+  const isCasual = mode === 'casual';
 
   useEffect(() => {
     try {
@@ -582,7 +661,13 @@ export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
   }, []);
 
   if (webGLError) {
-    return <FallbackRobotAvatar isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} />;
+    return (
+      <FallbackRobotAvatar
+        isSpeaking={isSpeaking || isConcluding}
+        isListening={isListening && !isConcluding}
+        isThinking={isThinking}
+      />
+    );
   }
 
   return (
@@ -597,21 +682,32 @@ export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
         onError={() => setWebGLError(true)}
         style={{ width: '100%', height: '100%', background: 'transparent' }}
       >
-        <ambientLight intensity={0.55} />
+        {/* Feature 8/9: Warm ambient golden/amber glow in Casual Talk mode or warm teal in Concluding state */}
+        <ambientLight
+          intensity={isConcluding ? 0.8 : (isCasual ? 0.8 : 0.55)}
+          color={isConcluding ? '#e6fffa' : (isCasual ? '#fffbeb' : '#ffffff')}
+        />
         <directionalLight
           position={[4, 6, 4]}
-          intensity={1.4}
+          intensity={isConcluding ? 1.7 : (isCasual ? 1.6 : 1.4)}
+          color={isConcluding ? '#ccfbf1' : (isCasual ? '#fef3c7' : '#ffffff')}
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         />
-        <pointLight position={[-2.5, 2.5, 2.5]} intensity={0.8} color="#0dd9b8" />
-        <pointLight position={[0, -1.5, 2.0]} intensity={0.4} color="#f59e0b" />
-        <pointLight position={[0, 3, -3]} intensity={0.45} color="#00e5ff" />
+        <pointLight position={[-2.5, 2.5, 2.5]} intensity={isConcluding ? 1.4 : (isCasual ? 1.2 : 0.8)} color={isConcluding ? '#0dd9b8' : (isCasual ? '#f59e0b' : '#0dd9b8')} />
+        <pointLight position={[0, -1.5, 2.0]} intensity={isConcluding ? 1.0 : (isCasual ? 0.8 : 0.4)} color={isConcluding ? '#14b8a6' : '#f59e0b'} />
+        <pointLight position={[0, 3, -3]} intensity={isConcluding ? 0.7 : (isCasual ? 0.6 : 0.45)} color={isConcluding ? '#2dd4bf' : (isCasual ? '#fbbf24' : '#00e5ff')} />
         <fog attach="fog" args={['#070b12', 7, 24]} />
 
-        {/* Dynamic 3D Low-Poly Golden Robot */}
-        <RobotModel isSpeaking={isSpeaking} isListening={isListening} isThinking={isThinking} />
+        {/* Dynamic 3D Low-Poly Golden Robot with warm teal glow and gentle nod in concluding mode */}
+        <RobotModel
+          isSpeaking={isSpeaking}
+          isListening={isListening}
+          isThinking={isThinking}
+          isConcluding={isConcluding}
+          isCasual={isCasual}
+        />
 
         {/* Stage Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.36, 0]} receiveShadow>
@@ -619,8 +715,13 @@ export default function ThreeAvatar({ isSpeaking, isListening, isThinking }) {
           <meshStandardMaterial color="#080d16" roughness={0.85} metalness={0.15} />
         </mesh>
 
-        {/* Dynamic Floor Aura Ring - emerald green pulse when listening */}
-        <AuraFloorRing isListening={isListening} isSpeaking={isSpeaking} />
+        {/* Dynamic Floor Aura Ring - warm teal pulse in concluding mode */}
+        <AuraFloorRing
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          isConcluding={isConcluding}
+          isCasual={isCasual}
+        />
 
         <OrbitControls
           enablePan={false}

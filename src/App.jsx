@@ -9,6 +9,11 @@ import ControlDock from './components/AuraGD/ControlDock';
 import PostureAlertBadge from './components/AuraGD/PostureAlertBadge';
 import ScoreModal from './components/AuraGD/ScoreModal';
 import ErrorBoundary from './components/ErrorBoundary';
+import StudentPracticeRoom from './components/PracticeRoom/StudentPracticeRoom';
+import SettingsModal from './components/PracticeRoom/SettingsModal';
+import LoginModal from './components/Dashboard/LoginModal';
+import DualVideoMentorshipRoom from './components/Mentorship/DualVideoMentorshipRoom';
+import { fireLoginCelebration, speakWelcomeGreeting } from './utils/celebration';
 
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
@@ -17,21 +22,68 @@ import { useVisionPostureTracker } from './hooks/useVisionPostureTracker';
 
 import {
   getAIResponse,
+  analyzeSelfIntro,
+  analyzeProjectPitch,
+  analyzeGDArgument,
   MODES,
   resetConversation,
   getCurrentTopic,
   getSmartMorningGreeting,
   generateCongratulationsSpeech,
+  GD_PLACEMENT_TOPIC,
+  GD_ROBOT_OPENING,
+  GD_ROBOT_COUNTER_ARGUMENT,
+  constructVerbalReinforcement,
+  CASUAL_ROBOT_WELCOME,
+  analyzeCasualWellness,
 } from './utils/aiResponses';
 import { calculateScores } from './utils/scoreCalculator';
 import { recordNewSession } from './utils/progressHistory';
 
 export default function App() {
-  const userName = 'Pragya';
+  const [userName, setUserName] = useState(() => {
+    try {
+      return localStorage.getItem('aura_gd_candidate_name') || 'Pragya';
+    } catch (e) {
+      return 'Pragya';
+    }
+  });
+
+  // ── Login / Welcome Celebration Modal State
+  const [showLoginModal, setShowLoginModal] = useState(() => {
+    try {
+      return !localStorage.getItem('aura_gd_has_logged_in');
+    } catch (e) {
+      return false;
+    }
+  });
 
   // ── Navigation State: 'dashboard' | 'history' | 'arena'
   const [currentView, setCurrentView] = useState('dashboard');
   const [currentMode, setCurrentMode] = useState(MODES.PRESENTATION);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // ── Login Completion & Celebration Handlers
+  const handleLoginSuccess = useCallback((name) => {
+    setUserName(name);
+    setShowLoginModal(false);
+    try {
+      localStorage.setItem('aura_gd_candidate_name', name);
+      localStorage.setItem('aura_gd_has_logged_in', 'true');
+    } catch (e) {
+      console.debug('Failed to persist login session:', e);
+    }
+  }, []);
+
+  const handleManualCelebration = useCallback(() => {
+    speakWelcomeGreeting(userName);
+    fireLoginCelebration();
+  }, [userName]);
+
+  // ── Feature 9: Exit Sequence State ('CONCLUDING') & Celebratory Banner
+  const [isConcluding, setIsConcluding] = useState(false);
+  const [celebrationBanner, setCelebrationBanner] = useState(null);
+  const conclusionTimerRef = useRef(null);
 
   // ── Voice & Audio Call State
   const [isListening, setIsListening] = useState(false);
@@ -62,6 +114,11 @@ export default function App() {
   // ── Internal Spoken Speech Memory (Zero-Text: never rendered to DOM)
   const spokenMemoryRef = useRef('');
 
+  const currentViewRef = useRef(currentView);
+  currentViewRef.current = currentView;
+  const showScoreModalRef = useRef(showScoreModal);
+  showScoreModalRef.current = showScoreModal;
+
   // ── Webcam Hook
   const { videoRef, stream, isActive: cameraActive, hasPermission, error: cameraError, toggleCamera } = useWebcam(true);
 
@@ -77,9 +134,23 @@ export default function App() {
   });
 
   const lastAITextRef = useRef('');
+  const latestSelfIntroAnalysisRef = useRef(null);
+  const latestProjectPitchAnalysisRef = useRef(null);
+  const projectPitchTurnRef = useRef(0);
+
+  // ── Group Discussion Debate Engine State (Feature 7)
+  const [gdTurnChoice, setGdTurnChoice] = useState(null); // null | 'user' | 'robot'
+  const gdTurnRef = useRef(0);
+  const latestGDAnalysisRef = useRef(null);
+  const gdSpeakingSecondsRef = useRef(0);
+  const [gdTopic, setGdTopic] = useState(GD_PLACEMENT_TOPIC);
+
+  // ── Live Speech & Subtitle States (Instant Speech Transcription & Listing)
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [aiSpeechSubtitle, setAiSpeechSubtitle] = useState('');
 
   // ── Natural TTS Hook
-  const { speak, stop: stopTTS } = useSpeechSynthesis({
+  const { speak: rawSpeak, stop: stopTTS } = useSpeechSynthesis({
     onStart: () => {
       setIsSpeaking(true);
       setIsThinking(false);
@@ -91,14 +162,20 @@ export default function App() {
     onEnd: () => {
       setIsSpeaking(false);
       // Automatically reactivate microphone listener and set 3D Robot state to 'LISTENING'
-      if (currentView === 'arena' && !showScoreModal) {
+      if (currentViewRef.current === 'arena' && !showScoreModalRef.current) {
         setTimeout(() => {
+          setLiveTranscript('');
           startListeningRef.current?.();
           setIsListening(true);
-        }, 600);
+        }, 400);
       }
     },
   });
+
+  const speak = useCallback((text, callback) => {
+    setAiSpeechSubtitle(text);
+    rawSpeak(text, callback);
+  }, [rawSpeak]);
 
   // ── AI Response Trigger
   const triggerAIResponse = useCallback((speechText) => {
@@ -122,9 +199,73 @@ export default function App() {
     setIsListening(false);
     spokenMemoryRef.current = '';
 
-    // Track filler words count
-    const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically)\b/g) || []).length;
-    statsRef.current.fillersCount += fillers;
+    // Mode-specific analysis: Project Presentation (Feature 6: STAR Framework & Tech Follow-up)
+    if (currentMode === MODES.PRESENTATION) {
+      const isFollowUp = projectPitchTurnRef.current >= 1;
+      const priorTech = latestProjectPitchAnalysisRef.current?.detectedTech;
+      const analysis = analyzeProjectPitch(cleaned, isFollowUp, priorTech, userName);
+      latestProjectPitchAnalysisRef.current = analysis;
+      projectPitchTurnRef.current += 1;
+
+      const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically|you know)\b/g) || []).length;
+      statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + fillers;
+
+      setTimeout(() => {
+        lastAITextRef.current = analysis.feedback;
+        speak(analysis.feedback);
+      }, 380);
+      return;
+    }
+
+    // Mode-specific analysis: Group Discussion (Feature 7: GD Debate Engine)
+    if (currentMode === MODES.GD) {
+      const words = cleaned.split(/\s+/).length;
+      const approxDurationSec = Math.max(Math.round((words / 130) * 60), 6);
+      gdSpeakingSecondsRef.current += approxDurationSec;
+
+      const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically|you know)\b/g) || []).length;
+      statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + fillers;
+
+      const analysis = analyzeGDArgument(cleaned, gdTurnRef.current, userName);
+      latestGDAnalysisRef.current = analysis;
+      gdTurnRef.current += 1;
+
+      setTimeout(() => {
+        lastAITextRef.current = analysis.feedback;
+        speak(analysis.feedback);
+      }, 380);
+      return;
+    }
+
+    // Mode-specific analysis: Self Introduction Evaluation & Mistake Detection (Feature 5)
+    if (currentMode === MODES.SELF_INTRO) {
+      const analysis = analyzeSelfIntro(cleaned, userName);
+      latestSelfIntroAnalysisRef.current = analysis;
+      statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + analysis.fillerCount;
+
+      setTimeout(() => {
+        lastAITextRef.current = analysis.feedback;
+        speak(analysis.feedback);
+      }, 380);
+      return;
+    }
+
+    // Mode-specific analysis: Casual Talk & Empathetic Mental Wellness (Feature 8)
+    if (currentMode === MODES.CASUAL) {
+      // Disable all numerical scoring, filler penalties, and STAR evaluation logic
+      const analysis = analyzeCasualWellness(cleaned, statsRef.current.turnCount, userName);
+      statsRef.current.turnCount++;
+
+      setTimeout(() => {
+        lastAITextRef.current = analysis.feedback;
+        speak(analysis.feedback);
+      }, 380);
+      return;
+    }
+
+    // Track filler words count for standard modes
+    const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically|you know)\b/g) || []).length;
+    statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + fillers;
 
     setTimeout(() => {
       const reply = getAIResponse(cleaned, currentMode, userName);
@@ -133,15 +274,17 @@ export default function App() {
     }, 380);
   }, [currentMode, isSpeaking, speak, userName]);
 
-  // ── STT Hook (webkitSpeechRecognition continuous listening in background)
-  const { startListening, stopListening, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
+  // ── STT Hook (webkitSpeechRecognition continuous listening with VAD energy fallback)
+  const { startListening, stopListening, commitSpeech, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
     onInterim: (text) => {
       spokenMemoryRef.current = text;
+      setLiveTranscript(text);
     },
     onResult: (finalText) => {
       spokenMemoryRef.current = '';
       if (!finalText || !finalText.trim()) return;
 
+      setLiveTranscript(finalText);
       const words = finalText.trim().split(/\s+/).length;
       statsRef.current.turnCount++;
       statsRef.current.wordCounts.push(words);
@@ -170,8 +313,44 @@ export default function App() {
     setHasStartedVoice(true);
   }, [stopTTS]);
 
+  // ── Turn-Taking Execution (Feature 7: Group Discussion)
+  const handleGDTurnChoice = useCallback((choice) => {
+    setGdTurnChoice(choice);
+    if (choice === 'user') {
+      // 2. Turn-Taking Execution: If "I Will Start" is clicked:
+      // Robot transitions to 'LISTENING' (green pulse aura). Candidate opens debate.
+      stopTTS();
+      setIsSpeaking(false);
+      setIsThinking(false);
+      setIsListening(true);
+      startListeningRef.current?.();
+    } else {
+      // If "You Start First" is clicked:
+      // Robot speaks the topic introduction and opening opinion:
+      // "Welcome to today's GD on Agentic AI. While autonomous systems boost operational speed, ethical boundaries remain uncertain. Candidate, what is your stance on this?"
+      // Robot then switches to 'LISTENING' with mic open.
+      stopListeningRef.current?.();
+      setIsListening(false);
+      setIsThinking(false);
+      setIsSpeaking(true);
+
+      const openingSpeech = GD_ROBOT_OPENING;
+      lastAITextRef.current = openingSpeech;
+      speak(openingSpeech, () => {
+        setIsSpeaking(false);
+        setTimeout(() => {
+          if (currentViewRef.current === 'arena') {
+            startListeningRef.current?.();
+            setIsListening(true);
+          }
+        }, 350);
+      });
+    }
+  }, [speak, stopTTS]);
+
   // ── Enter Arena View ("kebal bo and me dheku")
   const handleStartArena = useCallback((modeId) => {
+    currentViewRef.current = 'arena';
     setCurrentMode(modeId);
     setCurrentView('arena');
     setHasStartedVoice(true);
@@ -180,15 +359,46 @@ export default function App() {
     setPostureAlert(null);
     stopTTS();
 
-    // ── Feature 4: Smart Time-Aware Greeting & Welcoming
-    const greeting = getSmartMorningGreeting();
+    // 1. Immediately set 3D Robot state to 'SPEAKING' with mouth movement and cyan visor pulsing
+    setIsSpeaking(true);
+    setIsListening(false);
+    setIsThinking(false);
 
-    // Seamless Audio Triggering: Consume the user gesture immediately to invoke speech synthesis
+    // 2. Feature 6: Project Presentation initiation vs Feature 7: GD vs Feature 5: Self-Intro vs Feature 8: Casual vs Feature 4: Time-Aware Greeting
+    let greeting = '';
+    if (modeId === MODES.PRESENTATION) {
+      greeting = "Welcome to Project Presentation. Please walk me through your engineering project, including the problem you solved, your tech stack, and the final results. I'm listening.";
+      projectPitchTurnRef.current = 0;
+      latestProjectPitchAnalysisRef.current = null;
+    } else if (modeId === MODES.GD) {
+      setGdTurnChoice('user');
+      gdTurnRef.current = 0;
+      latestGDAnalysisRef.current = null;
+      gdSpeakingSecondsRef.current = 0;
+      setGdTopic(GD_PLACEMENT_TOPIC);
+      greeting = `Welcome to Group Discussion. Today's debate topic is: ${GD_PLACEMENT_TOPIC}. Whenever you are ready, please share your thoughts, I am listening.`;
+    } else if (modeId === MODES.SELF_INTRO) {
+      greeting = "Welcome to the Self-Introduction arena. Please deliver your 60 to 90-second elevator pitch. Whenever you are ready, you can start speaking.";
+    } else if (modeId === MODES.CASUAL) {
+      // Feature 8: Casual Talk & Empathetic Mental Wellness welcome
+      greeting = CASUAL_ROBOT_WELCOME;
+    } else {
+      greeting = getSmartMorningGreeting();
+    }
+    lastAITextRef.current = greeting;
+
+    // 3. Seamless Audio Triggering: Consume user gesture immediately to invoke speech synthesis
     speak(greeting, () => {
-      // On utterance.onend (or fallback):
-      // Smoothly switch 3D Robot to 'LISTENING' and automatically open the microphone stream
-      startListeningRef.current?.();
-      setIsListening(true);
+      // 4. On utterance.onend (or graceful fallback if cancelled/interrupted):
+      // Smoothly switch 3D Robot state to 'LISTENING' (green pulsing glow)
+      // and automatically open and activate the Web Speech Recognition microphone stream
+      setIsSpeaking(false);
+      setTimeout(() => {
+        if (currentViewRef.current === 'arena') {
+          startListeningRef.current?.();
+          setIsListening(true);
+        }
+      }, 350);
     });
   }, [resetTelemetry, speak, stopTTS]);
 
@@ -257,13 +467,27 @@ export default function App() {
     setCurrentMode(newMode);
     stopTTS();
 
+    if (newMode === MODES.GD) {
+      setGdTurnChoice(null);
+      gdTurnRef.current = 0;
+      latestGDAnalysisRef.current = null;
+      gdSpeakingSecondsRef.current = 0;
+      setGdTopic(GD_PLACEMENT_TOPIC);
+      setIsSpeaking(false);
+      setIsListening(false);
+      setIsThinking(false);
+      return;
+    }
+
     let verbalAnnouncement = '';
     if (newMode === MODES.PRESENTATION) {
-      verbalAnnouncement = 'Switched to Project Presentation mode. Walk me through your architecture and technical stack whenever you are ready.';
+      verbalAnnouncement = "Welcome to Project Presentation. Please walk me through your engineering project, including the problem you solved, your tech stack, and the final results. I'm listening.";
+      projectPitchTurnRef.current = 0;
+      latestProjectPitchAnalysisRef.current = null;
     } else if (newMode === MODES.SELF_INTRO) {
-      verbalAnnouncement = 'Switched to Self Introduction mode. Introduce yourself comfortably.';
+      verbalAnnouncement = 'Welcome to the Self-Introduction arena. Please deliver your 60 to 90-second elevator pitch. Whenever you are ready, you can start speaking.';
     } else if (newMode === MODES.CASUAL) {
-      verbalAnnouncement = 'Switched to Casual Talk mode. Take a deep breath.';
+      verbalAnnouncement = CASUAL_ROBOT_WELCOME;
     } else {
       verbalAnnouncement = `Switched to Group Discussion mode. Our theme is: "${getCurrentTopic()}".`;
     }
@@ -276,12 +500,16 @@ export default function App() {
     }, 200);
   }, [speak, startListening, stopTTS]);
 
-  // ── End Arena Call & Trigger Verbal Congratulations
+  // ── End Arena Call & Trigger Feature 9: Verbal Reinforcement & Positive Thinking
   const handleEndCall = useCallback(() => {
+    if (isConcluding) return;
+
+    // 1. End Call Interception:
+    // When the candidate clicks the red "End Call" button in the 3D call room:
+    // Do NOT abruptly switch views. Enter an exit sequence state 'CONCLUDING'.
+    setIsConcluding(true);
     stopListening();
-    stopTTS();
     setIsListening(false);
-    setIsSpeaking(false);
     setIsThinking(false);
 
     if (screenStreamRef.current) {
@@ -290,36 +518,96 @@ export default function App() {
     }
     setScreenActive(false);
 
-    const { turnCount, wordCounts, totalWords, fillersCount } = statsRef.current;
+    // 2. Verbal Reinforcement Voice Generation:
+    // Calculate candidate highlights from current session:
+    // - eyeContact = currentEyeContactPercentage (e.g., 88%)
+    // - fillers = totalFillersCount (e.g., 1)
+    const { turnCount, wordCounts, totalWords } = statsRef.current;
     const avgWordsPerTurn = wordCounts.length > 0 ? Math.round(totalWords / wordCounts.length) : 15;
-    const measuredEyeContact = getEyeContactPercentage();
+    const measuredEyeContact = Math.max(50, Math.min(98, Math.round(getEyeContactPercentage() || 88)));
+    const isCasualMode = currentMode === MODES.CASUAL;
+    const fillers = isCasualMode ? 0 : Math.max(statsRef.current.fillersCount || 0, 0);
 
     const computed = calculateScores({
       turnCount: Math.max(turnCount, 1),
       wordCounts,
       avgWordsPerTurn,
       mode: currentMode,
-      postureAlertCount: postureCountRef.current,
+      postureAlertCount: isCasualMode ? 0 : postureCountRef.current,
       eyeContactPercentage: measuredEyeContact,
+      fillersCount: fillers,
+      selfIntroAnalysis: latestSelfIntroAnalysisRef.current,
+      starAnalysis: latestProjectPitchAnalysisRef.current,
+      gdAnalysis: latestGDAnalysisRef.current,
+      speakingDurationSeconds: isCasualMode ? Math.round((totalWords / 120) * 60) : gdSpeakingSecondsRef.current,
     });
 
-    // Save session to Date-Wise Progress History with tracked telemetry
-    recordNewSession({
-      mode: currentMode,
-      score: computed.overall,
+    // Construct speech:
+    // "Fantastic effort today! Look at your progress—your eye contact was steady at [eyeContact]%, and you kept vocal hesitations down to just [fillers]. Keep this confidence high for your campus placements!"
+    const congratsSpeech = constructVerbalReinforcement({
       eyeContact: measuredEyeContact,
-      fillers: Math.max(fillersCount, 1),
+      fillers,
     });
 
-    setScores(computed);
-    setShowScoreModal(true);
+    lastAITextRef.current = congratsSpeech;
 
-    // AI Speaks Verbal Congratulations Out Loud
-    const congratsSpeech = generateCongratulationsSpeech(currentMode, computed.overall, userName);
-    setTimeout(() => {
-      speak(congratsSpeech);
-    }, 500);
-  }, [currentMode, speak, stopListening, stopTTS, userName]);
+    // Save celebratory banner data for Dashboard
+    const celebrationData = {
+      message: congratsSpeech,
+      eyeContact: measuredEyeContact,
+      fillers,
+      score: computed.overall,
+      mode: currentMode,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
+    };
+    setCelebrationBanner(celebrationData);
+    try {
+      localStorage.setItem('aura_gd_latest_celebration', JSON.stringify(celebrationData));
+    } catch (e) {
+      console.debug('Failed to cache celebration data:', e);
+    }
+
+    // 3. Animation & Transition:
+    // 3D Robot triggers 'SPEAKING' state with an encouraging gentle nod and warm teal glow.
+    // Speak the dialogue via speechSynthesis.
+    setIsSpeaking(true);
+
+    let hasConcluded = false;
+    const finalizeConclusion = () => {
+      if (hasConcluded) return;
+      hasConcluded = true;
+
+      if (conclusionTimerRef.current) {
+        clearTimeout(conclusionTimerRef.current);
+        conclusionTimerRef.current = null;
+      }
+
+      // Append today's session score and metrics into localStorage.getItem('aura_gd_session_history')
+      recordNewSession({
+        mode: currentMode,
+        score: computed.overall,
+        eyeContact: measuredEyeContact,
+        fillers,
+      });
+
+      // Smoothly route back to the Dashboard view with the celebratory banner displayed above the progress table
+      stopTTS();
+      setIsSpeaking(false);
+      setIsConcluding(false);
+      setScores(computed);
+      setCurrentView('dashboard');
+    };
+
+    // Safety timeout: 4 seconds as specified in requirement 3
+    conclusionTimerRef.current = setTimeout(() => {
+      finalizeConclusion();
+    }, 4000);
+
+    // Speak the dialogue via speechSynthesis, invoking finalizeConclusion on onend
+    speak(congratsSpeech, () => {
+      finalizeConclusion();
+    });
+  }, [currentMode, getEyeContactPercentage, isConcluding, speak, stopListening, stopTTS]);
 
   // ── Replay AI Congratulations Speech
   const handleReplayCongratulations = useCallback(() => {
@@ -335,58 +623,95 @@ export default function App() {
     setScores(null);
     statsRef.current = { turnCount: 0, wordCounts: [], totalWords: 0, fillersCount: 0 };
     postureCountRef.current = 0;
+    setGdTurnChoice(null);
+    gdTurnRef.current = 0;
+    latestGDAnalysisRef.current = null;
+    gdSpeakingSecondsRef.current = 0;
     resetConversation();
     setCurrentView('dashboard');
   }, []);
 
-  // ── Voice Ambient Edge Glow
-  const edgeGlowClass = isListening
-    ? 'voice-edge-listening'
-    : isSpeaking
-    ? 'voice-edge-speaking'
-    : '';
+  // ── Voice Ambient Edge Glow (Warm amber for casual wellness vs cyan/emerald)
+  const edgeGlowClass = currentMode === MODES.CASUAL
+    ? (isListening ? 'voice-edge-listening-casual' : isSpeaking ? 'voice-edge-speaking-casual' : '')
+    : (isListening ? 'voice-edge-listening' : isSpeaking ? 'voice-edge-speaking' : '');
 
   return (
-    <div className={`relative w-full h-full min-h-screen overflow-hidden bg-[#0a0f1d] text-slate-100 select-none ${edgeGlowClass}`}>
+    <div
+      className={`relative w-full h-full min-h-screen overflow-hidden ${
+        currentView === 'arena'
+          ? `bg-[#0a0f1d] text-slate-100 ${edgeGlowClass}`
+          : 'bg-[#f8faff] text-[#1e1b4b]'
+      } select-none`}
+    >
 
       {/* ══════════════════════════════════════════════════════════════
           VIEWS: DASHBOARD / HISTORY
       ══════════════════════════════════════════════════════════════ */}
-      {currentView !== 'arena' && (
+      {currentView !== 'arena' && currentView !== 'practice' && (
         <div className="w-full h-screen flex overflow-hidden">
           {/* Left Navigation Sidebar */}
           <Sidebar
             currentView={currentView}
             onNavigate={(viewId) => setCurrentView(viewId)}
             onStartArena={handleStartArena}
+            onOpenSettings={() => setIsSettingsOpen(true)}
           />
 
           {/* Dynamic Content Views */}
           {currentView === 'dashboard' && (
             <Dashboard
+              userName={userName}
               onStartArena={handleStartArena}
               onNavigate={(viewId) => setCurrentView(viewId)}
               cameraActive={cameraActive}
+              celebrationBanner={celebrationBanner}
+              onViewScorecard={() => setShowScoreModal(true)}
+              onOpenLoginModal={() => setShowLoginModal(true)}
+              onTriggerCelebration={handleManualCelebration}
             />
           )}
 
           {currentView === 'history' && (
-            <HistoryView onStartArena={handleStartArena} />
+            <HistoryView
+              onStartArena={handleStartArena}
+              onBackToDashboard={() => setCurrentView('dashboard')}
+            />
           )}
         </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          VIEW: STUDENT COMMUNICATION PRACTICE ROOM (AI MENTOR PRIYA)
+      ══════════════════════════════════════════════════════════════ */}
+      {currentView === 'practice' && (
+        <StudentPracticeRoom
+          onBackToDashboard={() => setCurrentView('dashboard')}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          VIEW: DUAL-VIDEO AI MENTORSHIP & INTERVIEW EVALUATION ROOM
+      ══════════════════════════════════════════════════════════════ */}
+      {currentView === 'mentorship' && (
+        <DualVideoMentorshipRoom
+          userName={userName}
+          onBackToDashboard={() => setCurrentView('dashboard')}
+          onEndCall={handleEndCall}
+        />
       )}
 
       {/* ══════════════════════════════════════════════════════════════
           VIEW: ARENA 1-ON-1 CALL VIEW ("kebal bo and me dheku")
       ══════════════════════════════════════════════════════════════ */}
       {currentView === 'arena' && (
-        <div className="w-full h-screen relative overflow-hidden">
+        <div className="w-full h-screen relative overflow-hidden bg-[#070b12]">
           {/* ── Top Minimal Floating Controls ── */}
           {/* Top-Left: Minimal Return Button */}
           <div className="absolute top-6 left-6 z-30 pointer-events-auto">
             <button
               onClick={handleBackToDashboard}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 shadow-lg backdrop-blur-md"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 shadow-lg backdrop-blur-md cursor-pointer"
               title="Return to Dashboard"
             >
               <span>←</span>
@@ -399,7 +724,7 @@ export default function App() {
             {isSpeaking && (
               <button
                 onClick={handleImmediateSpeak}
-                className="px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/50 text-cyan-300 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 backdrop-blur-md"
+                className="px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/50 text-cyan-300 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 backdrop-blur-md cursor-pointer"
                 title="Interrupt AI and speak right away"
               >
                 <span>Tap to Speak</span>
@@ -442,15 +767,54 @@ export default function App() {
                 isSpeaking={isSpeaking}
                 isListening={isListening}
                 isThinking={isThinking}
+                isConcluding={isConcluding}
+                mode={currentMode}
               />
             </ErrorBoundary>
           </main>
 
           {/* Vision Posture Alert Badge HUD (Slouching, Face-Touch, Gaze) */}
           <PostureAlertBadge
-            alert={postureAlert}
+            alert={(currentMode === MODES.CASUAL || isConcluding) ? null : postureAlert}
             onDismiss={() => setPostureAlert(null)}
           />
+
+          {/* ── Live Speech & Subtitle HUD (Shows Live Words & Dialogue) ── */}
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-xl w-[92vw] sm:w-auto flex flex-col items-center gap-2">
+            {/* When Candidate is speaking / mic detects speech */}
+            {isListening && (
+              <div className="px-5 py-2.5 rounded-2xl bg-black/85 border border-emerald-500/50 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in text-left max-w-lg">
+                <span className={`w-2.5 h-2.5 rounded-full ${audioLevel > 15 ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]' : 'bg-emerald-500/60'} shrink-0`} />
+                <div className="flex-1 min-w-[200px]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
+                    {audioLevel > 15 ? '● You (Speaking...)' : 'Microphone Live'}
+                  </span>
+                  <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
+                    {liveTranscript ? `"${liveTranscript}"` : 'Listening... Speak your response naturally.'}
+                  </p>
+                </div>
+                {liveTranscript && (
+                  <button
+                    onClick={commitSpeech}
+                    className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
+                    title="Send answer to AI now"
+                  >
+                    <span>Done ➔</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* When AI is speaking */}
+            {isSpeaking && aiSpeechSubtitle && (
+              <div className="px-5 py-2.5 rounded-2xl bg-black/85 border border-cyan-500/40 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in text-center max-w-lg">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00e5ff] shrink-0" />
+                <p className="text-xs sm:text-sm font-semibold text-cyan-200 leading-snug">
+                  "{aiSpeechSubtitle}"
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Floating Bottom Control Dock */}
           <ControlDock
@@ -458,6 +822,7 @@ export default function App() {
             onSelectMode={handleSelectMode}
             isListening={isListening}
             isSpeaking={isSpeaking}
+            isConcluding={isConcluding}
             onToggleMic={handleToggleMic}
             cameraActive={cameraActive}
             onToggleCamera={toggleCamera}
@@ -471,20 +836,22 @@ export default function App() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          ENLARGED CANDIDATE WEBCAM PIP ("me") - Always visible in both views
+          ENLARGED CANDIDATE WEBCAM PIP ("me") - In Arena Mode
       ══════════════════════════════════════════════════════════════ */}
-      <WebcamPIP
-        videoRef={videoRef}
-        stream={stream}
-        isActive={cameraActive}
-        hasPermission={hasPermission}
-        error={cameraError}
-        screenVideoRef={screenVideoRef}
-        screenActive={screenActive}
-        onToggleCamera={toggleCamera}
-        hasMistake={!!postureAlert}
-        alert={postureAlert}
-      />
+      {currentView === 'arena' && (
+        <WebcamPIP
+          videoRef={videoRef}
+          stream={stream}
+          isActive={cameraActive}
+          hasPermission={hasPermission}
+          error={cameraError}
+          screenVideoRef={screenVideoRef}
+          screenActive={screenActive}
+          onToggleCamera={toggleCamera}
+          hasMistake={(currentMode === MODES.CASUAL || isConcluding) ? false : !!postureAlert}
+          alert={(currentMode === MODES.CASUAL || isConcluding) ? null : postureAlert}
+        />
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           PERFORMANCE EVALUATION REPORT MODAL WITH VERBAL CONGRATULATIONS
@@ -496,6 +863,21 @@ export default function App() {
           onReplayCongratulations={handleReplayCongratulations}
         />
       )}
+
+      {/* ── Settings Dialog ── */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* ── Login / Welcome Celebration Dialog ── */}
+      <LoginModal
+        isOpen={showLoginModal}
+        currentName={userName}
+        onLogin={handleLoginSuccess}
+        onClose={() => setShowLoginModal(false)}
+        canClose={!!localStorage.getItem('aura_gd_has_logged_in')}
+      />
     </div>
   );
 }

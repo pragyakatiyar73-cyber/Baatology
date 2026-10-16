@@ -23,8 +23,7 @@ html, body, #root {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: var(--bg-primary);
-  color: #f1f5f9;
+  background-color: #f8faff;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -36,14 +35,14 @@ html, body, #root {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: rgba(148, 163, 184, 0.35);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: rgba(100, 116, 139, 0.6);
 }
 
 /* Animations */
@@ -70,6 +69,12 @@ html, body, #root {
 }
 .voice-edge-speaking {
   box-shadow: inset 0 0 100px rgba(6, 182, 212, 0.25);
+}
+.voice-edge-listening-casual {
+  box-shadow: inset 0 0 100px rgba(245, 158, 11, 0.28);
+}
+.voice-edge-speaking-casual {
+  box-shadow: inset 0 0 100px rgba(251, 191, 36, 0.32);
 }
 
 /* Glassmorphism Classes */

@@ -6,6 +6,7 @@ export default function ControlDock({
   onSelectMode,
   isListening,
   isSpeaking,
+  isConcluding = false,
   onToggleMic,
   cameraActive,
   onToggleCamera,
@@ -24,26 +25,6 @@ export default function ControlDock({
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3 w-auto max-w-[94vw] select-none">
-      {/* ── Mode Pill Switcher ── */}
-      <div className="glass-dock px-2.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl">
-        {modes.map((m) => {
-          const isSelected = currentMode === m.id;
-          return (
-            <button
-              key={m.id}
-              onClick={() => onSelectMode(m.id)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 select-none whitespace-nowrap ${
-                isSelected
-                  ? 'bg-teal-500/25 text-teal-300 border border-teal-400/60 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
-              }`}
-            >
-              {m.label}
-            </button>
-          );
-        })}
-      </div>
-
       {/* ── Main Control Actions Dock ── */}
       <div className="glass-dock px-4 py-2.5 rounded-3xl flex items-center gap-3 shadow-2xl">
         {/* Back to Dashboard Button */}
@@ -122,11 +103,16 @@ export default function ControlDock({
         {/* End Arena & Performance Report Button */}
         <button
           onClick={onEndCall}
-          className="px-4 py-2.5 rounded-2xl font-black text-xs tracking-wider uppercase flex items-center gap-2 bg-red-600/90 hover:bg-red-500 active:bg-red-700 text-white shadow-xl transition-all duration-200"
-          title="End Arena Session & View Evaluation Report"
+          disabled={isConcluding}
+          className={`px-4 py-2.5 rounded-2xl font-black text-xs tracking-wider uppercase flex items-center gap-2 text-white shadow-xl transition-all duration-200 ${
+            isConcluding
+              ? 'bg-amber-600/80 cursor-wait animate-pulse'
+              : 'bg-red-600/90 hover:bg-red-500 active:bg-red-700 cursor-pointer'
+          }`}
+          title={isConcluding ? 'Concluding session...' : 'End Arena Session & View Evaluation Report'}
         >
-          <span className="text-base leading-none">📞</span>
-          <span>End Arena</span>
+          <span className="text-base leading-none">{isConcluding ? '⏳' : '📞'}</span>
+          <span>{isConcluding ? 'Concluding...' : 'End Call'}</span>
         </button>
       </div>
     </div>

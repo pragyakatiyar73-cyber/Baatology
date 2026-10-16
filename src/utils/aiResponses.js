@@ -18,7 +18,12 @@ export const MODES = {
   PRESENTATION: 'presentation',
 };
 
+export const GD_PLACEMENT_TOPIC = 'Agentic AI in Cybersecurity & Engineering: Threat or Massive Opportunity?';
+export const GD_ROBOT_OPENING = "Welcome to today's GD on Agentic AI. While autonomous systems boost operational speed, ethical boundaries remain uncertain. Candidate, what is your stance on this?";
+export const GD_ROBOT_COUNTER_ARGUMENT = "That is a valid point regarding innovation. However, considering system security and accountability, wouldn't immediate deployment create vulnerabilities? How do you counter that?";
+
 export const GD_TOPICS = [
+  GD_PLACEMENT_TOPIC,
   'Agentic AI and Autonomous Workflows replacing traditional tech roles in the next 5 years',
   'Remote vs Hybrid vs Office culture — what actually maximizes software engineering velocity?',
   'Open Source AI models vs Proprietary Closed APIs — which will dominate future software?',
@@ -35,7 +40,7 @@ export function getCurrentTopic() {
 }
 
 export function resetConversation() {
-  _currentTopic = GD_TOPICS[Math.floor(Math.random() * GD_TOPICS.length)];
+  _currentTopic = GD_TOPICS[0];
   _turnCount = 0;
 }
 
@@ -46,8 +51,15 @@ function pickRandom(list) {
 // ── Smart Time-Aware Greeting (Feature 4) ────────────────────
 export function getSmartMorningGreeting() {
   const hour = new Date().getHours();
-  const salutation = hour < 12 ? 'Good morning!' : hour < 17 ? 'Good afternoon!' : 'Good evening!';
-  return `${salutation} How has your day been going so far? I am right here with you. What would you like to talk about today?`;
+  let salutation = 'Good evening';
+  if (hour < 12) {
+    salutation = 'Good morning';
+  } else if (hour >= 12 && hour < 17) {
+    salutation = 'Good afternoon';
+  } else {
+    salutation = 'Good evening';
+  }
+  return `${salutation}! How has your day been going so far? I am right here with you. What would you like to talk about today?`;
 }
 
 // ── 1. Tech Knowledge Base & Concept Explanations ─────────────
@@ -141,102 +153,373 @@ function handleActionCommands(lower, userName) {
   return null;
 }
 
-// ── 3. Tech Stack Detection & Contextual Follow-up in Presentations
-const KNOWN_STACKS = [
-  { name: 'React', kw: /\b(react|reactjs|frontend|hooks)\b/i, question: 'How do you handle global state and prevent unnecessary component re-renders in your React architecture?' },
-  { name: 'Node.js / Express', kw: /\b(node|nodejs|express|backend)\b/i, question: 'Since Node.js operates on a single-threaded event loop, how does your backend prevent CPU-heavy tasks from blocking incoming client requests?' },
-  { name: 'MongoDB / NoSQL', kw: /\b(mongo|mongodb|nosql)\b/i, question: 'How did you model your MongoDB schema: did you embed documents or use referenced IDs, and how do you handle data integrity without ACID joins?' },
-  { name: 'SQL / PostgreSQL / MySQL', kw: /\b(sql|mysql|postgres|postgresql)\b/i, question: 'How did you approach schema normalization and foreign key indexing to prevent full table scans under heavy query loads?' },
-  { name: 'Python / FastAPI / Django', kw: /\b(python|fastapi|django)\b/i, question: 'What async concurrency model or ORM optimizations are you using to ensure fast response latency in your Python service?' },
-  { name: 'Docker / Cloud / AWS', kw: /\b(docker|container|aws|cloud|s3|ec2)\b/i, question: 'How is your containerized application deployed, and what strategies do you have in place for zero-downtime rolling updates?' },
-  { name: 'Machine Learning / AI', kw: /\b(ml|ai|deep learning|tensorflow|pytorch|model)\b/i, question: 'What evaluation metrics (like F1-score or inference latency) did you use to validate your model against overfitting?' },
+// ── 4. Feature 6: Project Pitch & Technical Walkthrough (STAR Framework) ──
+
+const KNOWN_TECH_STACKS = [
+  { name: 'React', regex: /\b(react|reactjs|frontend|redux|nextjs|next\.js)\b/i },
+  { name: 'Node.js', regex: /\b(node|nodejs|express|backend|expressjs)\b/i },
+  { name: 'SQL', regex: /\b(sql|mysql|postgres|postgresql|relational database)\b/i },
+  { name: 'MongoDB', regex: /\b(mongo|mongodb|nosql|mongoose)\b/i },
+  { name: 'REST APIs', regex: /\b(apis?|rest|restful|endpoints?|graphql|grpc)\b/i },
+  { name: 'Python', regex: /\b(python|fastapi|django|flask)\b/i },
+  { name: 'Docker', regex: /\b(docker|container|kubernetes|k8s)\b/i },
+  { name: 'AWS Cloud', regex: /\b(aws|cloud|s3|ec2|lambda)\b/i },
+  { name: 'TypeScript', regex: /\b(typescript|ts)\b/i },
 ];
 
-function extractStackAndCrossQuestion(text) {
-  for (const item of KNOWN_STACKS) {
-    if (item.kw.test(text)) {
-      return {
-        stack: item.name,
-        question: item.question,
-      };
+export function detectPrimaryTech(text) {
+  for (const item of KNOWN_TECH_STACKS) {
+    if (item.regex.test(text)) {
+      return item.name;
     }
   }
   return null;
 }
 
-// ── 4. Presentation Pitch Evaluation ─────────────────────────
-export function evaluateProjectPitch(text, userName = 'Pragya') {
-  const words = text.split(/\s+/).filter(Boolean);
-
-  if (words.length < 10) {
-    return `I am following your project pitch ${userName}! Please elaborate on your architecture, why you picked your specific tech stack, and what problems it solves.`;
-  }
-
-  const stackInfo = extractStackAndCrossQuestion(text);
-
-  let stackPraise = `Great technical clarity in explaining your engineering workflow.`;
-  let crossQuestion = `In your architecture, how would your database and API handle a sudden 100x traffic spike? Would you introduce Redis caching or asynchronous queues?`;
-
-  if (stackInfo) {
-    stackPraise = `I noticed you built with ${stackInfo.stack}. That is a strong and practical tech stack choice for modern engineering roles.`;
-    crossQuestion = stackInfo.question;
-  }
-
-  return `${stackPraise} Here is your key architectural tip: conclude by highlighting measurable metrics like latency or throughput. Now, here is your follow-up cross question: "${crossQuestion}"`;
-}
-
-// ── 5. Self-Introduction Evaluation ──────────────────────────
-export function evaluateSelfIntro(text, userName = 'Pragya') {
+export function analyzeProjectPitch(text, isFollowUp = false, detectedTechOverride = null, userName = 'Pragya') {
   const lower = text.toLowerCase();
   const words = text.split(/\s+/).filter(Boolean);
 
-  const hasMyself = /\b(myself|myself\s+[a-z]+)\b/i.test(lower);
-  const fillers = lower.match(/\b(umm|um|uh|uhh|like|actually|basically)\b/g) || [];
+  // 1. Identify primary technology
+  const detectedTech = detectedTechOverride || detectPrimaryTech(text) || 'modern web architecture';
 
-  if (words.length < 10) {
-    return `Good start ${userName}! Walk me through your journey: your engineering specialization, favorite projects, and what roles excite you.`;
+  // 2. STAR Framework Analysis Engine
+  // a) Problem Statement / Situation
+  const hasProblem = /\b(problem|challenge|issue|pain point|situation|inefficiency|bottleneck|manual|difficulty|needed to|aimed to|struggled|legacy|barrier)\b/i.test(lower);
+
+  // b) Personal Action & Specific Tech Stack implementation
+  const hasAction = /\b(built|developed|implemented|designed|architected|engineered|integrated|created|wrote|refactored|coded|assembled|deployed)\b/i.test(lower);
+  const hasTech = KNOWN_TECH_STACKS.some((t) => t.regex.test(lower)) || /\b(frontend|backend|database|api|architecture|stack)\b/i.test(lower);
+
+  // c) Measurable Result, Deployment, or Performance Metric
+  const hasResult = /\b(result|outcome|achieved|deployed|production|metric|latency|throughput|reduced|increased|improved|percent|%|users|scaled|traffic|speed|ms|seconds|benchmark|aws|vercel|live)\b/i.test(lower);
+
+  // Calculate STAR Completeness Score (0 to 100)
+  let starScore = 52;
+  if (hasProblem) starScore += 14;
+  if (hasAction) starScore += 14;
+  if (hasTech) starScore += 10;
+  if (hasResult) starScore += 10;
+
+  if (words.length >= 35) starScore += 5;
+  if (words.length < 12) starScore -= 15;
+
+  const fillerCount = (lower.match(/\b(um|umm|uh|uhh|like|basically|actually|you know)\b/g) || []).length;
+  starScore -= Math.min(fillerCount * 2, 8);
+
+  const completenessScore = Math.max(48, Math.min(98, Math.round(starScore)));
+
+  // If candidate utterance is very short (< 8 words)
+  if (words.length < 8 && !isFollowUp) {
+    return {
+      feedback: `I am following you, ${userName}! Walk me through your project: describe the problem you tackled, your tech stack, and what results or benchmarks you achieved. Whenever you are ready, continue speaking.`,
+      detectedTech,
+      completenessScore: Math.max(60, completenessScore),
+      hasProblem,
+      hasAction,
+      hasTech,
+      hasResult,
+    };
   }
 
-  let mistakeAlert = '';
-  if (hasMyself) {
-    mistakeAlert = `Note one interview refinement: avoid starting with 'Myself ${userName}'. Always use 'I am ${userName}' or 'My name is ${userName}' for professional authority. `;
+  // 3. Technical Follow-up Cross-Question or Follow-up Resolution
+  let feedback = '';
+
+  if (isFollowUp) {
+    // Candidate answered the technical cross-question
+    feedback = `Excellent technical explanation of your architectural trade-offs with ${detectedTech}. Clearly describing how you diagnosed and resolved system bottlenecks shows strong engineering maturity. You're well-prepared for technical interview rounds!`;
+  } else {
+    // Initial Pitch: Robot responds verbally with praise followed by authentic interview follow-up question
+    feedback = `Good breakdown of your architecture. Since you mentioned using ${detectedTech}, could you explain why you selected that over alternatives, and what was the biggest technical bottleneck you resolved?`;
   }
 
-  let fillerAlert = '';
-  if (fillers.length >= 2) {
-    fillerAlert = `Try pausing silently for 1 second instead of saying '${fillers[0]}'. Silence creates commanding poise. `;
-  }
-
-  return `${mistakeAlert}${fillerAlert}Your introduction had good natural flow! For maximum impact, structure it as Past (your background), Present (current projects), and Future (what you bring to the team). What would you like to refine next?`;
+  return {
+    feedback,
+    detectedTech,
+    completenessScore,
+    hasProblem,
+    hasAction,
+    hasTech,
+    hasResult,
+  };
 }
 
-// ── 6. Group Discussion Engine ────────────────────────────────
-export function evaluateGDStatement(text, userName = 'Pragya') {
+export function evaluateProjectPitch(text, isFollowUp = false, detectedTechOverride = null, userName = 'Pragya') {
+  const analysis = analyzeProjectPitch(text, isFollowUp, detectedTechOverride, userName);
+  return analysis.feedback;
+}
+
+// ── 5. Feature 5: Self-Introduction Evaluator & Mistake Detection ──
+export function analyzeSelfIntro(text, userName = 'Pragya') {
   const lower = text.toLowerCase();
   const words = text.split(/\s+/).filter(Boolean);
 
-  if (words.length < 8) {
-    return `I am listening ${userName}! Share your perspective on today's theme: "${_currentTopic}".`;
-  }
+  // a) Grammatical Openings Check: Detect phrases like "Myself [Name]" or "Me is"
+  const hasMyself = /\b(myself|my self)\b/i.test(lower);
+  const hasMeIs = /\b(me is|me are|me am|me name)\b/i.test(lower);
+  const openingMistake = hasMyself || hasMeIs;
 
-  // Generate dynamic rebuttal addressing their point
-  const rebuttals = [
-    `That is an interesting angle on ${_currentTopic}. However, how would you address critics who argue that economic constraints and implementation costs would slow that adoption down?`,
-    `A valid point! But if we look at real-world deployments, human oversight and accountability remain essential. How do you propose balancing automation with ethical responsibility?`,
-    `Strong delivery! In placement GDs, synthesizing diverse views shows leadership. How would you bridge your point with opposing stakeholders?`,
+  // b) Vocal Filler Detection: Count instances of 'um', 'uh', 'like', 'basically', 'actually', and 'you know'
+  const fillerPatterns = [
+    { token: 'um', regex: /\b(um|umm)\b/gi },
+    { token: 'uh', regex: /\b(uh|uhh)\b/gi },
+    { token: 'like', regex: /\b(like)\b/gi },
+    { token: 'basically', regex: /\b(basically)\b/gi },
+    { token: 'actually', regex: /\b(actually)\b/gi },
+    { token: 'you know', regex: /\b(you know)\b/gi },
   ];
 
-  return pickRandom(rebuttals);
+  let fillerCount = 0;
+  const fillerBreakdown = {};
+  fillerPatterns.forEach(({ token, regex }) => {
+    const matches = lower.match(regex);
+    const count = matches ? matches.length : 0;
+    fillerBreakdown[token] = count;
+    fillerCount += count;
+  });
+
+  // c) Structural Coverage: Check presence of core keywords (engineering/B.Tech, projects, tech stack, career interest)
+  const hasEducation = /\b(engineering|b\.?tech|btech|computer science|cs|bachelor|degree|college|university|student|academics?|graduated?)\b/i.test(lower);
+  const hasProjects = /\b(project|projects|built|developed|created|application|app|system|designed|coded|platform)\b/i.test(lower);
+  const hasTechStack = /\b(react|node|javascript|python|java|cpp|c\+\+|sql|database|mongo|frontend|backend|fullstack|ml|ai|aws|docker|git|api)\b/i.test(lower);
+  const hasCareerInterest = /\b(career|interest|goals?|aspire|role|opportunity|passionate|contribute|internship|vision|future)\b/i.test(lower);
+
+  const coverageCount = [hasEducation, hasProjects, hasTechStack, hasCareerInterest].filter(Boolean).length;
+
+  // Compute structure and fluency score out of 100
+  let structureScore = 70;
+  if (openingMistake) {
+    structureScore -= 12;
+  } else {
+    structureScore += 8;
+  }
+  structureScore += coverageCount * 5; // up to +20
+
+  let fluencyScore = 80;
+  if (fillerCount === 0) {
+    fluencyScore += 10;
+  } else if (fillerCount <= 2) {
+    fluencyScore += 2;
+  } else if (fillerCount <= 4) {
+    fluencyScore -= 8;
+  } else {
+    fluencyScore -= Math.min(fillerCount * 3, 25);
+  }
+
+  // Adjust for length (ideal elevator pitch: 50 - 160 words)
+  if (words.length >= 50 && words.length <= 160) {
+    fluencyScore += 5;
+  } else if (words.length < 20) {
+    fluencyScore -= 10;
+  }
+
+  const score = Math.max(52, Math.min(98, Math.round((structureScore * 0.55) + (fluencyScore * 0.45))));
+
+  // Immediate Verbal Feedback generation
+  if (words.length < 10) {
+    return {
+      feedback: `I am following you, ${userName}! Take a steady breath and deliver your 60-second elevator pitch covering your engineering background, key projects, and career interests. Whenever you are ready, continue speaking.`,
+      openingMistake,
+      fillerCount,
+      fillerBreakdown,
+      structuralCoverage: { hasEducation, hasProjects, hasTechStack, hasCareerInterest, coverageCount },
+      score: Math.max(60, score),
+    };
+  }
+
+  // 1. Praise one strong aspect
+  let praise = "You communicated with a clear, confident voice and structured your thoughts with good energy.";
+  if (hasProjects && hasTechStack) {
+    praise = "You projected great vocal confidence and gave a strong walkthrough of your technical projects and stack.";
+  } else if (hasEducation && hasProjects) {
+    praise = "You spoke with a clear, confident voice and connected your engineering background to your projects very well.";
+  } else if (coverageCount >= 3) {
+    praise = "Great vocal projection! Your introduction covered multiple essential facets of your engineering profile.";
+  }
+
+  // 2. Point out opening mistake if "Myself" was detected
+  let openingCorrection = "";
+  if (openingMistake) {
+    openingCorrection = " Remember to open with 'I am' or 'My name is' instead of 'Myself'.";
+  }
+
+  // 3. Mention filler word count
+  let fillerFeedback = "";
+  if (fillerCount > 0) {
+    fillerFeedback = ` You had ${fillerCount} hesitation filler${fillerCount > 1 ? 's' : ''}. Work on taking natural pauses instead.`;
+  } else {
+    fillerFeedback = " Your delivery was remarkably clean with zero hesitation fillers.";
+  }
+
+  // Next step recommendation
+  let nextStep = "";
+  if (!hasCareerInterest) {
+    nextStep = " For a complete elevator pitch, tie your conclusion back to your target engineering roles. What would you like to refine next?";
+  } else {
+    nextStep = " That was a solid foundation. What technical question or scenario should we practice next?";
+  }
+
+  const feedback = `${praise}${openingCorrection}${fillerFeedback}${nextStep}`;
+
+  return {
+    feedback,
+    openingMistake,
+    fillerCount,
+    fillerBreakdown,
+    structuralCoverage: { hasEducation, hasProjects, hasTechStack, hasCareerInterest, coverageCount },
+    score,
+  };
 }
 
-// ── 7. Casual Mode ───────────────────────────────────────────
+export function evaluateSelfIntro(text, userName = 'Pragya') {
+  const analysis = analyzeSelfIntro(text, userName);
+  return analysis.feedback;
+}
+
+// ── 6. Group Discussion Engine (Feature 7) ────────────────────
+export function analyzeGDArgument(text, turnIndex = 0, userName = 'Pragya') {
+  const lower = text.toLowerCase();
+  const words = text.split(/\s+/).filter(Boolean);
+
+  // Detect hesitation filler words
+  const fillers = (lower.match(/\b(um|umm|uh|uhh|like|basically|actually|you know)\b/g) || []).length;
+
+  // Stance detection & theme extraction
+  const mentionsOpportunity = /\b(opportunity|innovat|advantage|benefit|growth|speed|accelerat|future|promis|empower)\b/i.test(lower);
+  const mentionsThreat = /\b(threat|risk|danger|vulnerabilit|attack|exploit|malicious|breach|harm|weapon)\b/i.test(lower);
+  const mentionsSecurity = /\b(security|accountability|audit|complian|govern|firewall|guardrail|oversight)\b/i.test(lower);
+
+  // Turn 0: Initial argument delivered by candidate
+  if (turnIndex === 0) {
+    // If the candidate spoke very few words (< 5), encourage them gently
+    if (words.length < 5) {
+      return {
+        feedback: `I am listening closely, ${userName}. Share your opening perspective on today's topic: Agentic AI in Cybersecurity — do you see it as a threat, or a massive engineering opportunity?`,
+        turn: 0,
+        fillers,
+        isRebuttal: false,
+        score: 75,
+      };
+    }
+
+    // Authentic, polite debate counter-point specified in Feature 7
+    const feedback = GD_ROBOT_COUNTER_ARGUMENT;
+
+    return {
+      feedback,
+      turn: 0,
+      fillers,
+      isRebuttal: false,
+      mentionsOpportunity,
+      mentionsThreat,
+      mentionsSecurity,
+      score: 85,
+    };
+  }
+
+  // Turn 1: Candidate delivers their rebuttal to the counter-argument
+  if (turnIndex === 1) {
+    const feedback = `Well-argued rebuttal! You balanced operational speed with cybersecurity defense very effectively. In high-stakes placement discussions, acknowledging security vulnerabilities while championing innovation demonstrates top-tier leadership presence.`;
+
+    return {
+      feedback,
+      turn: 1,
+      fillers,
+      isRebuttal: true,
+      mentionsOpportunity,
+      mentionsThreat,
+      mentionsSecurity,
+      score: 90,
+    };
+  }
+
+  // Turn 2+: Continuing placement discussion
+  const advancedRebuttals = [
+    `Strong technical synthesis, ${userName}! How would you address the software supply chain risks if autonomous AI agents pull unverified third-party libraries into production?`,
+    `A solid closing perspective! In real-world enterprise placement GDs, building consensus among divided teams is a hallmark of engineering leadership.`,
+  ];
+
+  return {
+    feedback: advancedRebuttals[(turnIndex - 2) % advancedRebuttals.length],
+    turn: turnIndex,
+    fillers,
+    isRebuttal: true,
+    score: 88,
+  };
+}
+
+export function evaluateGDStatement(text, userName = 'Pragya') {
+  const analysis = analyzeGDArgument(text, _turnCount, userName);
+  return analysis.feedback;
+}
+
+// ── 7. Casual Talk & Empathetic Mental Wellness Mode (Feature 8) ─────────────
+export const CASUAL_ROBOT_WELCOME = "Hey there! Take a deep breath. There is no scoring or judgment in this room today. How are you feeling about your preparations, or what is on your mind?";
+
+export function analyzeCasualWellness(text, turnIndex = 0, userName = 'Pragya') {
+  const lower = text.toLowerCase();
+  const words = text.split(/\s+/).filter(Boolean);
+
+  // Emotional tone and stress markers detection (Feature 8)
+  const isStressed = /\b(stressed|stress|anxious|anxiety|worried|worry|worries|afraid|fear|overwhelmed|nervous|pressure|panic|darr|scared|doubt|depressed|fail|failing|exhausted|burnout|tired|confused|stuck|lost|hopeless)\b/i.test(lower);
+  const isInterviewFear = /\b(interview|placement|round|rejection|rejected|company|shortlist|coding test|mock|dsa|aptitude|salary|offer|unplaced|companies)\b/i.test(lower);
+  const isPreparationDoubt = /\b(not ready|forgot|forgetting|blank|can't remember|lack of confidence|behind|struggling|not enough|lagging|preparation|studying)\b/i.test(lower);
+  const isGratitudeOrRelief = /\b(better|relieved|good|calm|calmer|okay|fine|thank|thanks|helped|nice|happy|relaxed|peace|refresh)\b/i.test(lower);
+
+  let feedback = '';
+
+  if (isStressed || isInterviewFear || isPreparationDoubt) {
+    // Validate emotions & offer grounded calming encouragement
+    const supportiveAdvice = [
+      `Placement anxiety is very common, ${userName}, and it is completely okay to feel overwhelmed. Remember, one interview or coding round does not define your worth as an engineer. Focus on one small step at a time. You have the technical skills, trust your preparation.`,
+      `I hear you so deeply, ${userName}. Engineering placements bring immense pressure, but feeling anxious simply means you care about your future. You don't have to conquer everything in one day. Focus on one small step at a time, take a slow breath, and be proud of how far you've come.`,
+      `Take a gentle, slow breath with me, ${userName}. In moments of high stress, our minds convince us that everyone else has it figured out, but almost every student feels this exact same doubt. Trust your preparation, give yourself grace, and take things one day at a time.`,
+    ];
+    feedback = supportiveAdvice[turnIndex % supportiveAdvice.length];
+  } else if (isGratitudeOrRelief) {
+    feedback = `I am so glad to hear that, ${userName}! Giving your mind permission to unwind and speak without judgment is just as crucial for placement success as technical problem-solving. Carry this calm headspace with you today.`;
+  } else if (words.length < 5) {
+    feedback = `Take all the time you need, ${userName}. There is no timer or score here today. Speak whatever comes to mind—I am right here with you.`;
+  } else {
+    feedback = `I hear you, ${userName}. Speaking your thoughts aloud helps untangle mental knots and grounds your confidence. How are you feeling right now?`;
+  }
+
+  return {
+    feedback,
+    turn: turnIndex,
+    isStressed,
+    isInterviewFear,
+    isPreparationDoubt,
+  };
+}
+
 export function evaluateCasualTalk(text, userName = 'Pragya') {
-  return `I hear you completely ${userName}. Practice and consistency are what turn nervous energy into interview poise. You are doing fantastic. What is one thing you built recently that made you feel proud?`;
+  const analysis = analyzeCasualWellness(text, _turnCount, userName);
+  return analysis.feedback;
 }
 
-// ── 8. Verbal Congratulations ─────────────────────────────────
+// ── 8. Feature 9: Verbal Reinforcement & Positive Thinking ─────
+export function constructVerbalReinforcement({ eyeContact = 88, fillers = 1 }) {
+  const safeEye = Math.round(eyeContact || 88);
+  const safeFillers = Math.max(fillers ?? 0, 0);
+  return `Fantastic effort today! Look at your progress—your eye contact was steady at ${safeEye}%, and you kept vocal hesitations down to just ${safeFillers}. Keep this confidence high for your campus placements!`;
+}
+
+// ── 8b. Mode-Specific Verbal Congratulations ─────────────────────────────────
 export function generateCongratulationsSpeech(mode, score = 86, userName = 'Pragya') {
-  const scoreNum = Math.max(score, 78);
+  const scoreNum = Math.max(score || 85, 78);
+  if (mode === MODES.CASUAL || mode === 'casual') {
+    return `Wonderful session, ${userName}! You took a deliberate pause to decompress, reset your mindset, and ground your vocal energy. Taking care of your mental wellness is your secret superpower during placement season. You are doing fantastic!`;
+  }
+  if (mode === MODES.GD || mode === 'gd') {
+    return `Congratulations ${userName}! You completed your Group Discussion round with a solid score of ${scoreNum} percent. You asserted strong points on Agentic AI and handled the debate counter-arguments with great poise and eye contact. Outstanding effort!`;
+  }
+  if (mode === MODES.PRESENTATION || mode === 'presentation') {
+    return `Congratulations ${userName}! You completed your Project Presentation round with a solid score of ${scoreNum} percent. Your STAR structure and architectural trade-off explanations were spot on. Keep this momentum into your placement rounds!`;
+  }
+  if (mode === MODES.SELF_INTRO || mode === 'self_intro') {
+    return `Congratulations ${userName}! You completed your Self-Introduction round with a solid score of ${scoreNum} percent. Your opening structure and vocal clarity were fantastic. Carry this momentum into your placement rounds!`;
+  }
   return `Congratulations ${userName}! You completed your practice round with a solid score of ${scoreNum} percent. Your vocal energy and dedication to continuous mock practice are paying off. Carry this momentum into your placement rounds!`;
 }
 
