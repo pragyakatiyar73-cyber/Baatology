@@ -42,13 +42,19 @@ export default defineConfig(({ mode }) => {
                   },
                 });
 
-                const data = await response.json();
+                const text = await response.text();
+                let data = null;
+                try {
+                  data = JSON.parse(text);
+                } catch {
+                  data = { message: text.slice(0, 200) };
+                }
 
                 if (!response.ok || !data?.data?.token) {
                   res.statusCode = response.status || 500;
                   res.end(
                     JSON.stringify({
-                      error: data?.message || 'Failed to generate token from HeyGen.',
+                      error: data?.message || data?.error || 'Failed to generate token from HeyGen.',
                       details: data,
                       hasApiKey: true,
                     })
