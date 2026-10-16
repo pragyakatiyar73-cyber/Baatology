@@ -1,17 +1,18 @@
 import React, { useRef, useMemo, Suspense, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, OrbitControls, ContactShadows, Html } from '@react-three/drei';
+import { useGLTF, OrbitControls, ContactShadows, Html, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 
 /**
  * SeatedFemaleMentorModel
  *
  * Highly Realistic Human Female Mentor:
- * - Natural, relaxed human arm posture (arms hang comfortably along torso, hands resting naturally in lap)
+ * - Natural skin tones on hands & arms (restoring original human texture on Wolf3D_Body)
+ * - Hands & forearms settled naturally on top of the executive desk pad
  * - Phonetic speech lip-sync matching syllables with distinct vowels and clean closures
  * - Natural eye-blinking every 4-6 seconds
  * - Continuous subtle chest & shoulder breathing
- * - Warm attentive listening nods & resting smile
+ * - Warm attentive listening nods & resting empathetic smile
  * - Enhanced PBR materials for realistic skin, corneal moisture, glasses, and hair
  */
 function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isThinking = false }) {
@@ -36,10 +37,12 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
         // Cinematic Material Enhancements (Skin softness, cornea gloss, metallic frames)
         if (child.material) {
           const mat = child.material;
-          if (mat.name === 'Wolf3D_Skin') {
-            mat.roughness = 0.62; // Soft human skin matte texture
+          // IMPORTANT: Wolf3D_Body contains the arms and hands. Treat as human skin with neutral color #ffffff
+          // so the original skin texture displays with natural human flesh tones!
+          if (mat.name === 'Wolf3D_Skin' || mat.name === 'Wolf3D_Body') {
+            mat.roughness = 0.65; // Soft human skin matte texture
             mat.metalness = 0.0;
-            mat.color = new THREE.Color('#fdede2'); // Warm, healthy human skin tone
+            mat.color = new THREE.Color('#ffffff'); // Keep 100% natural human skin texture & tone
           } else if (mat.name === 'Wolf3D_Eye' || mat.name === 'EyeLeft' || mat.name === 'EyeRight') {
             mat.roughness = 0.05; // Moist reflective cornea
             mat.metalness = 0.15;
@@ -57,10 +60,10 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
             mat.roughness = 0.22;
             mat.metalness = 0.0;
             mat.color = new THREE.Color('#fcfbf7');
-          } else if (mat.name?.includes('Outfit') || mat.name === 'Wolf3D_Outfit_Top' || mat.name === 'Wolf3D_Body') {
-            mat.roughness = 0.88; // Professional executive blazer fabric
+          } else if (mat.name === 'Wolf3D_Outfit_Top' || mat.name?.includes('Outfit')) {
+            mat.roughness = 0.82; // Professional executive blazer fabric
             mat.metalness = 0.05;
-            mat.color = new THREE.Color('#192231');
+            mat.color = new THREE.Color('#ffffff'); // Preserve blazer fabric texture
           }
           mat.needsUpdate = true;
         }
@@ -73,6 +76,26 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     return { bones, meshes };
   }, [scene]);
 
+  // Capture pristine rest quaternions of all upper-body bones to prevent drift
+  const restQuats = useMemo(() => {
+    const quats = {};
+    const names = [
+      'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm',
+      'LeftHand', 'RightHand', 'LeftShoulder', 'RightShoulder',
+      'Spine', 'Spine1', 'Head',
+      'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandMiddle1', 'LeftHandMiddle2',
+      'LeftHandRing1', 'LeftHandRing2', 'LeftHandPinky1', 'LeftHandPinky2',
+      'RightHandIndex1', 'RightHandIndex2', 'RightHandMiddle1', 'RightHandMiddle2',
+      'RightHandRing1', 'RightHandRing2', 'RightHandPinky1', 'RightHandPinky2'
+    ];
+    names.forEach((name) => {
+      if (rig.bones[name]) {
+        quats[name] = rig.bones[name].quaternion.clone();
+      }
+    });
+    return quats;
+  }, [rig]);
+
   // Random eye blink tracker (every 4-6 seconds)
   const blinkTimerRef = useRef({ nextBlink: 3.5, isBlinking: false });
 
@@ -83,58 +106,68 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
 
     // ── 1. Subtle Chest & Shoulder Breathing Loops ──
     const breatheCycle = Math.sin(t * 1.6);
-    const chestRise = breatheCycle * 0.01;
-    const shoulderBreath = breatheCycle * 0.006;
+    const chestRise = breatheCycle * 0.008;
+    const shoulderBreath = breatheCycle * 0.004;
 
-    if (bones.Spine) {
-      bones.Spine.rotation.x = 0.02 + chestRise;
-      bones.Spine.rotation.z = Math.sin(t * 0.5) * 0.004;
+    if (bones.Spine && restQuats.Spine) {
+      bones.Spine.quaternion.copy(restQuats.Spine);
+      bones.Spine.rotateX(0.02 + chestRise);
+      bones.Spine.rotateZ(Math.sin(t * 0.5) * 0.004);
     }
-    if (bones.Spine1) {
-      bones.Spine1.rotation.x = chestRise * 0.7;
-    }
-
-    if (bones.LeftShoulder) bones.LeftShoulder.rotation.z = -shoulderBreath;
-    if (bones.RightShoulder) bones.RightShoulder.rotation.z = shoulderBreath;
-
-    // ── 2. Natural Relaxed Human Seated Arm Posture ──
-    // Arms hang naturally down along the torso, resting comfortably in lap (NO floating stick arms!)
-    if (bones.LeftArm) {
-      bones.LeftArm.rotation.x = 0.12 + chestRise * 0.4;
-      bones.LeftArm.rotation.y = 0.05;
-      bones.LeftArm.rotation.z = -0.35; // Hangs naturally close to body
-    }
-    if (bones.RightArm) {
-      bones.RightArm.rotation.x = 0.12 + chestRise * 0.4;
-      bones.RightArm.rotation.y = -0.05;
-      bones.RightArm.rotation.z = 0.35; // Hangs naturally close to body
+    if (bones.Spine1 && restQuats.Spine1) {
+      bones.Spine1.quaternion.copy(restQuats.Spine1);
+      bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    // Forearms relaxed forward into her lap
-    if (bones.LeftForeArm) {
-      bones.LeftForeArm.rotation.x = 0.38;
-      bones.LeftForeArm.rotation.y = 0.12;
-      bones.LeftForeArm.rotation.z = 0.10;
+    if (bones.LeftShoulder && restQuats.LeftShoulder) {
+      bones.LeftShoulder.quaternion.copy(restQuats.LeftShoulder);
+      bones.LeftShoulder.rotateZ(-shoulderBreath);
     }
-    if (bones.RightForeArm) {
-      bones.RightForeArm.rotation.x = 0.38;
-      bones.RightForeArm.rotation.y = -0.12;
-      bones.RightForeArm.rotation.z = -0.10;
+    if (bones.RightShoulder && restQuats.RightShoulder) {
+      bones.RightShoulder.quaternion.copy(restQuats.RightShoulder);
+      bones.RightShoulder.rotateZ(shoulderBreath);
     }
 
-    // Hands resting naturally in lap
-    if (bones.LeftHand) {
-      bones.LeftHand.rotation.x = 0.14;
-      bones.LeftHand.rotation.y = 0.06;
-      bones.LeftHand.rotation.z = 0.0;
+    // ── 2. Natural Table-Rested Arm & Hand Posture ──
+    // Arms drape naturally from shoulders, forearms angle forward onto the desk,
+    // and hands rest comfortably flat/relaxed on the executive desk pad
+    const speechGesture = isSpeaking ? Math.sin(t * 3.2) * 0.015 : 0;
+
+    // Left Arm & Hand on Desk Pad
+    if (bones.LeftArm && restQuats.LeftArm) {
+      bones.LeftArm.quaternion.copy(restQuats.LeftArm);
+      bones.LeftArm.rotateX(0.55 + chestRise * 0.3);
+      bones.LeftArm.rotateZ(0.05);
     }
-    if (bones.RightHand) {
-      bones.RightHand.rotation.x = 0.14;
-      bones.RightHand.rotation.y = -0.06;
-      bones.RightHand.rotation.z = 0.0;
+    if (bones.LeftForeArm && restQuats.LeftForeArm) {
+      bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
+      bones.LeftForeArm.rotateX(0.35 + speechGesture);
+      bones.LeftForeArm.rotateZ(0.70);
+    }
+    if (bones.LeftHand && restQuats.LeftHand) {
+      bones.LeftHand.quaternion.copy(restQuats.LeftHand);
+      bones.LeftHand.rotateX(0.12);
+      bones.LeftHand.rotateZ(-0.22);
     }
 
-    // Natural gentle finger relaxation (softly curled, not stiff starfish)
+    // Right Arm & Hand on Desk Pad (Symmetrical)
+    if (bones.RightArm && restQuats.RightArm) {
+      bones.RightArm.quaternion.copy(restQuats.RightArm);
+      bones.RightArm.rotateX(0.55 + chestRise * 0.3);
+      bones.RightArm.rotateZ(-0.05);
+    }
+    if (bones.RightForeArm && restQuats.RightForeArm) {
+      bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
+      bones.RightForeArm.rotateX(0.35 - speechGesture);
+      bones.RightForeArm.rotateZ(-0.70);
+    }
+    if (bones.RightHand && restQuats.RightHand) {
+      bones.RightHand.quaternion.copy(restQuats.RightHand);
+      bones.RightHand.rotateX(0.12);
+      bones.RightHand.rotateZ(0.22);
+    }
+
+    // Fingers gently relaxed and resting naturally on the desk pad
     const fingerNames = [
       'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandMiddle1', 'LeftHandMiddle2',
       'LeftHandRing1', 'LeftHandRing2', 'LeftHandPinky1', 'LeftHandPinky2',
@@ -142,15 +175,17 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       'RightHandRing1', 'RightHandRing2', 'RightHandPinky1', 'RightHandPinky2'
     ];
     fingerNames.forEach((name) => {
-      if (bones[name]) {
-        bones[name].rotation.z = name.startsWith('Left') ? 0.22 : -0.22;
+      if (bones[name] && restQuats[name]) {
+        bones[name].quaternion.copy(restQuats[name]);
+        bones[name].rotateX(0.16);
+        bones[name].rotateZ(name.startsWith('Left') ? 0.08 : -0.08);
       }
     });
 
     // ── 3. Head & Gaze: Attentive Eye-Level Listening & Micro-Tilts ──
     if (bones.Head) {
       if (isSpeaking) {
-        // Natural speech cadence head movement (subtle conversational emphasis)
+        // Natural speech cadence head movement (conversational emphasis)
         const pitch = Math.sin(t * 6.5) * 0.016 + Math.sin(t * 3.2) * 0.012;
         const yaw = Math.sin(t * 2.0) * 0.018;
         const roll = Math.cos(t * 2.8) * 0.008;
@@ -159,7 +194,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
         bones.Head.rotation.y = THREE.MathUtils.lerp(bones.Head.rotation.y, yaw, 0.12);
         bones.Head.rotation.z = THREE.MathUtils.lerp(bones.Head.rotation.z, roll, 0.12);
       } else if (isListening) {
-        // Attentive warm nodding rhythm
+        // Attentive warm nodding rhythm while listening to student
         const nod = 0.02 + Math.sin(t * 1.8) * 0.028 + Math.sin(t * 0.9) * 0.012;
         const gazeYaw = Math.sin(t * 0.7) * 0.022;
         const subtleTilt = Math.sin(t * 1.2) * 0.015;
@@ -242,21 +277,16 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
           targetOpen = openAperture * 0.68;
 
           if (phonemeCycle === 0) {
-            // 'AA' (open vowel)
             targetAA = openAperture * 0.78;
           } else if (phonemeCycle === 1) {
-            // 'E' / 'I' (lip stretch vowel)
             targetE = openAperture * 0.65;
             targetI = openAperture * 0.35;
           } else if (phonemeCycle === 2) {
-            // 'O' / 'U' (rounded lips vowel)
             targetO = openAperture * 0.72;
           } else if (phonemeCycle === 3) {
-            // Conversational transition vowel
             targetAA = openAperture * 0.45;
             targetE = openAperture * 0.40;
           } else {
-            // Short vocalic release
             targetI = openAperture * 0.55;
           }
         } else {
@@ -318,46 +348,311 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
 useGLTF.preload('/models/female_mentor.glb');
 
 /**
- * ErgonomicExecutiveChairBack
+ * RealExecutiveOfficeChair
  *
- * Contoured Ergonomic Chair Backrest positioned seamlessly behind the mentor:
- * - Breathable curved mesh upholstery with soft graphite tone
- * - Dual chrome support struts connecting to headrest
- * - Fits naturally behind her shoulders and head
+ * Fully Realized Luxury Ergonomic Executive Chair:
+ * - Contoured, multi-segmented black Napa leather backrest with ergonomic lateral wings
+ * - Horizontal stitched pleats/grooves for authentic tailored leather upholstery
+ * - Adjustable chrome-mounted ergonomic headrest pillow framing the mentor's head
+ * - 4D Executive armrests flanking her waist/elbows with chrome riser brackets and cushioned pads
+ * - Heavy-duty die-cast aluminum structural exoskeleton spine and lumbar adjustment knobs
+ * - Plush matching leather seat cushion base
  */
-function ErgonomicExecutiveChairBack() {
+function RealExecutiveOfficeChair() {
   return (
-    <group position={[0, -0.08, -0.32]}>
-      {/* Contoured Spine / Lumbar Support Backbone */}
-      <mesh position={[0, 0.05, -0.05]} castShadow>
-        <boxGeometry args={[0.06, 0.54, 0.04]} />
-        <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.25} />
+    <group position={[0, -0.06, -0.30]}>
+      {/* ── 1. Structural Chrome Exoskeleton Spine Frame (Behind Chair) ── */}
+      {/* Central Polished Aluminum Spine Column */}
+      <mesh position={[0, 0.06, -0.07]} castShadow>
+        <cylinderGeometry args={[0.018, 0.022, 0.72, 16]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.14} />
       </mesh>
 
-      {/* Ergonomic Ribbed Leather / Mesh Backrest (Curved, softly rounded) */}
-      <mesh position={[0, 0.05, -0.01]} castShadow receiveShadow>
-        <boxGeometry args={[0.42, 0.52, 0.05]} />
-        <meshStandardMaterial color="#1a1c23" roughness={0.65} metalness={0.2} />
+      {/* Upper Exoskeleton Y-Bracket holding upper backrest */}
+      <mesh position={[0, 0.28, -0.05]}>
+        <boxGeometry args={[0.32, 0.024, 0.035]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.92} roughness={0.16} />
       </mesh>
 
-      {/* Dual Chrome Support Struts for Headrest */}
-      <mesh position={[-0.05, 0.34, -0.04]} castShadow>
-        <cylinderGeometry args={[0.007, 0.007, 0.14, 12]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
-      </mesh>
-      <mesh position={[0.05, 0.34, -0.04]} castShadow>
-        <cylinderGeometry args={[0.007, 0.007, 0.14, 12]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+      {/* Lower Lumbar Exoskeleton Support Bracket */}
+      <mesh position={[0, -0.12, -0.05]}>
+        <boxGeometry args={[0.36, 0.03, 0.035]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.92} roughness={0.16} />
       </mesh>
 
-      {/* Ergonomic Curved Headrest Cushion (Directly behind head) */}
-      <mesh position={[0, 0.39, -0.02]} castShadow>
-        <boxGeometry args={[0.24, 0.12, 0.06]} />
-        <meshStandardMaterial color="#14161c" roughness={0.6} metalness={0.2} />
+      {/* Mechanical Lumbar Tension Adjustment Knobs (Chrome accents on both sides) */}
+      <mesh position={[-0.20, -0.12, -0.04]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.016, 0.016, 0.035, 16]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.12} />
       </mesh>
-      <mesh position={[0, 0.39, -0.04]}>
-        <boxGeometry args={[0.25, 0.02, 0.02]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
+      <mesh position={[0.20, -0.12, -0.04]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.016, 0.016, 0.035, 16]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.12} />
+      </mesh>
+
+      {/* ── 2. Contoured Executive High Backrest (Multi-Segmented Leather) ── */}
+      {/* Central Ergonomic Thoracic/Lumbar Cushion */}
+      <RoundedBox
+        args={[0.36, 0.50, 0.065]}
+        radius={0.028}
+        smoothness={4}
+        position={[0, 0.06, -0.02]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial
+          color="#16181f" // Executive black Napa leather
+          roughness={0.44} // Soft supple leather sheen
+          metalness={0.12}
+        />
+      </RoundedBox>
+
+      {/* Horizontal Stitched Leather Creases / Ribs (Luxury executive detailing) */}
+      {[-0.10, -0.02, 0.07, 0.16, 0.24].map((yPos, idx) => (
+        <mesh key={idx} position={[0, yPos, 0.014]}>
+          <boxGeometry args={[0.32, 0.005, 0.008]} />
+          <meshStandardMaterial color="#0b0c10" roughness={0.8} />
+        </mesh>
+      ))}
+
+      {/* Ergonomic Lateral Shoulder Bolster Wings (Wrap gently around shoulders) */}
+      {/* Left Shoulder Wing */}
+      <group position={[-0.20, 0.08, -0.01]} rotation={[0, 0.28, 0]}>
+        <RoundedBox args={[0.08, 0.46, 0.055]} radius={0.02} smoothness={4} castShadow receiveShadow>
+          <meshStandardMaterial color="#14161c" roughness={0.46} metalness={0.1} />
+        </RoundedBox>
+        {/* Chrome edge accent trim */}
+        <mesh position={[-0.038, 0, 0]}>
+          <boxGeometry args={[0.006, 0.44, 0.04]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.18} />
+        </mesh>
+      </group>
+
+      {/* Right Shoulder Wing */}
+      <group position={[0.20, 0.08, -0.01]} rotation={[0, -0.28, 0]}>
+        <RoundedBox args={[0.08, 0.46, 0.055]} radius={0.02} smoothness={4} castShadow receiveShadow>
+          <meshStandardMaterial color="#14161c" roughness={0.46} metalness={0.1} />
+        </RoundedBox>
+        {/* Chrome edge accent trim */}
+        <mesh position={[0.038, 0, 0]}>
+          <boxGeometry args={[0.006, 0.44, 0.04]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.18} />
+        </mesh>
+      </group>
+
+      {/* Contoured Lower Lumbar Support Cushion */}
+      <RoundedBox
+        args={[0.33, 0.14, 0.045]}
+        radius={0.02}
+        smoothness={4}
+        position={[0, -0.12, 0.018]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial color="#1a1c24" roughness={0.48} metalness={0.12} />
+      </RoundedBox>
+
+      {/* ── 3. Ergonomic Contoured Headrest ── */}
+      {/* Dual Articulated Polished Chrome Neck Struts */}
+      <mesh position={[-0.06, 0.36, -0.045]} rotation={[-0.14, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.007, 0.007, 0.16, 16]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.10} />
+      </mesh>
+      <mesh position={[0.06, 0.36, -0.045]} rotation={[-0.14, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.007, 0.007, 0.16, 16]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.10} />
+      </mesh>
+
+      {/* Chrome Pivot Mounting Bar */}
+      <mesh position={[0, 0.43, -0.038]}>
+        <boxGeometry args={[0.18, 0.018, 0.024]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.12} />
+      </mesh>
+
+      {/* Ergonomic Curved Headrest Cushion (Pillow directly behind mentor's head) */}
+      <RoundedBox
+        args={[0.28, 0.14, 0.07]}
+        radius={0.03}
+        smoothness={4}
+        position={[0, 0.44, -0.015]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial
+          color="#16181f"
+          roughness={0.42}
+          metalness={0.12}
+        />
+      </RoundedBox>
+      {/* Central Headrest Indentation/Stitch */}
+      <mesh position={[0, 0.44, 0.021]}>
+        <boxGeometry args={[0.22, 0.004, 0.006]} />
+        <meshStandardMaterial color="#0c0d12" roughness={0.8} />
+      </mesh>
+
+      {/* ── 4. Executive 4D Armrests (Flanking the mentor) ── */}
+      {/* Left Armrest */}
+      <group position={[-0.28, -0.16, 0.05]}>
+        {/* Die-Cast Chrome Armrest Support Upright */}
+        <mesh position={[0, -0.07, -0.08]} castShadow>
+          <cylinderGeometry args={[0.012, 0.015, 0.18, 16]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
+        </mesh>
+        {/* Chrome Horizontal Cantilever */}
+        <mesh position={[0.02, -0.01, -0.03]} rotation={[0, 0, -0.15]}>
+          <boxGeometry args={[0.05, 0.02, 0.14]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
+        </mesh>
+        {/* Contoured Cushioned Armrest Pad */}
+        <RoundedBox args={[0.085, 0.032, 0.26]} radius={0.014} smoothness={4} position={[0.02, 0.01, 0.0]} castShadow>
+          <meshStandardMaterial color="#1a1c22" roughness={0.52} metalness={0.1} />
+        </RoundedBox>
+      </group>
+
+      {/* Right Armrest */}
+      <group position={[0.28, -0.16, 0.05]}>
+        {/* Die-Cast Chrome Armrest Support Upright */}
+        <mesh position={[0, -0.07, -0.08]} castShadow>
+          <cylinderGeometry args={[0.012, 0.015, 0.18, 16]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
+        </mesh>
+        {/* Chrome Horizontal Cantilever */}
+        <mesh position={[-0.02, -0.01, -0.03]} rotation={[0, 0, 0.15]}>
+          <boxGeometry args={[0.05, 0.02, 0.14]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
+        </mesh>
+        {/* Contoured Cushioned Armrest Pad */}
+        <RoundedBox args={[0.085, 0.032, 0.26]} radius={0.014} smoothness={4} position={[-0.02, 0.01, 0.0]} castShadow>
+          <meshStandardMaterial color="#1a1c22" roughness={0.52} metalness={0.1} />
+        </RoundedBox>
+      </group>
+
+      {/* ── 5. Plush Matching Leather Seat Base Cushion ── */}
+      <RoundedBox
+        args={[0.52, 0.09, 0.48]}
+        radius={0.032}
+        smoothness={4}
+        position={[0, -0.28, 0.04]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial color="#16181f" roughness={0.46} metalness={0.12} />
+      </RoundedBox>
+    </group>
+  );
+}
+
+/**
+ * ExecutiveConsultationDesk
+ *
+ * Professional executive consultation desk placed directly in front of the mentor:
+ * - Rich dark walnut / espresso wooden tabletop with chamfered smooth beveled edge
+ * - Center executive Napa leather desk pad (where her hands and forearms rest naturally)
+ * - Modern executive laptop (space grey slim aluminum chassis angled to the side)
+ * - Fine executive accessories: sleek metal pen, ceramic espresso mug with saucer
+ * - Front modesty panel in dark matte graphite / wood grain
+ */
+function ExecutiveConsultationDesk() {
+  return (
+    <group position={[0, -0.31, 0.22]}>
+      {/* ── 1. Main Executive Wooden Desktop (Rich dark walnut with satin bevel) ── */}
+      <RoundedBox args={[2.2, 0.038, 0.75]} radius={0.012} smoothness={4} position={[0, 0, 0]} receiveShadow castShadow>
+        <meshStandardMaterial
+          color="#1e1814" // Rich dark espresso walnut wood tone
+          roughness={0.35} // Soft satin reflection
+          metalness={0.08}
+        />
+      </RoundedBox>
+
+      {/* Subtle Chamfer Under-Bevel Trim (Adds thickness & architectural depth) */}
+      <mesh position={[0, -0.024, 0]}>
+        <boxGeometry args={[2.16, 0.015, 0.72]} />
+        <meshStandardMaterial color="#120e0b" roughness={0.7} metalness={0.05} />
+      </mesh>
+
+      {/* ── 2. Executive Napa Leather Desk Pad / Blotter ── */}
+      {/* Hands and forearms rest directly on this desk mat */}
+      <RoundedBox
+        args={[0.74, 0.007, 0.38]}
+        radius={0.008}
+        smoothness={4}
+        position={[0, 0.022, -0.08]}
+        receiveShadow
+      >
+        <meshStandardMaterial
+          color="#15171b" // Deep charcoal executive leather
+          roughness={0.58}
+          metalness={0.12}
+        />
+      </RoundedBox>
+
+      {/* ── 3. Ultra-Slim Executive Laptop (Angled on the left) ── */}
+      <group position={[-0.46, 0.024, -0.02]} rotation={[0, 0.26, 0]}>
+        {/* Base Chassis (Space Grey Aluminum) */}
+        <RoundedBox args={[0.26, 0.008, 0.18]} radius={0.004} smoothness={4} castShadow receiveShadow>
+          <meshStandardMaterial color="#2c3038" metalness={0.88} roughness={0.22} />
+        </RoundedBox>
+        {/* Trackpad */}
+        <mesh position={[0, 0.005, 0.045]}>
+          <planeGeometry args={[0.09, 0.06]} />
+          <meshStandardMaterial color="#252930" metalness={0.8} roughness={0.3} />
+        </mesh>
+        {/* Keyboard Well */}
+        <mesh position={[0, 0.005, -0.025]}>
+          <planeGeometry args={[0.23, 0.09]} />
+          <meshStandardMaterial color="#181a1f" metalness={0.2} roughness={0.7} />
+        </mesh>
+        {/* Open Display Lid (Tilted at 105 degrees) */}
+        <group position={[0, 0.004, -0.09]} rotation={[-0.26, 0, 0]}>
+          <RoundedBox args={[0.26, 0.17, 0.006]} radius={0.004} smoothness={4} position={[0, 0.085, 0]} castShadow>
+            <meshStandardMaterial color="#2c3038" metalness={0.88} roughness={0.22} />
+          </RoundedBox>
+          {/* Glowing Retina Screen */}
+          <mesh position={[0, 0.085, 0.0035]}>
+            <planeGeometry args={[0.245, 0.155]} />
+            <meshStandardMaterial
+              color="#0d1b2a"
+              emissive="#1e3a8a"
+              emissiveIntensity={0.25}
+              roughness={0.1}
+            />
+          </mesh>
+        </group>
+      </group>
+
+      {/* ── 4. Executive Accessories on the Right ── */}
+      {/* Matte Black Ceramic Mug & Saucer */}
+      <group position={[0.42, 0.024, -0.04]}>
+        <mesh position={[0, 0.0035, 0]}>
+          <cylinderGeometry args={[0.048, 0.038, 0.007, 24]} />
+          <meshStandardMaterial color="#1a1c22" roughness={0.4} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, 0.038, 0]} castShadow>
+          <cylinderGeometry args={[0.032, 0.028, 0.065, 24]} />
+          <meshStandardMaterial color="#1e2129" roughness={0.35} metalness={0.15} />
+        </mesh>
+        <mesh position={[0, 0.062, 0]}>
+          <cylinderGeometry args={[0.029, 0.029, 0.002, 20]} />
+          <meshStandardMaterial color="#2b1810" roughness={0.15} metalness={0.1} />
+        </mesh>
+      </group>
+
+      {/* Sleek Titanium Executive Pen beside the desk pad */}
+      <group position={[0.26, 0.024, 0.06]} rotation={[0, -0.35, 0]}>
+        <mesh position={[0, 0.004, 0]} castShadow>
+          <cylinderGeometry args={[0.004, 0.004, 0.13, 16]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
+        </mesh>
+        <mesh position={[0, 0.004, 0.03]}>
+          <cylinderGeometry args={[0.0045, 0.0045, 0.035, 16]} />
+          <meshStandardMaterial color="#1e2430" roughness={0.6} metalness={0.2} />
+        </mesh>
+      </group>
+
+      {/* ── 5. Front Modesty Panel / Desk Base ── */}
+      <mesh position={[0, -0.24, -0.08]} castShadow receiveShadow>
+        <boxGeometry args={[1.9, 0.44, 0.025]} />
+        <meshStandardMaterial color="#14100d" roughness={0.6} metalness={0.05} />
       </mesh>
     </group>
   );
@@ -385,7 +680,9 @@ function ModelLoader() {
  * Face-to-Face Executive Studio Setup:
  * - 100% Fixed, Full-Screen, Non-Moving Photorealistic Background Image
  * - Symmetrical straight-on executive room (bookshelves, warm lamps, daylight windows)
- * - Mentor seated naturally with relaxed arms resting comfortably in lap (normal human posture)
+ * - Mentor seated naturally in a Luxury Executive Ergonomic Chair
+ * - Executive Consultation Desk in foreground with her hands resting comfortably on the leather pad
+ * - Natural human skin tones preserved on hands & arms (no black gloves!)
  * - Realistic phonetic syllable lip-sync synchronized to speech cadence with clean closures
  * - Eye-level camera: position [0, 0, 1.4], fov 40
  * - OrbitControls locked (enableRotate=false) to ensure zero unwanted movement
@@ -470,8 +767,8 @@ export default function FemaleMentor3DAvatar({
             distance={3.5}
           />
 
-          {/* ── Contoured Ergonomic Chair Back (Directly behind mentor) ── */}
-          <ErgonomicExecutiveChairBack />
+          {/* ── Real Luxury Executive Ergonomic Chair (Directly behind mentor) ── */}
+          <RealExecutiveOfficeChair />
 
           {/* ── 3D Seated Avatar Model ── */}
           <Suspense fallback={<ModelLoader />}>
@@ -482,19 +779,22 @@ export default function FemaleMentor3DAvatar({
             />
           </Suspense>
 
-          {/* ── Soft Floor / Lap Contact Shadow ── */}
+          {/* ── Executive Consultation Desk & Accessories (In front of mentor) ── */}
+          <ExecutiveConsultationDesk />
+
+          {/* ── Soft Floor / Desk Contact Shadows ── */}
           <ContactShadows
-            position={[0, -0.65, 0]}
-            opacity={0.6}
-            scale={3.0}
+            position={[0, -0.32, 0.2]}
+            opacity={0.65}
+            scale={2.6}
             blur={2.0}
-            far={2.0}
+            far={1.5}
             color="#000000"
           />
 
           {/* ── Orbit Controls (Locked so neither avatar nor background ever moves) ── */}
           <OrbitControls
-            target={[0, 0.1, 0]}   // Face level target
+            target={[0, 0.08, 0]}  // Natural eye-level target
             enableRotate={false}   // 100% Fixed: will not rotate on mouse drag!
             enableZoom={false}     // Fixed natural interview distance
             enablePan={false}      // No panning
