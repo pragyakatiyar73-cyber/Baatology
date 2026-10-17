@@ -119,27 +119,27 @@ export default function Dashboard({
               <div className="lg:col-span-8 flex flex-col gap-4 w-full">
                 {/* 3 Practice Session Cards Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 xl:gap-5 w-full">
-                  {/* Card 1: Group Discussion */}
+                  {/* Card 1: Group Discussion Studio */}
                   <div
-                    onClick={() => onStartArena(MODES.GD)}
+                    onClick={() => onNavigate('gd_studio')}
                     className="bg-white rounded-[26px] p-6 border-2 border-[#ede9fe] shadow-xs hover:shadow-xl hover:border-[#8b5cf6] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
                   >
                     <div className="w-14 h-14 rounded-full bg-[#8b5cf6] flex items-center justify-center text-white shadow-md shadow-purple-200 group-hover:scale-105 transition-transform">
                       <Users className="w-7 h-7" />
                     </div>
                     <h3 className="text-base font-bold text-[#1e1b4b] mt-3">
-                      Group Discussion
+                      Group Discussion Studio
                     </h3>
                     <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
-                      Discuss real-world topics with AI and other students. Build teamwork and confidence.
+                      Interactive 2D roundtable with AI participants, topic selection, real-time air-time tracking & delivery telemetry.
                     </p>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onStartArena(MODES.GD);
+                        onNavigate('gd_studio');
                       }}
                       className="mt-3 w-9 h-9 rounded-full bg-[#f3f0ff] hover:bg-[#ede9fe] text-[#7c3aed] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
-                      title="Start Group Discussion"
+                      title="Launch Group Discussion Studio"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>
@@ -231,10 +231,11 @@ export default function Dashboard({
                       <span>Dual-Video Mentorship</span>
                     </button>
                     <button
-                      onClick={() => onStartArena(MODES.GD)}
+                      onClick={() => onNavigate('gd_studio')}
                       className="px-5 py-2.5 rounded-full bg-[#5b51e8] hover:bg-[#4a3ecc] text-white text-xs font-semibold shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
                     >
-                      <span>Start GD Arena</span>
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Start GD Studio</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>

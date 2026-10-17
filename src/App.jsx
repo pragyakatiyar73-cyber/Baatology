@@ -15,6 +15,7 @@ import SettingsModal from './components/PracticeRoom/SettingsModal';
 import LoginModal from './components/Dashboard/LoginModal';
 import DualVideoMentorshipRoom from './components/Mentorship/DualVideoMentorshipRoom';
 import PresentationStudio from './components/Presentation/PresentationStudio';
+import GroupDiscussionStudio from './components/GDStudio/GroupDiscussionStudio';
 import { fireLoginCelebration, speakWelcomeGreeting } from './utils/celebration';
 
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
@@ -658,7 +659,7 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════════
           VIEWS: DASHBOARD / HISTORY
       ══════════════════════════════════════════════════════════════ */}
-      {currentView !== 'arena' && currentView !== 'practice' && currentView !== 'mentorship' && currentView !== 'presentation_studio' && (
+      {currentView !== 'arena' && currentView !== 'practice' && currentView !== 'mentorship' && currentView !== 'presentation_studio' && currentView !== 'gd_studio' && (
         <div className="w-full h-screen flex overflow-hidden">
           {/* Left Navigation Sidebar */}
           <Sidebar
@@ -716,6 +717,16 @@ export default function App() {
       ══════════════════════════════════════════════════════════════ */}
       {currentView === 'presentation_studio' && (
         <PresentationStudio
+          userName={userName}
+          onBackToDashboard={() => setCurrentView('dashboard')}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          VIEW: GROUP DISCUSSION STUDIO (ROUNDTABLE 2D VIEW)
+      ══════════════════════════════════════════════════════════════ */}
+      {currentView === 'gd_studio' && (
+        <GroupDiscussionStudio
           userName={userName}
           onBackToDashboard={() => setCurrentView('dashboard')}
         />

@@ -552,7 +552,172 @@ app.post('/api/presentation/summary', (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════
-// 4. ASSISTANT CONFIGURATION & HEALTH ENDPOINTS
+// 4. GROUP DISCUSSION STUDIO ENDPOINTS (ROUNDTABLE & TOPICS)
+// ════════════════════════════════════════════════════════════════════
+
+const CURATED_GD_TOPICS = [
+  {
+    id: 'gd-ai-healthcare',
+    title: 'Artificial Intelligence in Healthcare: Boon or Threat?',
+    category: 'Technology & Ethics',
+    description: 'Debating diagnostic precision, doctor displacement, data privacy, and ethical accountability in automated medical care.',
+    keyPoints: [
+      'Early cancer detection and radiological precision save thousands of lives.',
+      'Risk of algorithmic bias in patient diagnosis and insurance underwriting.',
+      'Human doctor empathy vs robotic decision making.',
+    ],
+  },
+  {
+    id: 'gd-ev-vs-hydrogen',
+    title: 'Electric Vehicles vs Hydrogen Fuel: Which is the Real Green Future?',
+    category: 'Sustainability & Tech',
+    description: 'Evaluating lithium mining impact, grid capacity, hydrogen infrastructure, and life-cycle carbon footprint.',
+    keyPoints: [
+      'EV charging infrastructure is already scaling rapidly across urban centers.',
+      'Hydrogen fuel cells offer zero refuel latency for heavy commercial transport.',
+      'Battery recycling and environmental toll of lithium extraction.',
+    ],
+  },
+  {
+    id: 'gd-wfh-culture',
+    title: 'Remote Work vs In-Office Collaboration for Early Career Engineers',
+    category: 'Corporate Culture',
+    description: 'Assessing mentorship speed, serendipitous innovation, work-life balance, and cross-timezone collaboration.',
+    keyPoints: [
+      'In-person hallway conversations accelerate onboarding and peer mentorship.',
+      'Remote work eliminates burnout commutes and democratizes global hiring.',
+      'Hybrid model as a compromise with structured anchor days.',
+    ],
+  },
+  {
+    id: 'gd-social-media',
+    title: 'Has Social Media Strengthened or Fragmented Human Connection?',
+    category: 'Society & Mental Health',
+    description: 'Analyzing global awareness, algorithmic polarization, attention spans, and genuine real-world empathy.',
+    keyPoints: [
+      'Instant global solidarity during international crises and knowledge dissemination.',
+      'Dopamine loop optimization fueling teenage anxiety and cognitive echo chambers.',
+      'Paradox of hyper-connectivity leading to social isolation.',
+    ],
+  },
+  {
+    id: 'gd-fintech-crypto',
+    title: 'Central Bank Digital Currencies (CBDC) vs Decentralized Crypto',
+    category: 'Economy & Fintech',
+    description: 'Comparing state financial sovereignty, anonymous peer-to-peer trust, financial inclusion, and volatility.',
+    keyPoints: [
+      'CBDCs streamline cross-border remittances with regulatory compliance.',
+      'Decentralization protects citizens against inflation and state overreach.',
+      'Smart contracts automate complex escrow without traditional banking fees.',
+    ],
+  },
+];
+
+// 4.1 Get Curated Topics
+app.get('/api/gd/topics', (req, res) => {
+  return res.json({
+    success: true,
+    topics: CURATED_GD_TOPICS,
+  });
+});
+
+// 4.2 Generate Peer Student Arguments & Turn-taking Responses
+app.post('/api/gd/argument', async (req, res) => {
+  try {
+    const { topic = 'Artificial Intelligence in Healthcare', speaker = 'Student 2', studentSpeech = '' } = req.body;
+
+    const peerArguments = {
+      'Student 2': [
+        `I strongly agree with that perspective regarding ${topic}. While automation helps efficiency, we must never compromise on human empathy and ethical accountability.`,
+        `That is a valid point, but looking at the counter-perspective, the economic barrier to implementing this nationwide is often underestimated.`,
+        `Building on what was just mentioned, data security and patient privacy must remain the primary benchmark before widespread adoption.`,
+      ],
+      'Student 3': [
+        `Adding to Student 2's remark, recent global studies show that hybrid adoption yields 38% better retention and performance than binary extremes.`,
+        `I would like to offer an alternative viewpoint on ${topic}. If we over-regulate early, developing economies will miss out on foundational leapfrogging opportunities.`,
+        `I appreciate that insight. However, if we examine the grassroots implementation, infrastructure readiness remains our biggest bottleneck.`,
+      ],
+      'Student 4': [
+        `Synthesizing the points raised so far, both ethical caution and rapid innovation are vital. The real solution lies in transparent phased rollouts.`,
+        `I would like to redirect our attention to the consumer standpoint. Without intuitive education and trust, even the best framework will face friction.`,
+        `To conclude this turn, maintaining clear audit trails and stakeholder feedback loops will ensure equitable benefits for all parties.`,
+      ],
+    };
+
+    const speakerList = peerArguments[speaker] || peerArguments['Student 2'];
+    const randomReply = speakerList[Math.floor(Math.random() * speakerList.length)];
+
+    return res.json({
+      success: true,
+      speaker,
+      argument: randomReply,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[GD Studio] Argument generation error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 4.3 Real-time GD Speech & Air-Time Analysis
+app.post('/api/gd/analysis', (req, res) => {
+  try {
+    const {
+      transcript = '',
+      speakerTimeSeconds = 45,
+      totalSessionSeconds = 180,
+      participantCount = 4,
+    } = req.body;
+
+    const lower = (transcript || '').toLowerCase().trim();
+    const words = lower.split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+
+    // Detect Filler Words
+    const FILLERS = ['um', 'uh', 'ah', 'like', 'you know', 'actually', 'basically', 'haan', 'matlab'];
+    const detected = words.filter((w) => FILLERS.includes(w.replace(/[^a-z]/g, '')));
+
+    // Calculate Air Time %
+    const targetAirTime = 100 / Math.max(1, participantCount); // e.g. 25% for 4 participants
+    const actualAirTime = Math.min(100, Math.round((speakerTimeSeconds / Math.max(1, totalSessionSeconds)) * 100));
+
+    let airTimeStatus = 'Balanced';
+    let tip = 'Great collaborative pacing! You are giving peers room to speak while making structured contributions.';
+
+    if (actualAirTime > targetAirTime * 1.5) {
+      airTimeStatus = 'High Air-Time';
+      tip = 'You have occupied a significant portion of discussion time (>35%). Consider inviting Student 3 or 4 to share their thoughts.';
+    } else if (actualAirTime < targetAirTime * 0.5 && totalSessionSeconds > 60) {
+      airTimeStatus = 'Low Air-Time';
+      tip = 'Jump into the discussion! Acknowledge the last speaker and present your unique perspective.';
+    }
+
+    // GD Scoring: Articulation, Team Player, Decorum
+    const articulationScore = Math.max(65, Math.min(98, 92 - detected.length * 4));
+    const teamPlayerScore = airTimeStatus === 'Balanced' ? 95 : 82;
+
+    return res.json({
+      success: true,
+      analysis: {
+        wordCount,
+        fillersCount: detected.length,
+        fillersDetected: detected,
+        airTimePct: actualAirTime,
+        targetAirTimePct: Math.round(targetAirTime),
+        airTimeStatus,
+        articulationScore,
+        teamPlayerScore,
+        tip,
+      },
+    });
+  } catch (error) {
+    console.error('[GD Studio] Analysis error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════
+// 5. ASSISTANT CONFIGURATION & HEALTH ENDPOINTS
 // ════════════════════════════════════════════════════════════════════
 app.get('/api/assistant/config', (req, res) => {
   res.json({
@@ -580,4 +745,7 @@ app.listen(PORT, () => {
   console.log(`[Presentation Studio] Upload Endpoint: POST http://localhost:${PORT}/api/presentation/upload`);
   console.log(`[Presentation Studio] Analyze Endpoint: POST http://localhost:${PORT}/api/presentation/analyze`);
   console.log(`[Presentation Studio] Summary Endpoint: POST http://localhost:${PORT}/api/presentation/summary`);
+  console.log(`[GD Studio] Topics Endpoint: GET http://localhost:${PORT}/api/gd/topics`);
+  console.log(`[GD Studio] Argument Endpoint: POST http://localhost:${PORT}/api/gd/argument`);
+  console.log(`[GD Studio] Analysis Endpoint: POST http://localhost:${PORT}/api/gd/analysis`);
 });

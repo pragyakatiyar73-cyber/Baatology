@@ -43,11 +43,11 @@ export default function Sidebar({
       isActive: currentView === 'mentorship',
     },
     {
-      id: MODES.GD,
-      label: 'Group Discussion',
+      id: 'gd_studio',
+      label: 'Group Discussion Studio',
       icon: Users,
-      action: () => onStartArena(MODES.GD),
-      isActive: false,
+      action: () => onNavigate('gd_studio'),
+      isActive: currentView === 'gd_studio',
     },
     {
       id: MODES.SELF_INTRO,
