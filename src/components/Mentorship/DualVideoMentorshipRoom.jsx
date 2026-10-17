@@ -1,39 +1,41 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
-  Sparkles,
   Volume2,
   Mic,
   MicOff,
+  PhoneOff,
+  Smile,
+  Heart,
   Video,
   VideoOff,
-  ScreenShare,
-  PhoneOff,
-  Code2,
-  LayoutGrid,
-  Bot,
-  ShieldCheck,
-  CheckCircle,
+  Sparkles,
+  HelpCircle,
+  MessageCircleHeart,
 } from 'lucide-react';
 
-import MentorVideoPanel from './MentorVideoPanel';
+import DigitalRobotAvatar from './DigitalRobotAvatar';
 import CandidateVideoPanel from './CandidateVideoPanel';
-import CodeWorkspaceWidget from './CodeWorkspaceWidget';
-import EmpatheticAssistantHUD from '../Assistant/EmpatheticAssistantHUD';
 import { useWebRTCInterview } from '../../hooks/useWebRTCInterview';
 import { useEmpatheticVoiceAssistant } from '../../hooks/useEmpatheticVoiceAssistant';
 
+/**
+ * DualVideoMentorshipRoom
+ * 
+ * 1. Digital AI Robot Avatar (Zero Judgement & Safe Space Companion):
+ * - Pure Black Theme (#000000) for zero distraction and maximum comfort
+ * - Fullscreen face-to-face conversation ("Amne-samne ek dusre se baat kar rahe hain")
+ * - 4 Expressive Emotional States: listening, speaking, empathetic, thinking
+ * - High Psychological Comfort: Nervous/introverted students can share mistakes freely
+ * - Clean UI with only Listening status and END SESSION button
+ */
 export default function DualVideoMentorshipRoom({
-  userName = 'Pragya',
+  userName = 'Student',
   onBackToDashboard,
   onEndCall,
 }) {
-  // ── Layout Mode State: 'split' (50/50 Dual Video) | 'code_desk' (Mentor + Code with Floating PIP) ──
-  const [layoutMode, setLayoutMode] = useState('split');
-  const [showCodeOverlay, setShowCodeOverlay] = useState(false);
-  const [mentorReviewing, setMentorReviewing] = useState(false);
-
-  const mentorName = 'Dr. Ann Vance';
+  const mentorName = 'Aura';
+  const [showCandidatePip, setShowCandidatePip] = useState(false);
 
   // ── Empathetic Voice Assistant Hook (Thought Reasoning + Voice STT/TTS + Sentiment) ──
   const {
@@ -54,44 +56,55 @@ export default function DualVideoMentorshipRoom({
     autoListen: true,
   });
 
-  // ── Real-Time WebRTC Candidate Stream & Audio Analyser Hook ──
+  // ── WebRTC Candidate Camera & Microphone Hook ──
   const {
     stream,
     cameraActive,
     micActive,
-    screenActive,
     audioLevel,
     toggleCamera,
     toggleMic,
-    toggleScreenShare,
   } = useWebRTCInterview({ autoStart: true });
 
-  // ── Opening Greeting on Mount ──
+  // ── Opening Greeting on Mount: Friendly, Empathetic & Zero-Judgement ──
   useEffect(() => {
     const welcomeTimeout = setTimeout(() => {
       playEmpatheticVoice(
-        `Welcome to your Technical Mentorship, ${userName}! I am ${mentorName}. I am here to understand your thoughts, guide your reasoning, and support you at every step. Whenever you are ready, talk me through your ideas or start coding.`
+        `Hey ${userName}! I'm Aura, your AI companion. You can think of me as a trusted friend who is always in your corner. There is zero pressure and zero judgment here—feel free to share your thoughts, ask anything, or talk about any mistakes or doubts. What's on your mind today?`
       );
-    }, 1000);
+    }, 900);
 
     return () => clearTimeout(welcomeTimeout);
   }, [playEmpatheticVoice, userName]);
 
-  // ── Review Code Trigger with Deep Empathy Reasoning ──
-  const handleAskMentorToReview = useCallback(
-    (codeContent) => {
-      setMentorReviewing(true);
-      interrupt();
+  // ── Map Assistant State to Robot Emotional State ──
+  const currentRobotState = useMemo(() => {
+    const transcriptLower = (userTranscript || '').toLowerCase();
+    const hasStressKeywords =
+      transcriptLower.includes('nervous') ||
+      transcriptLower.includes('mistake') ||
+      transcriptLower.includes('afraid') ||
+      transcriptLower.includes('hesitate') ||
+      transcriptLower.includes('scared') ||
+      transcriptLower.includes('confused') ||
+      transcriptLower.includes('sorry') ||
+      transcriptLower.includes('weak') ||
+      transcriptLower.includes('sharam');
 
-      setTimeout(() => {
-        submitUserMessage(
-          `Candidate ${userName} submitted code for review: \n\`\`\`\n${(codeContent || '').slice(0, 350)}\n\`\`\`\nPlease provide empathetic feedback, validate their effort, and evaluate algorithmic efficiency.`
-        );
-        setMentorReviewing(false);
-      }, 500);
-    },
-    [interrupt, submitUserMessage, userName]
-  );
+    // If candidate shows stress/hesitation or asked for emotional support
+    if (
+      hasStressKeywords ||
+      emotionalState?.primaryEmotion === 'sadness' ||
+      emotionalState?.primaryEmotion === 'fear' ||
+      (emotionalState?.stressScore && emotionalState.stressScore > 35)
+    ) {
+      return 'empathetic';
+    }
+
+    if (assistantState === 'speaking' || isSpeaking) return 'speaking';
+    if (assistantState === 'thinking' || isThinking) return 'thinking';
+    return 'listening';
+  }, [assistantState, isSpeaking, isThinking, emotionalState, userTranscript]);
 
   // ── Handle End Call ──
   const handleEndCallClick = () => {
@@ -103,249 +116,178 @@ export default function DualVideoMentorshipRoom({
     }
   };
 
+  // ── Reassuring Quick Comfort Prompts ──
+  const quickComfortPrompts = [
+    {
+      label: 'I feel nervous about mistakes',
+      prompt: "I am feeling nervous about making mistakes and not knowing the answer.",
+    },
+    {
+      label: 'Explain this like a friend',
+      prompt: "Could you explain the concepts simply and kindly like a supportive friend?",
+    },
+    {
+      label: 'How can I build confidence?',
+      prompt: "I struggle with self-confidence in discussions. How should I approach this?",
+    },
+  ];
+
   return (
-    <div className="relative w-full h-screen bg-[#070b14] overflow-hidden flex flex-col justify-between text-slate-100 select-none">
+    <div className="relative w-full h-screen bg-[#000000] overflow-hidden flex flex-col justify-between text-slate-100 select-none">
       {/* ══════════════════════════════════════════════════════════════
-          1. TOP NAVIGATION BAR (Dashboard, Evaluation Status Pill)
+          1. MINIMAL TOP BAR (Dashboard Back & Zero Judgement Badge)
       ══════════════════════════════════════════════════════════════ */}
-      <header className="relative z-30 w-full px-6 py-4 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-xl">
+      <header className="relative z-30 w-full px-5 py-3.5 flex items-center justify-between border-b border-white/5 bg-black/60 backdrop-blur-md">
         {/* Top-Left: Return to Dashboard */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={onBackToDashboard}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all shadow-md cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-md cursor-pointer"
             title="Return to Dashboard"
           >
             <ArrowLeft className="w-4 h-4 text-cyan-400" />
-            <span>Dashboard</span>
+            <span className="hidden sm:inline">Dashboard</span>
           </button>
 
-          {/* Layout Mode Switcher */}
-          <div className="hidden md:flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-white/10 text-xs">
-            <button
-              onClick={() => {
-                setLayoutMode('split');
-                setShowCodeOverlay(false);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition-all ${
-                layoutMode === 'split' && !showCodeOverlay
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Split Screen (50/50)</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setLayoutMode('code_desk');
-                setShowCodeOverlay(true);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-semibold transition-all ${
-                layoutMode === 'code_desk' || showCodeOverlay
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Code2 className="w-3.5 h-3.5" />
-              <span>Desk & Code (PIP)</span>
-            </button>
+          {/* Student Comfort Badge */}
+          <div className="flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/20 text-xs text-cyan-300">
+            <Smile className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-semibold tracking-wide">Aura • AI Friend Companion</span>
           </div>
         </div>
 
-        {/* Top-Center: Evaluation Status Pill Badge */}
-        <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/90 border border-teal-500/30 backdrop-blur-md shadow-xl">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#10b981]" />
-          <span className="text-xs font-bold text-slate-200">
-            3D Photorealistic AI Mentorship & Code Evaluation • Active Session
-          </span>
-        </div>
+        {/* Top-Center / Right: Zero-Judgement Safe Space Indicator */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/20 text-[11px] font-semibold text-emerald-300">
+            <Heart className="w-3 h-3 text-emerald-400" />
+            <span className="hidden sm:inline">Zero Judgement Zone</span>
+          </div>
 
-        {/* Top-Right: Placeholder alignment */}
-        <div className="w-24 hidden lg:block" />
+          {/* Optional Toggle for Student Video PIP */}
+          <button
+            onClick={() => setShowCandidatePip((prev) => !prev)}
+            className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+              showCandidatePip
+                ? 'bg-cyan-500/20 border-cyan-400/40 text-cyan-300'
+                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+            }`}
+            title={showCandidatePip ? 'Hide my camera' : 'Show my camera preview'}
+          >
+            {showCandidatePip ? <Video className="w-4 h-4 text-cyan-400" /> : <VideoOff className="w-4 h-4" />}
+          </button>
+        </div>
       </header>
 
       {/* ══════════════════════════════════════════════════════════════
-          TOP-RIGHT FLOATING CALL STATUS & EMPATHY WIDGET
+          2. MAIN FULLSCREEN FACE-TO-FACE DIGITAL ROBOT CANVAS
       ══════════════════════════════════════════════════════════════ */}
-      <div className="absolute top-20 right-6 z-30 pointer-events-auto max-w-sm w-full sm:w-80">
-        <div className="p-4 rounded-3xl bg-black/75 border border-white/15 backdrop-blur-xl shadow-2xl space-y-2.5 text-white">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="p-1 rounded-lg bg-teal-500/30 text-teal-300">
-                <Bot className="w-4 h-4 text-teal-300" />
-              </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-teal-300">
-                AURAGD Empathetic Mentor
-              </span>
-            </div>
-
-            {isSpeaking && (
-              <button
-                onClick={interrupt}
-                className="px-2.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-400/50 text-cyan-300 text-[10px] font-bold hover:bg-cyan-900 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
-                title="Interrupt AI Mentor and speak"
-              >
-                <span>Interrupt</span>
-                <Volume2 className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-
-          <div>
-            <h2 className="text-sm font-extrabold tracking-tight text-white flex items-center gap-1.5">
-              <span>Welcome, {userName}!</span>
-              <span>🌿</span>
-            </h2>
-            <p className="text-xs text-slate-300 leading-relaxed mt-0.5">
-              {isSpeaking
-                ? `${mentorName} is speaking with empathetic voice.`
-                : isThinking
-                ? `${mentorName} is deep-reasoning thoughtfully...`
-                : `${mentorName} is listening attentively. Speak naturally into your mic.`}
-            </p>
-          </div>
-
-          {/* Active Status & Emotional Telemetry Indicator */}
-          <div className="pt-1.5 flex items-center justify-between text-[11px] text-slate-400 border-t border-white/10">
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isSpeaking
-                    ? 'bg-cyan-400 animate-pulse'
-                    : isThinking
-                    ? 'bg-indigo-400 animate-spin'
-                    : 'bg-emerald-400'
-                }`}
-              />
-              <span className="font-semibold text-slate-300">
-                {isSpeaking ? 'Voice Active' : isThinking ? 'Reasoning' : 'Microphone Open'}
-              </span>
-            </div>
-
-            <span className="font-mono text-teal-400 font-bold">
-              Stress: {emotionalState?.stressScore || 18}%
-            </span>
-          </div>
+      <main className="relative flex-1 w-full h-full flex flex-col items-center justify-center overflow-hidden bg-[#000000]">
+        {/* Fullscreen Digital Robot Companion */}
+        <div className="w-full h-full flex items-center justify-center">
+          <DigitalRobotAvatar
+            avatarState={currentRobotState}
+            speakingText={spokenResponse}
+            mentorName={mentorName}
+            isSpeaking={isSpeaking}
+            isListening={isListening}
+            isThinking={isThinking}
+            emotionalTone={currentRobotState}
+          />
         </div>
-      </div>
 
-      {/* ══════════════════════════════════════════════════════════════
-          2. DUAL VIDEO / SPLIT-SCREEN GRID INTERFACE
-      ══════════════════════════════════════════════════════════════ */}
-      <main className="flex-1 w-full p-4 sm:p-6 overflow-hidden flex items-center justify-center">
-        {layoutMode === 'split' && !showCodeOverlay ? (
-          /* ── 50/50 Split Screen Grid (Left Mentor, Right Candidate) ── */
-          <div className="w-full h-full max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Left Panel: 3D Photorealistic AI Mentor */}
-            <div className="w-full h-full min-h-[300px]">
-              <MentorVideoPanel
-                avatarState={assistantState}
-                speakingText={spokenResponse}
-                mentorName={mentorName}
-                mentorRole="Staff Software Engineer & Evaluator"
-              />
-            </div>
-
-            {/* Right Panel: Clean HD Candidate Video Feed */}
-            <div className="w-full h-full min-h-[300px]">
-              <CandidateVideoPanel
-                stream={stream}
-                cameraActive={cameraActive}
-                micActive={micActive}
-                candidateName={userName}
-                audioLevel={audioLevel}
-                eyeContactPct={93}
-                isFloatingPIP={false}
-              />
-            </div>
-          </div>
-        ) : (
-          /* ── Focus Desk & Code View with Floating Candidate PIP ── */
-          <div className="w-full h-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 relative">
-            {/* Left/Center: 3D Photorealistic AI Mentor View */}
-            <div className="lg:col-span-6 w-full h-full min-h-[340px]">
-              <MentorVideoPanel
-                avatarState={assistantState}
-                speakingText={spokenResponse}
-                mentorName={mentorName}
-                mentorRole="Staff Software Engineer & Evaluator"
-              />
-            </div>
-
-            {/* Right: Interactive Code Workspace & Terminal (6 cols) */}
-            <div className="lg:col-span-6 w-full h-full min-h-[340px]">
-              <CodeWorkspaceWidget
-                onAskMentorToReview={handleAskMentorToReview}
-                mentorReviewing={mentorReviewing}
-              />
-            </div>
-
-            {/* Floating Candidate Video Preview Box with LIVE tag */}
+        {/* Floating Student Camera PIP (Optional & Minimal) */}
+        {showCandidatePip && (
+          <div className="absolute bottom-24 right-6 z-40 w-48 sm:w-56 aspect-video rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black animate-fade-in">
             <CandidateVideoPanel
               stream={stream}
               cameraActive={cameraActive}
               micActive={micActive}
               candidateName={userName}
               audioLevel={audioLevel}
-              eyeContactPct={93}
+              eyeContactPct={95}
               isFloatingPIP={true}
             />
           </div>
         )}
+
+        {/* Reassuring Quick Prompt Chips (Subtle at bottom of screen) */}
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 flex flex-wrap items-center justify-center gap-2 max-w-xl px-4 pointer-events-auto">
+          {quickComfortPrompts.map((item, idx) => (
+            <button
+              key={idx}
+              onClick={() => submitUserMessage(item.prompt)}
+              className="px-3 py-1.5 rounded-full bg-black/70 hover:bg-cyan-950/70 border border-white/10 hover:border-cyan-400/40 text-[11px] font-medium text-slate-300 hover:text-cyan-200 transition-all backdrop-blur-md cursor-pointer shadow-lg flex items-center gap-1.5"
+            >
+              <MessageCircleHeart className="w-3 h-3 text-cyan-400" />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
       </main>
 
-      {/* ── Empathetic Assistant HUD (Emotional Telemetry, Thought Process Drawer, Live Subtitles) ── */}
-      <div className="relative z-30 w-full px-6 flex justify-center pb-2 pointer-events-auto">
-        <EmpatheticAssistantHUD
-          assistantState={assistantState}
-          thoughtProcess={thoughtProcess}
-          spokenResponse={spokenResponse}
-          userTranscript={userTranscript}
-          interimTranscript={interimTranscript}
-          emotionalState={emotionalState}
-          mentorName={mentorName}
-          onSendPresetMessage={(text) => submitUserMessage(text)}
-        />
-      </div>
-
       {/* ══════════════════════════════════════════════════════════════
-          3. BOTTOM CONTROL BAR (Round Control Action Buttons)
+          3. CLEAN BOTTOM CONTROLS: LISTENING INDICATOR & END SESSION
       ══════════════════════════════════════════════════════════════ */}
-      <footer className="relative z-30 w-full pb-4 flex items-center justify-center pointer-events-auto">
-        <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-black/65 border border-white/15 backdrop-blur-xl shadow-2xl">
-          {/* Mute/Unmute Listening Button */}
+      <footer className="relative z-30 w-full pb-6 pt-2 flex items-center justify-center pointer-events-auto bg-[#000000]">
+        <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-black/90 border border-white/15 backdrop-blur-2xl shadow-[0_0_35px_rgba(0,0,0,0.9)]">
+          {/* Listening Status & Mic Toggle Button */}
           <button
             onClick={toggleMic}
-            className={`px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+            className={`px-5 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs font-bold transition-all cursor-pointer ${
               micActive
-                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 shadow-lg shadow-emerald-500/20'
+                ? isSpeaking
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-400/50 shadow-lg shadow-teal-500/20'
+                  : isThinking
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/50 shadow-lg shadow-indigo-500/20'
+                  : currentRobotState === 'empathetic'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shadow-lg shadow-emerald-500/20'
+                  : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-lg shadow-cyan-500/20'
                 : 'bg-red-950/80 hover:bg-red-900 text-red-400 border border-red-500/40'
             }`}
-            title={micActive ? 'Mute Microphone' : 'Unmute Microphone'}
+            title={micActive ? 'Click to Mute' : 'Click to Unmute'}
           >
-            {micActive ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4 text-red-400" />}
-            <span>
+            {/* Animated Mic / Speaker Icon */}
+            {micActive ? (
+              isSpeaking ? (
+                <Volume2 className="w-4 h-4 text-teal-400 animate-pulse" />
+              ) : isThinking ? (
+                <Sparkles className="w-4 h-4 text-indigo-400 animate-spin" />
+              ) : currentRobotState === 'empathetic' ? (
+                <Heart className="w-4 h-4 text-emerald-400 animate-pulse" />
+              ) : (
+                <Mic className="w-4 h-4 text-cyan-400 animate-pulse" />
+              )
+            ) : (
+              <MicOff className="w-4 h-4 text-red-400" />
+            )}
+
+            {/* Status Text */}
+            <span className="tracking-wide">
               {micActive
                 ? isSpeaking
-                  ? 'Mentor Speaking'
+                  ? 'Aura is speaking...'
                   : isThinking
-                  ? 'Mentor Thinking...'
-                  : isListening
-                  ? 'Listening (Voice active)'
-                  : 'Listening...'
-                : 'Muted'}
+                  ? 'Aura is thinking...'
+                  : currentRobotState === 'empathetic'
+                  ? 'Aura is listening with care...'
+                  : 'Listening to you...'
+                : 'Microphone Muted'}
             </span>
+
+            {/* Active Mic Ripple Dot */}
+            {micActive && !isSpeaking && !isThinking && (
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            )}
           </button>
 
-          <div className="w-[1px] h-7 bg-white/15 mx-1" />
+          {/* Divider */}
+          <div className="w-[1px] h-7 bg-white/15" />
 
           {/* Prominent Red END SESSION Button */}
           <button
             onClick={handleEndCallClick}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-red-600/95 hover:bg-red-500 active:bg-red-700 text-white font-extrabold text-xs tracking-wider uppercase shadow-xl shadow-red-600/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-            title="End Interview & View Evaluation"
+            className="flex items-center gap-2.5 px-6 py-2.5 rounded-2xl bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-black text-xs tracking-wider uppercase shadow-xl shadow-red-600/40 transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+            title="End Session"
           >
             <PhoneOff className="w-4 h-4" />
             <span>END SESSION</span>
