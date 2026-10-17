@@ -14,6 +14,7 @@ import StudentPracticeRoom from './components/PracticeRoom/StudentPracticeRoom';
 import SettingsModal from './components/PracticeRoom/SettingsModal';
 import LoginModal from './components/Dashboard/LoginModal';
 import DualVideoMentorshipRoom from './components/Mentorship/DualVideoMentorshipRoom';
+import PresentationStudio from './components/Presentation/PresentationStudio';
 import { fireLoginCelebration, speakWelcomeGreeting } from './utils/celebration';
 
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
@@ -657,7 +658,7 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════════
           VIEWS: DASHBOARD / HISTORY
       ══════════════════════════════════════════════════════════════ */}
-      {currentView !== 'arena' && currentView !== 'practice' && (
+      {currentView !== 'arena' && currentView !== 'practice' && currentView !== 'mentorship' && currentView !== 'presentation_studio' && (
         <div className="w-full h-screen flex overflow-hidden">
           {/* Left Navigation Sidebar */}
           <Sidebar
@@ -707,6 +708,16 @@ export default function App() {
           userName={userName}
           onBackToDashboard={() => setCurrentView('dashboard')}
           onEndCall={handleEndCall}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          VIEW: 2D AI SMART PRESENTATION STUDIO (FIXED CANVAS)
+      ══════════════════════════════════════════════════════════════ */}
+      {currentView === 'presentation_studio' && (
+        <PresentationStudio
+          userName={userName}
+          onBackToDashboard={() => setCurrentView('dashboard')}
         />
       )}
 

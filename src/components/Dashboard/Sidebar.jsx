@@ -10,6 +10,7 @@ import {
   Target,
   ArrowRight,
   Video,
+  Tv,
 } from 'lucide-react';
 import { MODES } from '../../utils/aiResponses';
 
@@ -26,6 +27,13 @@ export default function Sidebar({
       icon: Home,
       action: () => onNavigate('dashboard'),
       isActive: currentView === 'dashboard',
+    },
+    {
+      id: 'presentation_studio',
+      label: 'AI Presentation Studio',
+      icon: Tv,
+      action: () => onNavigate('presentation_studio'),
+      isActive: currentView === 'presentation_studio',
     },
     {
       id: 'mentorship',

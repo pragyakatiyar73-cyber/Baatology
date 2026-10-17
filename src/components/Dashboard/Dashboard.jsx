@@ -11,6 +11,7 @@ import {
   Bell,
   ChevronDown,
   Video,
+  Tv,
 } from 'lucide-react';
 import { MODES } from '../../utils/aiResponses';
 import { getPracticeHistory } from '../../utils/progressHistory';
@@ -171,8 +172,9 @@ export default function Dashboard({
                   </div>
 
                   {/* Card 3: Project Presentation */}
+                  {/* Card 3: Project Presentation (2D AI Smart Presentation Studio) */}
                   <div
-                    onClick={() => onStartArena(MODES.PRESENTATION)}
+                    onClick={() => onNavigate('presentation_studio')}
                     className="bg-white rounded-[26px] p-6 border-2 border-[#d1fae5] shadow-xs hover:shadow-xl hover:border-[#10b981] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
                   >
                     <div className="w-14 h-14 rounded-full bg-[#10b981] flex items-center justify-center text-white shadow-md shadow-emerald-200 group-hover:scale-105 transition-transform">
@@ -182,15 +184,15 @@ export default function Dashboard({
                       Project Presentation
                     </h3>
                     <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
-                      Present your ideas, get improvement suggestions and learn to explain better.
+                      Present your slides on HD digital screen board with real-time AI mistake detection & voice navigation.
                     </p>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onStartArena(MODES.PRESENTATION);
+                        onNavigate('presentation_studio');
                       }}
                       className="mt-3 w-9 h-9 rounded-full bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#059669] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
-                      title="Start Project Presentation"
+                      title="Launch AI Smart Presentation Studio"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>
@@ -214,6 +216,13 @@ export default function Dashboard({
                   </div>
 
                   <div className="flex items-center gap-2.5 flex-wrap">
+                    <button
+                      onClick={() => onNavigate('presentation_studio')}
+                      className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <Tv className="w-3.5 h-3.5" />
+                      <span>AI Presentation Studio</span>
+                    </button>
                     <button
                       onClick={() => onNavigate('mentorship')}
                       className="px-5 py-2.5 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold shadow-md shadow-teal-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
