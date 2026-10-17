@@ -1,5 +1,4 @@
 import React from 'react';
-import { MODES } from '../../utils/aiResponses';
 
 export default function ControlDock({
   currentMode,
@@ -16,33 +15,14 @@ export default function ControlDock({
   onBackToDashboard,
   audioLevel = 0,
 }) {
-  const modes = [
-    { id: MODES.PRESENTATION, label: '📽️ Project Presentation' },
-    { id: MODES.GD,           label: '🗣️ Group Discussion' },
-    { id: MODES.SELF_INTRO,   label: '🎯 Self Introduction' },
-    { id: MODES.CASUAL,       label: '☕ Casual Talk' },
-  ];
-
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3 w-auto max-w-[94vw] select-none">
-      {/* ── Main Control Actions Dock ── */}
+      {/* ── Minimal Control Actions Dock: Only Listening & End Session ── */}
       <div className="glass-dock px-4 py-2.5 rounded-3xl flex items-center gap-3 shadow-2xl">
-        {/* Back to Dashboard Button */}
-        <button
-          onClick={onBackToDashboard}
-          className="px-3.5 py-2.5 rounded-2xl flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 transition-all"
-          title="Return to Dashboard"
-        >
-          <span>🏠</span>
-          <span>Dashboard</span>
-        </button>
-
-        <div className="w-[1px] h-7 bg-slate-700/60" />
-
-        {/* Mic Toggle with Live Audio Level Wave */}
+        {/* Mic Toggle with Live Audio Level Wave (Listening Indicator) */}
         <button
           onClick={onToggleMic}
-          className={`relative px-4 py-2.5 rounded-2xl flex items-center gap-2.5 transition-all duration-200 ${
+          className={`relative px-5 py-2.5 rounded-2xl flex items-center gap-2.5 transition-all duration-200 cursor-pointer ${
             isListening
               ? 'bg-emerald-500/20 border border-emerald-400 text-emerald-300 mic-listening shadow-[0_0_20px_rgba(16,185,129,0.3)]'
               : 'bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300'
@@ -72,47 +52,21 @@ export default function ControlDock({
           </span>
         </button>
 
-        {/* Camera Toggle Button */}
-        <button
-          onClick={onToggleCamera}
-          className={`p-3 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-            cameraActive
-              ? 'bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-teal-300'
-              : 'bg-red-950/40 hover:bg-red-900/40 border border-red-800/40 text-red-400'
-          }`}
-          title={cameraActive ? 'Turn Off Camera' : 'Turn On Camera'}
-        >
-          <span className="text-lg leading-none">{cameraActive ? '📷' : '🚫'}</span>
-        </button>
-
-        {/* Screen Share Button */}
-        <button
-          onClick={onToggleScreenShare}
-          className={`p-3 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-            screenActive
-              ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-300 shadow-lg'
-              : 'bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300'
-          }`}
-          title={screenActive ? 'Stop Screen Share' : 'Share Screen / Slides'}
-        >
-          <span className="text-lg leading-none">{screenActive ? '🖥️' : '💻'}</span>
-        </button>
-
         <div className="w-[1px] h-7 bg-slate-700/60" />
 
-        {/* End Arena & Performance Report Button */}
+        {/* End Session Button */}
         <button
           onClick={onEndCall}
           disabled={isConcluding}
-          className={`px-4 py-2.5 rounded-2xl font-black text-xs tracking-wider uppercase flex items-center gap-2 text-white shadow-xl transition-all duration-200 ${
+          className={`px-5 py-2.5 rounded-2xl font-black text-xs tracking-wider uppercase flex items-center gap-2 text-white shadow-xl transition-all duration-200 cursor-pointer ${
             isConcluding
               ? 'bg-amber-600/80 cursor-wait animate-pulse'
-              : 'bg-red-600/90 hover:bg-red-500 active:bg-red-700 cursor-pointer'
+              : 'bg-red-600/95 hover:bg-red-500 active:bg-red-700 shadow-red-600/30 hover:scale-[1.02]'
           }`}
           title={isConcluding ? 'Concluding session...' : 'End Arena Session & View Evaluation Report'}
         >
           <span className="text-base leading-none">{isConcluding ? '⏳' : '📞'}</span>
-          <span>{isConcluding ? 'Concluding...' : 'End Call'}</span>
+          <span>{isConcluding ? 'Concluding...' : 'END SESSION'}</span>
         </button>
       </div>
     </div>

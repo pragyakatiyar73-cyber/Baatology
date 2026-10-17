@@ -411,77 +411,31 @@ export default function DualVideoMentorshipRoom({
           3. BOTTOM CONTROL BAR (Round Control Action Buttons)
       ══════════════════════════════════════════════════════════════ */}
       <footer className="relative z-30 w-full py-4 flex items-center justify-center pointer-events-auto">
-        <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-black/60 border border-white/15 backdrop-blur-xl shadow-2xl">
-          {/* Mute/Unmute Microphone */}
+        <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-black/65 border border-white/15 backdrop-blur-xl shadow-2xl">
+          {/* Mute/Unmute Listening Button */}
           <button
             onClick={toggleMic}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+            className={`px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
               micActive
-                ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/40 shadow-lg shadow-emerald-500/20'
+                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 shadow-lg shadow-emerald-500/20'
                 : 'bg-red-950/80 hover:bg-red-900 text-red-400 border border-red-500/40'
             }`}
             title={micActive ? 'Mute Microphone' : 'Unmute Microphone'}
           >
-            {micActive ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+            {micActive ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4 text-red-400" />}
+            <span>{micActive ? (audioLevel > 15 ? 'Listening (Voice detected)' : 'Listening...') : 'Muted'}</span>
           </button>
 
-          {/* Toggle Camera */}
-          <button
-            onClick={toggleCamera}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-              cameraActive
-                ? 'bg-slate-800 hover:bg-slate-700 text-teal-300 border border-white/15'
-                : 'bg-red-950/80 hover:bg-red-900 text-red-400 border border-red-500/40'
-            }`}
-            title={cameraActive ? 'Turn Off Camera' : 'Turn On Camera'}
-          >
-            {cameraActive ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-          </button>
+          <div className="w-[1px] h-7 bg-white/15 mx-1" />
 
-          {/* Screen Share */}
-          <button
-            onClick={toggleScreenShare}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-              screenActive
-                ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/30'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/15'
-            }`}
-            title={screenActive ? 'Stop Screen Share' : 'Share Screen / Code'}
-          >
-            <ScreenShare className="w-5 h-5" />
-          </button>
-
-          {/* Code Workspace Toggle */}
-          <button
-            onClick={() => {
-              if (layoutMode === 'split' && !showCodeOverlay) {
-                setLayoutMode('code_desk');
-                setShowCodeOverlay(true);
-              } else {
-                setLayoutMode('split');
-                setShowCodeOverlay(false);
-              }
-            }}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-              showCodeOverlay || layoutMode === 'code_desk'
-                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/15'
-            }`}
-            title="Toggle Interactive Code Workspace"
-          >
-            <Code2 className="w-5 h-5" />
-          </button>
-
-          <div className="w-[1px] h-8 bg-white/15 mx-1" />
-
-          {/* Prominent Red END CALL Button */}
+          {/* Prominent Red END SESSION Button */}
           <button
             onClick={handleEndCallClick}
-            className="flex items-center gap-2 px-6 py-3 rounded-full bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-extrabold text-xs tracking-wider uppercase shadow-xl shadow-red-600/30 transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-red-600/95 hover:bg-red-500 active:bg-red-700 text-white font-extrabold text-xs tracking-wider uppercase shadow-xl shadow-red-600/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             title="End Interview & View Evaluation"
           >
             <PhoneOff className="w-4 h-4" />
-            <span>END CALL</span>
+            <span>END SESSION</span>
           </button>
         </div>
       </footer>
