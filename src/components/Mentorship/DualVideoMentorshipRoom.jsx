@@ -19,9 +19,9 @@ import {
 import MentorVideoPanel from './MentorVideoPanel';
 import CandidateVideoPanel from './CandidateVideoPanel';
 import CodeWorkspaceWidget from './CodeWorkspaceWidget';
+import EmpatheticAssistantHUD from '../Assistant/EmpatheticAssistantHUD';
 import { useWebRTCInterview } from '../../hooks/useWebRTCInterview';
-import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
-import { getPriyaResponse } from '../../utils/priyaAI';
+import { useEmpatheticVoiceAssistant } from '../../hooks/useEmpatheticVoiceAssistant';
 
 export default function DualVideoMentorshipRoom({
   userName = 'Pragya',
@@ -33,13 +33,26 @@ export default function DualVideoMentorshipRoom({
   const [showCodeOverlay, setShowCodeOverlay] = useState(false);
   const [mentorReviewing, setMentorReviewing] = useState(false);
 
-  // ── Avatar Speaking / Listening State for 3D Lip-Sync & Visemes ──
-  const [avatarState, setAvatarState] = useState('listening'); // 'listening' | 'speaking' | 'thinking'
-  const [speakingText, setSpeakingText] = useState('');
-  const [liveCandidateTranscript, setLiveCandidateTranscript] = useState('');
-  const conversationHistoryRef = useRef([]);
-
   const mentorName = 'Dr. Ann Vance';
+
+  // ── Empathetic Voice Assistant Hook (Thought Reasoning + Voice STT/TTS + Sentiment) ──
+  const {
+    assistantState,
+    isListening,
+    isThinking,
+    isSpeaking,
+    userTranscript,
+    interimTranscript,
+    spokenResponse,
+    thoughtProcess,
+    emotionalState,
+    interrupt,
+    submitUserMessage,
+    playEmpatheticVoice,
+  } = useEmpatheticVoiceAssistant({
+    mentorName,
+    autoListen: true,
+  });
 
   // ── Real-Time WebRTC Candidate Stream & Audio Analyser Hook ──
   const {
@@ -53,149 +66,36 @@ export default function DualVideoMentorshipRoom({
     toggleScreenShare,
   } = useWebRTCInterview({ autoStart: true });
 
-  const startListeningRef = useRef(null);
-  const stopListeningRef = useRef(null);
-
-  // ── Speak Text with Speech Synthesis (Drives 3D Lip-Sync) ──
-  const speakText = useCallback(
-    (text, onComplete) => {
-      if (!text) return;
-      setSpeakingText(text);
-      setAvatarState('speaking');
-      stopListeningRef.current?.();
-
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.05;
-
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(
-          (v) =>
-            v.lang.startsWith('en') &&
-            (v.name.includes('Natural') ||
-              v.name.includes('Samantha') ||
-              v.name.includes('Google') ||
-              v.name.includes('Victoria') ||
-              v.name.includes('Zira'))
-        );
-        if (preferred) utterance.voice = preferred;
-
-        utterance.onend = () => {
-          setAvatarState('listening');
-          onComplete?.();
-          setTimeout(() => {
-            setLiveCandidateTranscript('');
-            startListeningRef.current?.();
-          }, 400);
-        };
-
-        utterance.onerror = () => {
-          setAvatarState('listening');
-          onComplete?.();
-          setTimeout(() => {
-            setLiveCandidateTranscript('');
-            startListeningRef.current?.();
-          }, 400);
-        };
-
-        window.speechSynthesis.speak(utterance);
-      } else {
-        setTimeout(() => {
-          setAvatarState('listening');
-          onComplete?.();
-          startListeningRef.current?.();
-        }, Math.max(2500, (text.split(' ').length / 2.8) * 1000));
-      }
-    },
-    []
-  );
-
-  // ── Interrupt AI ──
-  const interrupt = useCallback(() => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    setAvatarState('listening');
-    startListeningRef.current?.();
-  }, []);
-
-  // ── Continuous Candidate Voice Recognition & Gemini AI Intelligence ──
-  const handleCandidateSpeech = useCallback(
-    async (transcript) => {
-      if (!transcript || !transcript.trim()) return;
-      if (avatarState === 'speaking') return; // Avoid echo
-
-      setLiveCandidateTranscript(transcript);
-      setAvatarState('thinking');
-      stopListeningRef.current?.();
-
-      try {
-        console.log('[DualVideoMentorshipRoom] Querying Gemini AI intelligence for student speech:', transcript);
-        const reply = await getPriyaResponse(
-          transcript,
-          conversationHistoryRef.current,
-          `Technical Mock Interview and SDE placement evaluation for candidate ${userName}. Give insightful, supportive technical feedback and follow-up questions.`
-        );
-
-        conversationHistoryRef.current.push({ role: 'student', text: transcript });
-        conversationHistoryRef.current.push({ role: 'mentor', text: reply });
-
-        speakText(reply);
-      } catch (err) {
-        console.warn('AI Mentor response fallback:', err);
-        const fallbackReply = `That is very clear, ${userName}. In system design, how would you optimize database reads with indexing and caching?`;
-        speakText(fallbackReply);
-      }
-    },
-    [avatarState, speakText, userName]
-  );
-
-  const { startListening, stopListening, isListening } = useSpeechRecognition({
-    onResult: (resultText) => {
-      if (resultText && resultText.trim()) {
-        setLiveCandidateTranscript(resultText);
-        handleCandidateSpeech(resultText);
-      }
-    },
-  });
-
-  startListeningRef.current = startListening;
-  stopListeningRef.current = stopListening;
-
   // ── Opening Greeting on Mount ──
   useEffect(() => {
     const welcomeTimeout = setTimeout(() => {
-      speakText(
-        `Welcome to your Technical Mock Interview, ${userName}! I am ${mentorName}, your senior engineering evaluator. We have our interactive workspace ready. Feel free to introduce your background or talk me through your algorithm.`
+      playEmpatheticVoice(
+        `Welcome to your Technical Mentorship, ${userName}! I am ${mentorName}. I am here to understand your thoughts, guide your reasoning, and support you at every step. Whenever you are ready, talk me through your ideas or start coding.`
       );
-    }, 900);
+    }, 1000);
 
     return () => clearTimeout(welcomeTimeout);
-  }, [speakText, userName]);
+  }, [playEmpatheticVoice, userName]);
 
-  // ── Review Code Trigger ──
+  // ── Review Code Trigger with Deep Empathy Reasoning ──
   const handleAskMentorToReview = useCallback(
     (codeContent) => {
       setMentorReviewing(true);
-      setAvatarState('thinking');
       interrupt();
 
       setTimeout(() => {
-        speakText(
-          `I am reviewing your code implementation, ${userName}. Your approach using a single-pass hash map is optimal and passes all unit tests with O(n) runtime complexity. Excellent work!`
+        submitUserMessage(
+          `Candidate ${userName} submitted code for review: \n\`\`\`\n${(codeContent || '').slice(0, 350)}\n\`\`\`\nPlease provide empathetic feedback, validate their effort, and evaluate algorithmic efficiency.`
         );
         setMentorReviewing(false);
-      }, 900);
+      }, 500);
     },
-    [interrupt, speakText, userName]
+    [interrupt, submitUserMessage, userName]
   );
 
   // ── Handle End Call ──
   const handleEndCallClick = () => {
     interrupt();
-    stopListening();
     if (onEndCall) {
       onEndCall();
     } else if (onBackToDashboard) {
@@ -267,27 +167,27 @@ export default function DualVideoMentorshipRoom({
       </header>
 
       {/* ══════════════════════════════════════════════════════════════
-          TOP-RIGHT FLOATING CALL STATUS WIDGET
+          TOP-RIGHT FLOATING CALL STATUS & EMPATHY WIDGET
       ══════════════════════════════════════════════════════════════ */}
       <div className="absolute top-20 right-6 z-30 pointer-events-auto max-w-sm w-full sm:w-80">
-        <div className="p-4 rounded-3xl bg-black/65 border border-white/15 backdrop-blur-xl shadow-2xl space-y-2.5 text-white">
+        <div className="p-4 rounded-3xl bg-black/75 border border-white/15 backdrop-blur-xl shadow-2xl space-y-2.5 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="p-1 rounded-lg bg-teal-500/30 text-teal-300">
                 <Bot className="w-4 h-4 text-teal-300" />
               </span>
               <span className="text-[11px] font-bold uppercase tracking-wider text-teal-300">
-                AURAGD 3D Mentorship Call
+                AURAGD Empathetic Mentor
               </span>
             </div>
 
-            {avatarState === 'speaking' && (
+            {isSpeaking && (
               <button
                 onClick={interrupt}
                 className="px-2.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-400/50 text-cyan-300 text-[10px] font-bold hover:bg-cyan-900 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
                 title="Interrupt AI Mentor and speak"
               >
-                <span>Interrupt AI</span>
+                <span>Interrupt</span>
                 <Volume2 className="w-3 h-3" />
               </button>
             )}
@@ -295,34 +195,38 @@ export default function DualVideoMentorshipRoom({
 
           <div>
             <h2 className="text-sm font-extrabold tracking-tight text-white flex items-center gap-1.5">
-              <span>Welcome back, {userName}!</span>
-              <span>👋</span>
+              <span>Welcome, {userName}!</span>
+              <span>🌿</span>
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed mt-0.5">
-              {avatarState === 'speaking'
-                ? `${mentorName} is speaking with synchronized 3D lip-sync.`
-                : avatarState === 'thinking'
-                ? `${mentorName} is analyzing with Gemini AI intelligence...`
-                : `${mentorName} is listening attentively. Speak naturally into your microphone.`}
+              {isSpeaking
+                ? `${mentorName} is speaking with empathetic voice.`
+                : isThinking
+                ? `${mentorName} is deep-reasoning thoughtfully...`
+                : `${mentorName} is listening attentively. Speak naturally into your mic.`}
             </p>
           </div>
 
-          {/* Active Audio Indicator */}
-          <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400 border-t border-white/10">
+          {/* Active Status & Emotional Telemetry Indicator */}
+          <div className="pt-1.5 flex items-center justify-between text-[11px] text-slate-400 border-t border-white/10">
             <div className="flex items-center gap-1.5">
               <span
                 className={`w-2 h-2 rounded-full ${
-                  avatarState === 'speaking'
+                  isSpeaking
                     ? 'bg-cyan-400 animate-pulse'
+                    : isThinking
+                    ? 'bg-indigo-400 animate-spin'
                     : 'bg-emerald-400'
                 }`}
               />
               <span className="font-semibold text-slate-300">
-                {avatarState === 'speaking' ? '3D Visemes Active' : 'Microphone Open'}
+                {isSpeaking ? 'Voice Active' : isThinking ? 'Reasoning' : 'Microphone Open'}
               </span>
             </div>
 
-            <span className="font-mono text-teal-400 font-bold">Local 60 FPS</span>
+            <span className="font-mono text-teal-400 font-bold">
+              Stress: {emotionalState?.stressScore || 18}%
+            </span>
           </div>
         </div>
       </div>
@@ -337,8 +241,8 @@ export default function DualVideoMentorshipRoom({
             {/* Left Panel: 3D Photorealistic AI Mentor */}
             <div className="w-full h-full min-h-[300px]">
               <MentorVideoPanel
-                avatarState={avatarState}
-                speakingText={speakingText}
+                avatarState={assistantState}
+                speakingText={spokenResponse}
                 mentorName={mentorName}
                 mentorRole="Staff Software Engineer & Evaluator"
               />
@@ -363,8 +267,8 @@ export default function DualVideoMentorshipRoom({
             {/* Left/Center: 3D Photorealistic AI Mentor View */}
             <div className="lg:col-span-6 w-full h-full min-h-[340px]">
               <MentorVideoPanel
-                avatarState={avatarState}
-                speakingText={speakingText}
+                avatarState={assistantState}
+                speakingText={spokenResponse}
                 mentorName={mentorName}
                 mentorRole="Staff Software Engineer & Evaluator"
               />
@@ -392,25 +296,24 @@ export default function DualVideoMentorshipRoom({
         )}
       </main>
 
-      {/* ── Live Microphone Speech Transcription Banner ── */}
-      {isListening && liveCandidateTranscript && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-40 px-5 py-2.5 rounded-2xl bg-black/85 border border-emerald-500/50 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in max-w-lg pointer-events-none">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981] shrink-0" />
-          <div className="text-left">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
-              ● You (Speaking...)
-            </span>
-            <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
-              "{liveCandidateTranscript}"
-            </p>
-          </div>
-        </div>
-      )}
+      {/* ── Empathetic Assistant HUD (Emotional Telemetry, Thought Process Drawer, Live Subtitles) ── */}
+      <div className="relative z-30 w-full px-6 flex justify-center pb-2 pointer-events-auto">
+        <EmpatheticAssistantHUD
+          assistantState={assistantState}
+          thoughtProcess={thoughtProcess}
+          spokenResponse={spokenResponse}
+          userTranscript={userTranscript}
+          interimTranscript={interimTranscript}
+          emotionalState={emotionalState}
+          mentorName={mentorName}
+          onSendPresetMessage={(text) => submitUserMessage(text)}
+        />
+      </div>
 
       {/* ══════════════════════════════════════════════════════════════
           3. BOTTOM CONTROL BAR (Round Control Action Buttons)
       ══════════════════════════════════════════════════════════════ */}
-      <footer className="relative z-30 w-full py-4 flex items-center justify-center pointer-events-auto">
+      <footer className="relative z-30 w-full pb-4 flex items-center justify-center pointer-events-auto">
         <div className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-black/65 border border-white/15 backdrop-blur-xl shadow-2xl">
           {/* Mute/Unmute Listening Button */}
           <button
@@ -423,7 +326,17 @@ export default function DualVideoMentorshipRoom({
             title={micActive ? 'Mute Microphone' : 'Unmute Microphone'}
           >
             {micActive ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4 text-red-400" />}
-            <span>{micActive ? (audioLevel > 15 ? 'Listening (Voice detected)' : 'Listening...') : 'Muted'}</span>
+            <span>
+              {micActive
+                ? isSpeaking
+                  ? 'Mentor Speaking'
+                  : isThinking
+                  ? 'Mentor Thinking...'
+                  : isListening
+                  ? 'Listening (Voice active)'
+                  : 'Listening...'
+                : 'Muted'}
+            </span>
           </button>
 
           <div className="w-[1px] h-7 bg-white/15 mx-1" />
