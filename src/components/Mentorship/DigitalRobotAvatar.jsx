@@ -1,118 +1,100 @@
-import React, { useMemo, useState, useRef, Suspense, useEffect } from 'react';
+import React, { useMemo, useState, useRef, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, OrbitControls, ContactShadows, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { Heart, Sparkles, Volume2, Mic, Brain, Smile, Bot, Sparkle } from 'lucide-react';
+import { Heart, Sparkles, Volume2, Mic, Brain, Smile, Bot } from 'lucide-react';
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * 1. 3D EXECUTIVE ERGONOMIC HIGH-BACK CHAIR COMPONENT
+ * 1. SLEEK EXECUTIVE ERGONOMIC CHAIR (CLEAN & SOLID - NO WIREFRAME)
  * ══════════════════════════════════════════════════════════════════════
- * Renders an aesthetic modern executive mesh/leather office chair
- * directly behind the robot avatar. The chair naturally moves and swivels
- * with the mentor, establishing an authentic seated desk presence.
+ * Sleek, contoured, dark executive mesh/leather office chair that sits
+ * naturally behind the mentor's shoulders and head.
+ * 100% clean solid PBR materials with soft shading — ZERO wireframe glitches.
  */
-function ExecutiveErgonomicChair({ activeState = 'listening', isSpeaking = false }) {
-  // Lumbar & rim accent color according to situation
-  const rimColor = useMemo(() => {
-    switch (activeState) {
-      case 'speaking': return '#00e5ff';
-      case 'empathetic': return '#10b981';
-      case 'thinking': return '#818cf8';
-      default: return '#38bdf8';
-    }
-  }, [activeState]);
-
+function ExecutiveErgonomicChair({ activeState = 'listening' }) {
+  // Subtle dark executive slate styling
   return (
-    <group position={[0, 0, -0.16]}>
-      {/* ── Main Ergonomic Backrest (Contoured High-Back) ── */}
-      <mesh position={[0, 1.25, -0.02]}>
-        <boxGeometry args={[0.54, 0.76, 0.07]} />
+    <group position={[0, 0, -0.18]}>
+      {/* ── Main Ergonomic High-Back Cushion ── */}
+      <mesh position={[0, 1.26, -0.02]}>
+        <boxGeometry args={[0.52, 0.72, 0.06]} />
         <meshStandardMaterial
-          color="#0c1220"
-          roughness={0.75}
-          metalness={0.3}
-        />
-      </mesh>
-
-      {/* Lumbar Cushion Support Curve */}
-      <mesh position={[0, 1.05, 0.015]}>
-        <boxGeometry args={[0.46, 0.26, 0.04]} />
-        <meshStandardMaterial
-          color="#080e1a"
+          color="#0a0f1d"
           roughness={0.85}
           metalness={0.2}
         />
       </mesh>
 
-      {/* Futuristic Cyber Neon Rim Piping on Backrest */}
-      <mesh position={[0, 1.25, 0.02]}>
-        <boxGeometry args={[0.55, 0.77, 0.005]} />
-        <meshBasicMaterial
-          color={rimColor}
-          wireframe={true}
-          transparent={true}
-          opacity={0.35}
+      {/* Lumbar Support Contour Pad */}
+      <mesh position={[0, 1.08, 0.012]}>
+        <boxGeometry args={[0.44, 0.24, 0.035]} />
+        <meshStandardMaterial
+          color="#070c17"
+          roughness={0.9}
+          metalness={0.15}
         />
       </mesh>
 
-      {/* ── Contoured Executive Headrest ── */}
-      <group position={[0, 1.70, -0.03]}>
-        {/* Headrest Cushion */}
+      {/* Outer Chair Frame Rim (Solid Dark Metallic Trim) */}
+      <mesh position={[0, 1.26, -0.04]}>
+        <boxGeometry args={[0.55, 0.75, 0.03]} />
+        <meshStandardMaterial
+          color="#1e293b"
+          roughness={0.5}
+          metalness={0.7}
+        />
+      </mesh>
+
+      {/* ── Contoured Executive Headrest Cushion ── */}
+      <group position={[0, 1.68, -0.03]}>
         <mesh>
-          <boxGeometry args={[0.34, 0.17, 0.07]} />
+          <boxGeometry args={[0.30, 0.15, 0.06]} />
           <meshStandardMaterial
-            color="#0c1220"
-            roughness={0.7}
-            metalness={0.35}
+            color="#0a0f1d"
+            roughness={0.85}
+            metalness={0.2}
           />
         </mesh>
-        {/* Headrest Accent Glow Trim */}
-        <mesh position={[0, 0, 0.038]}>
-          <planeGeometry args={[0.32, 0.02]} />
-          <meshBasicMaterial color={rimColor} transparent opacity={0.7} />
-        </mesh>
       </group>
 
-      {/* Dual Chrome Support Rods (Connecting Backrest to Headrest) */}
-      <mesh position={[-0.07, 1.59, -0.04]}>
-        <cylinderGeometry args={[0.008, 0.008, 0.12, 12]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.15} />
+      {/* Dual Dark Metallic Support Rods */}
+      <mesh position={[-0.06, 1.58, -0.04]}>
+        <cylinderGeometry args={[0.007, 0.007, 0.10, 12]} />
+        <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
       </mesh>
-      <mesh position={[0.07, 1.59, -0.04]}>
-        <cylinderGeometry args={[0.008, 0.008, 0.12, 12]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.15} />
+      <mesh position={[0.06, 1.58, -0.04]}>
+        <cylinderGeometry args={[0.007, 0.007, 0.10, 12]} />
+        <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
       </mesh>
 
-      {/* ── Executive Armrests (Flanking the avatar) ── */}
-      {/* Left Armrest Pad & Stanchion */}
-      <group position={[-0.31, 0.96, 0.06]}>
+      {/* ── Padded Armrests (Flanking the avatar) ── */}
+      <group position={[-0.29, 0.98, 0.06]}>
         <mesh>
-          <boxGeometry args={[0.07, 0.03, 0.28]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.6} metalness={0.4} />
+          <boxGeometry args={[0.065, 0.025, 0.26]} />
+          <meshStandardMaterial color="#0f172a" roughness={0.75} metalness={0.3} />
         </mesh>
-        <mesh position={[0, -0.12, -0.06]}>
-          <boxGeometry args={[0.025, 0.22, 0.04]} />
-          <meshStandardMaterial color="#64748b" metalness={0.85} roughness={0.2} />
+        <mesh position={[0, -0.11, -0.06]}>
+          <boxGeometry args={[0.02, 0.20, 0.03]} />
+          <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.25} />
         </mesh>
       </group>
 
-      {/* Right Armrest Pad & Stanchion */}
-      <group position={[0.31, 0.96, 0.06]}>
+      <group position={[0.29, 0.98, 0.06]}>
         <mesh>
-          <boxGeometry args={[0.07, 0.03, 0.28]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.6} metalness={0.4} />
+          <boxGeometry args={[0.065, 0.025, 0.26]} />
+          <meshStandardMaterial color="#0f172a" roughness={0.75} metalness={0.3} />
         </mesh>
-        <mesh position={[0, -0.12, -0.06]}>
-          <boxGeometry args={[0.025, 0.22, 0.04]} />
-          <meshStandardMaterial color="#64748b" metalness={0.85} roughness={0.2} />
+        <mesh position={[0, -0.11, -0.06]}>
+          <boxGeometry args={[0.02, 0.20, 0.03]} />
+          <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.25} />
         </mesh>
       </group>
 
-      {/* ── Central Spine Pillar (Behind Chair Back) ── */}
-      <mesh position={[0, 1.18, -0.07]}>
-        <cylinderGeometry args={[0.024, 0.028, 0.85, 16]} />
-        <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.25} />
+      {/* ── Central Metallic Spine Column ── */}
+      <mesh position={[0, 1.15, -0.07]}>
+        <cylinderGeometry args={[0.022, 0.026, 0.80, 16]} />
+        <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.2} />
       </mesh>
     </group>
   );
@@ -120,140 +102,11 @@ function ExecutiveErgonomicChair({ activeState = 'listening', isSpeaking = false
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * 2. CYBER FACE RIG: SITUATIONAL EYES, BLINKING & LIP-SYNC MOUTH
+ * 2. MAIN 3D SEATED MENTOR (LIFELIKE MOVEMENT & SITUATIONAL DYNAMICS)
  * ══════════════════════════════════════════════════════════════════════
- * Mounted on the robot's face. Changes eyes, blinking, expressions,
- * and audio-reactive lip-sync according to the situation:
- * - Listening: Attentive, focused cyan eyes with gentle blink.
- * - Speaking: Animated audio lip-sync mouth bars and dynamic glowing eyes.
- * - Empathetic: Warm smiling eye arches (^ ^) and kind curved mouth.
- * - Thinking: Analytical gaze looking up/right with purple scan beam.
- */
-function CyberFaceRig({ activeState = 'listening', isSpeaking = false }) {
-  const leftEyeRef = useRef();
-  const rightEyeRef = useRef();
-  const mouthRef = useRef();
-  const blinkTimerRef = useRef(0);
-  const isBlinkingRef = useRef(false);
-
-  // Situational colors
-  const eyeColor = useMemo(() => {
-    switch (activeState) {
-      case 'speaking': return '#00e5ff';
-      case 'empathetic': return '#10b981';
-      case 'thinking': return '#818cf8';
-      default: return '#00f0ff';
-    }
-  }, [activeState]);
-
-  useFrame((state, delta) => {
-    const t = state.clock.getElapsedTime();
-
-    // ── Natural Random Blinking Cycle (Every 3.2 - 4.5 seconds) ──
-    blinkTimerRef.current += delta;
-    if (blinkTimerRef.current > 3.6) {
-      isBlinkingRef.current = true;
-      if (blinkTimerRef.current > 3.75) {
-        isBlinkingRef.current = false;
-        blinkTimerRef.current = Math.random() * 0.8; // randomize next blink
-      }
-    }
-
-    const blinkScaleY = isBlinkingRef.current ? 0.08 : 1.0;
-
-    // ── Eye Movement & Shape Modulation ──
-    if (leftEyeRef.current && rightEyeRef.current) {
-      if (activeState === 'thinking') {
-        // Look up and slightly right
-        leftEyeRef.current.position.x = -0.036 + Math.sin(t * 1.5) * 0.002;
-        leftEyeRef.current.position.y = 1.648 + Math.cos(t * 1.2) * 0.002;
-        rightEyeRef.current.position.x = 0.042 + Math.sin(t * 1.5) * 0.002;
-        rightEyeRef.current.position.y = 1.648 + Math.cos(t * 1.2) * 0.002;
-        leftEyeRef.current.scale.set(0.9, 0.7 * blinkScaleY, 1);
-        rightEyeRef.current.scale.set(0.9, 0.7 * blinkScaleY, 1);
-      } else if (activeState === 'empathetic') {
-        // Reassuring happy eye shape (^ ^)
-        leftEyeRef.current.position.set(-0.038, 1.644, 0.013);
-        rightEyeRef.current.position.set(0.040, 1.644, 0.013);
-        leftEyeRef.current.scale.set(1.15, 0.55 * blinkScaleY, 1);
-        rightEyeRef.current.scale.set(1.15, 0.55 * blinkScaleY, 1);
-      } else {
-        // Forward eye contact with subtle micro-saccades
-        const saccadeX = Math.sin(t * 0.7) * 0.0015;
-        const saccadeY = Math.cos(t * 0.9) * 0.001;
-        leftEyeRef.current.position.set(-0.038 + saccadeX, 1.644 + saccadeY, 0.013);
-        rightEyeRef.current.position.set(0.040 + saccadeX, 1.644 + saccadeY, 0.013);
-        leftEyeRef.current.scale.set(1.0, 1.0 * blinkScaleY, 1);
-        rightEyeRef.current.scale.set(1.0, 1.0 * blinkScaleY, 1);
-      }
-    }
-
-    // ── Mouth Lip-Sync & Expression Modulation ──
-    if (mouthRef.current) {
-      if (isSpeaking) {
-        // Expressive voice lip-sync animation
-        const speechAmp = Math.abs(Math.sin(t * 11.5)) * 0.8 + 0.2;
-        mouthRef.current.scale.set(1.0 + speechAmp * 0.3, speechAmp, 1);
-      } else if (activeState === 'empathetic') {
-        // Warm gentle smile
-        mouthRef.current.scale.set(1.1, 0.45, 1);
-      } else if (activeState === 'thinking') {
-        // Small focused mouth
-        mouthRef.current.scale.set(0.65, 0.4, 1);
-      } else {
-        // Calm resting mouth
-        mouthRef.current.scale.set(0.85, 0.35, 1);
-      }
-    }
-  });
-
-  return (
-    <group position={[0.042, 0, 0]}>
-      {/* ── Left Eye Visor Element ── */}
-      <mesh ref={leftEyeRef} position={[-0.038, 1.644, 0.013]}>
-        <planeGeometry args={[0.024, 0.014]} />
-        <meshBasicMaterial
-          color={eyeColor}
-          transparent
-          opacity={0.95}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* ── Right Eye Visor Element ── */}
-      <mesh ref={rightEyeRef} position={[0.040, 1.644, 0.013]}>
-        <planeGeometry args={[0.024, 0.014]} />
-        <meshBasicMaterial
-          color={eyeColor}
-          transparent
-          opacity={0.95}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* ── Holographic Mouth / Audio Lip-Sync Unit ── */}
-      <group ref={mouthRef} position={[0.001, 1.578, 0.014]}>
-        {/* Dynamic Lip-Sync Bars / Smile Line */}
-        <mesh>
-          <planeGeometry args={[0.032, 0.008]} />
-          <meshBasicMaterial
-            color={eyeColor}
-            transparent
-            opacity={0.9}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      </group>
-    </group>
-  );
-}
-
-/**
- * ══════════════════════════════════════════════════════════════════════
- * 3. MAIN 3D SEATED MENTOR MODEL COMPONENT
- * ══════════════════════════════════════════════════════════════════════
- * Combines the glTF 3D model, executive chair, and cyber face rig
- * in one continuous living useFrame animation loop.
+ * Renders the clean, authentic 3D model with natural idle breathing,
+ * seated posture sway, conversational speaking nods, and situational dynamics.
+ * Preserves the model's natural face, skin, and eyes cleanly without overlays.
  */
 function SeatedRobotMentor({ isSpeaking = false, activeState = 'listening' }) {
   const { scene } = useGLTF('/models/robot.glb');
@@ -265,43 +118,43 @@ function SeatedRobotMentor({ isSpeaking = false, activeState = 'listening' }) {
     if (!mentorGroup.current) return;
 
     // 1. Natural Seated Breathing Motion (Gentle Y translation)
-    const breath = Math.sin(t * 1.8) * 0.009;
+    const breath = Math.sin(t * 1.6) * 0.008;
     mentorGroup.current.position.y = -1.38 + breath;
 
-    // 2. Seated Micro-swivel & Weight Shifts (Natural alive feeling)
-    mentorGroup.current.rotation.y = Math.sin(t * 0.8) * 0.024;
-    mentorGroup.current.rotation.z = Math.cos(t * 0.6) * 0.007;
+    // 2. Natural Seated Micro-swivel & Weight Shifting (Living Presence)
+    mentorGroup.current.rotation.y = Math.sin(t * 0.7) * 0.022;
+    mentorGroup.current.rotation.z = Math.cos(t * 0.5) * 0.006;
 
-    // 3. Situational Gesture & Posture Articulation (Hands, Head, Torso)
+    // 3. Situational Gesture & Head Articulation
     if (isSpeaking) {
-      // Speaking cadence: head nods, conversational body tilt, hand gesturing
-      mentorGroup.current.rotation.x = Math.sin(t * 5.2) * 0.018 + 0.008;
-      mentorGroup.current.position.y += Math.sin(t * 7.0) * 0.005;
-      mentorGroup.current.rotation.y += Math.sin(t * 3.2) * 0.018;
+      // Conversational speaking: rhythmic nodding, torso emphasis, active hand sway
+      mentorGroup.current.rotation.x = Math.sin(t * 4.8) * 0.016 + 0.008;
+      mentorGroup.current.position.y += Math.sin(t * 6.5) * 0.005;
+      mentorGroup.current.rotation.y += Math.sin(t * 3.0) * 0.016;
     } else if (activeState === 'thinking') {
       // Contemplative posture: head tilted slightly upward and to the side
-      mentorGroup.current.rotation.x = -0.02 + Math.sin(t * 0.5) * 0.004;
-      mentorGroup.current.rotation.z = 0.018 + Math.cos(t * 0.5) * 0.005;
+      mentorGroup.current.rotation.x = -0.02 + Math.sin(t * 0.5) * 0.003;
+      mentorGroup.current.rotation.y = 0.025 + Math.cos(t * 0.5) * 0.004;
+      mentorGroup.current.rotation.z = -0.015;
     } else if (activeState === 'empathetic') {
-      // Empathetic warmth: leaning slightly forward toward the user
-      mentorGroup.current.rotation.x = 0.025 + Math.sin(t * 1.2) * 0.008;
+      // Empathetic reassurance: leaning gently forward toward the user
+      mentorGroup.current.rotation.x = 0.024 + Math.sin(t * 1.1) * 0.007;
+      mentorGroup.current.rotation.z = 0.020 + Math.cos(t * 0.7) * 0.004;
       mentorGroup.current.rotation.y = Math.sin(t * 0.8) * 0.012;
     } else {
-      // Attentive listening: calm posture, occasional gentle listening nod
-      mentorGroup.current.rotation.x = Math.sin(t * 1.1) * 0.010;
+      // Attentive listening: calm upright posture with periodic supportive nods
+      const listenNod = Math.max(0, Math.sin(t * 0.8)) * 0.012;
+      mentorGroup.current.rotation.x = listenNod;
     }
   });
 
   return (
     <group ref={mentorGroup} position={[-0.04, -1.38, 0]} rotation={[0, 0, 0]} scale={[1.0, 1.0, 1.0]}>
-      {/* 3D Executive Ergonomic Chair behind robot */}
-      <ExecutiveErgonomicChair activeState={activeState} isSpeaking={isSpeaking} />
+      {/* Sleek solid executive chair behind mentor */}
+      <ExecutiveErgonomicChair activeState={activeState} />
 
-      {/* 3D Robot glTF Model */}
+      {/* Clean 3D Robot glTF Model (Zero flat overlays on face) */}
       <primitive object={clone} />
-
-      {/* Dynamic Cyber Face Rig (Eyes, Blinking, Mouth Lip-Sync) */}
-      <CyberFaceRig activeState={activeState} isSpeaking={isSpeaking} />
     </group>
   );
 }
@@ -318,7 +171,7 @@ function Model3DLoadingFallback() {
       <div className="flex flex-col items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/85 border border-cyan-500/40 backdrop-blur-md shadow-2xl">
         <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
         <span className="text-[11px] font-bold text-cyan-300 font-mono tracking-wide">
-          Seating Aura GD Mentor...
+          Connecting with Aura GD Mentor...
         </span>
       </div>
     </Html>
@@ -327,7 +180,7 @@ function Model3DLoadingFallback() {
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * 4. DIGITAL ROBOT AVATAR COMPONENT
+ * 3. DIGITAL ROBOT AVATAR COMPONENT
  * ══════════════════════════════════════════════════════════════════════
  */
 export default function DigitalRobotAvatar({
@@ -394,34 +247,34 @@ export default function DigitalRobotAvatar({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-between bg-black overflow-hidden select-none">
-      {/* ── PURE BLACK BACKDROP & DELICATE SITUATIONAL AMBIENT GLOW ── */}
+      {/* ── PURE BLACK BACKDROP & SITUATIONAL AMBIENT GLOW ── */}
       <div className="absolute inset-0 bg-[#000000] pointer-events-none" />
 
-      {/* Dynamic Ambient Backlight matching situation */}
+      {/* Dynamic Soft Ambient Halo matching situation */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
         {activeState === 'listening' && (
-          <div className="w-[580px] h-[580px] rounded-full bg-cyan-600/10 blur-[130px] transition-all duration-1000" />
+          <div className="w-[560px] h-[560px] rounded-full bg-cyan-600/10 blur-[130px] transition-all duration-1000" />
         )}
         {activeState === 'speaking' && (
-          <div className="w-[600px] h-[600px] rounded-full bg-teal-500/15 blur-[140px] transition-all duration-1000" />
+          <div className="w-[580px] h-[580px] rounded-full bg-teal-500/15 blur-[140px] transition-all duration-1000" />
         )}
         {activeState === 'empathetic' && (
-          <div className="w-[620px] h-[620px] rounded-full bg-emerald-500/15 blur-[140px] transition-all duration-1000" />
+          <div className="w-[600px] h-[600px] rounded-full bg-emerald-500/15 blur-[140px] transition-all duration-1000" />
         )}
         {activeState === 'thinking' && (
-          <div className="w-[580px] h-[580px] rounded-full bg-indigo-500/15 blur-[130px] transition-all duration-1000" />
+          <div className="w-[560px] h-[560px] rounded-full bg-indigo-500/15 blur-[130px] transition-all duration-1000" />
         )}
       </div>
 
-      {/* ── TOP CONTROL BAR: CLEAN, NON-OVERLAPPING CONTROLS ── */}
+      {/* ── TOP CONTROL BAR: CLEAN, NON-OVERLAPPING ── */}
       <div className="relative z-30 pt-4 px-6 w-full flex items-center justify-between pointer-events-auto">
-        {/* Left: Companion Identity Pill (Pushed right to clear ← Dashboard button) */}
+        {/* Left: Companion Identity Pill (offset to clear the ← Dashboard button) */}
         <div className="ml-36 hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-black/80 border border-white/10 backdrop-blur-md shadow-2xl">
           <span className={`w-2 h-2 rounded-full ${currentConfig.dotColor} animate-pulse`} />
           <span className="text-xs font-black text-white tracking-wide">{mentorName}</span>
           <span className="text-[10px] text-cyan-300 font-semibold px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 flex items-center gap-1">
             <Smile className="w-2.5 h-2.5 text-cyan-400" />
-            <span>AI Friend & Mentor</span>
+            <span>AI Mentor & Companion</span>
           </span>
           <span className="text-[10px] text-emerald-300 font-medium px-2 py-0.5 rounded-full bg-emerald-950/70 border border-emerald-500/30">
             Zero Judgement Zone
@@ -464,10 +317,10 @@ export default function DigitalRobotAvatar({
         {modelType === '3d' ? (
           /* ══════════════════════════════════════════════════════════
               1. 3D REALISTIC SEATED ROBOT AVATAR & CHAIR
-              - Eye-level waist-up framing (Camera: [0, 0.22, 1.45], FOV: 38)
-              - Head, eyes, headphones, shoulders, chest & hand 100% visible
-              - High-back chair rendered in Three.js behind the avatar
-              - Situational eyes, blinking, audio lip-sync mouth, and gestures
+              - Portrait Framing: Head, face, hair, chest & hand fully in frame
+              - Flattering Studio Lighting (zero harsh dark neck shadows)
+              - Solid dark executive chair (zero wireframes)
+              - Lifelike breathing & conversational nodding
           ══════════════════════════════════════════════════════════ */
           <div className="relative w-full h-full min-h-[440px] flex items-center justify-center">
             <Canvas
@@ -475,16 +328,18 @@ export default function DigitalRobotAvatar({
               gl={{ antialias: true, alpha: true }}
               className="w-full h-full"
             >
-              {/* Studio Lighting Rig */}
-              <ambientLight intensity={1.25} />
-              {/* Key Front-Top Light */}
-              <directionalLight position={[2, 3, 3]} intensity={1.8} color="#ffffff" />
-              {/* Cyber Cyan Rim Light (Left) */}
-              <pointLight position={[-2, 1, 1]} color="#00e5ff" intensity={2.2} />
-              {/* Soft Purple/Blue Fill (Right) */}
-              <pointLight position={[2, 0.8, 1.5]} color="#818cf8" intensity={1.0} />
+              {/* Studio Lighting Rig - Soft, Flattering, Professional */}
+              <ambientLight intensity={1.4} />
+              {/* Soft Key Light from front-top */}
+              <directionalLight position={[1.5, 2.5, 3]} intensity={1.4} color="#ffffff" />
+              {/* Soft Fill Light from front-left */}
+              <directionalLight position={[-2, 1.5, 2]} intensity={1.1} color="#f0f9ff" />
+              {/* Front Eye & Face Fill (eliminates harsh shadows on neck & cheeks) */}
+              <pointLight position={[0, 0.25, 1.2]} intensity={0.8} color="#ffffff" />
+              {/* Soft Cyber Rim Light from behind for gentle hair edge lighting */}
+              <pointLight position={[0, 1.2, -1.0]} intensity={1.0} color="#38bdf8" />
 
-              {/* 3D Seated Mentor with Executive Chair & Cyber Face Rig */}
+              {/* 3D Seated Mentor with Solid Executive Chair */}
               <Suspense fallback={<Model3DLoadingFallback />}>
                 <SeatedRobotMentor
                   isSpeaking={isSpeaking}
@@ -590,7 +445,7 @@ export default function DigitalRobotAvatar({
         {/* Right: Live Responsive AI Indicator */}
         <div className="hidden sm:flex items-center gap-2 text-[10px] text-emerald-400 font-mono">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span>Eye Gaze & Hand Gestures Active</span>
+          <span>Interactive Live Session</span>
         </div>
       </div>
     </div>

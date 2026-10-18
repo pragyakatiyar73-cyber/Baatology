@@ -117,14 +117,16 @@ export default function AuraMentorDesk({
           gl={{ antialias: true, alpha: true }}
           className="w-full h-full"
         >
-          {/* Studio Lighting Rig */}
-          <ambientLight intensity={1.25} />
-          {/* Key Light */}
-          <directionalLight position={[2, 3, 3]} intensity={1.8} color="#ffffff" />
-          {/* Cyber Cyan Rim Light */}
-          <pointLight position={[-2, 1, 1]} color="#00e5ff" intensity={2.2} />
-          {/* Soft fill accent */}
-          <pointLight position={[2, 0.8, 1.5]} color="#818cf8" intensity={1.0} />
+          {/* Studio Lighting Rig - Soft, Flattering, Balanced */}
+          <ambientLight intensity={1.4} />
+          {/* Soft Key Light */}
+          <directionalLight position={[1.5, 2.5, 3]} intensity={1.4} color="#ffffff" />
+          {/* Soft Fill Light */}
+          <directionalLight position={[-2, 1.5, 2]} intensity={1.1} color="#f0f9ff" />
+          {/* Face Fill Light */}
+          <pointLight position={[0, 0.25, 1.2]} intensity={0.8} color="#ffffff" />
+          {/* Hair Rim Light */}
+          <pointLight position={[0, 1.2, -1.0]} intensity={1.0} color="#38bdf8" />
 
           {/* 3D Robot with Continuous useFrame Movement */}
           <Suspense fallback={<ModelLoadingFallback />}>
