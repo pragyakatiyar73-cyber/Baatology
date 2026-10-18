@@ -7,8 +7,9 @@ import { Sparkles, Bot, Volume2, Shield, Activity, MessageCircle } from 'lucide-
 /**
  * 3D Robot Model Component
  * - Loads /models/robot.glb
- * - Offsets model vertically so only upper body/chest/head is visible ("Seated at Desk" illusion)
- * - Adds natural idle breathing and subtle conversational swaying using useFrame
+ * - Offsets model vertically (y: -0.9) and scales slightly (0.92) so entire head, hair,
+ *   and headphones are fully visible, while waist-down/legs are concealed behind the desk.
+ * - Adds natural idle breathing and subtle conversational swaying using useFrame.
  */
 function RobotModel({ isSpeaking = false }) {
   const { scene } = useGLTF('/models/robot.glb');
@@ -21,8 +22,8 @@ function RobotModel({ isSpeaking = false }) {
     const t = state.clock.getElapsedTime();
 
     // Natural breathing motion (Y-axis translation)
-    const breathOffset = Math.sin(t * 1.6) * 0.014;
-    groupRef.current.position.y = -1.06 + breathOffset;
+    const breathOffset = Math.sin(t * 1.6) * 0.012;
+    groupRef.current.position.y = -0.9 + breathOffset;
 
     // Gentle micro-rotation (looking slightly around and breathing)
     groupRef.current.rotation.y = Math.sin(t * 0.7) * 0.035;
@@ -37,7 +38,7 @@ function RobotModel({ isSpeaking = false }) {
   });
 
   return (
-    <group ref={groupRef} position={[0, -1.06, 0]} rotation={[0, 0, 0]} scale={[1, 1, 1]}>
+    <group ref={groupRef} position={[0, -0.9, 0]} rotation={[0, 0, 0]} scale={[0.92, 0.92, 0.92]}>
       <primitive object={clone} />
     </group>
   );
@@ -66,12 +67,12 @@ function ModelLoadingFallback() {
  * AuraMentorDesk
  *
  * 3D AI Robot Mentor sitting naturally behind a futuristic executive desk:
- * 1. "Seated at Desk" camera illusion: Model is positioned lower (y: -1.06) so only
- *    chest/upper body and head are visible, completely concealing legs.
- * 2. Camera set to eye-level conversation posture (fov: 40, lookAt: [0, 0.45, 0]).
+ * 1. "Seated at Desk" camera illusion: Model is positioned at y: -0.9 and scaled to 0.92,
+ *    so the entire head, hair, and headphones are fully visible with ample headroom.
+ * 2. Camera set to eye-level conversation posture (position: [0, 0.4, 2.8], fov: 45, target: [0, 0.4, 0]).
  * 3. useFrame subtle idle breathing and ambient floating animation.
- * 4. Futuristic dark desk UI overlay at bottom with neon-blue glowing border labeled:
- *    "AURA GD MENTOR DESK".
+ * 4. Futuristic dark desk UI overlay aligned at bottom naturally cuts off at the waist,
+ *    with a neon-blue glowing border labeled: "AURA GD MENTOR DESK".
  */
 export default function AuraMentorDesk({
   onStartTalk,
@@ -114,20 +115,20 @@ export default function AuraMentorDesk({
       {/* ── MAIN 3D THREE.JS CANVAS ── */}
       <div className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden z-10 -mb-6">
         <Canvas
-          camera={{ position: [0, 0.48, 1.45], fov: 40 }}
+          camera={{ position: [0, 0.4, 2.8], fov: 45 }}
           gl={{ antialias: true, alpha: true }}
           className="w-full h-full"
         >
           {/* Studio Lighting Rig */}
-          <ambientLight intensity={1.2} />
+          <ambientLight intensity={1.3} />
           {/* Key Light from front-top */}
-          <directionalLight position={[2, 3, 3]} intensity={1.8} color="#f0f9ff" />
+          <directionalLight position={[2, 3, 3]} intensity={1.9} color="#f0f9ff" />
           {/* Cyan Fill/Rim Light from left */}
-          <directionalLight position={[-3, 2, -1]} intensity={2.2} color="#00e5ff" />
+          <directionalLight position={[-3, 2, -1]} intensity={2.3} color="#00e5ff" />
           {/* Purple Accent Light from right */}
-          <directionalLight position={[3, 1, -1]} intensity={1.6} color="#818cf8" />
+          <directionalLight position={[3, 1, -1]} intensity={1.7} color="#818cf8" />
           {/* Chest Front Soft Fill */}
-          <pointLight position={[0, 0.4, 1.2]} intensity={0.9} color="#e0f2fe" />
+          <pointLight position={[0, 0.4, 1.5]} intensity={1.0} color="#e0f2fe" />
 
           {/* 3D Robot with Idle Breathing */}
           <Suspense fallback={<ModelLoadingFallback />}>
@@ -144,8 +145,9 @@ export default function AuraMentorDesk({
             color="#000000"
           />
 
-          {/* Smooth Subtle Interaction Orbit Control */}
+          {/* Smooth Subtle Interaction Orbit Control focused at [0, 0.4, 0] */}
           <OrbitControls
+            target={[0, 0.4, 0]}
             enableZoom={false}
             enablePan={false}
             minPolarAngle={Math.PI / 2.3}
