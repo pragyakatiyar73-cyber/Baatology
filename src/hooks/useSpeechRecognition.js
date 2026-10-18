@@ -37,14 +37,21 @@ export function useSpeechRecognition({
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [micNotice, setMicNotice] = useState(null);
   const [language, setLanguage] = useState(() => {
-    const browser = typeof navigator !== 'undefined' ? navigator.language : 'en-IN';
-    return browser?.startsWith('hi') ? 'hi-IN' : 'en-IN';
+    return 'hi-IN'; // Default to hi-IN so Hindi, Hinglish, and English are all recognized seamlessly
   });
+  const languageRef = useRef('hi-IN');
+  languageRef.current = language;
 
   const toggleLanguage = useCallback(() => {
     setLanguage((prev) => {
-      const next = prev === 'en-IN' ? 'hi-IN' : 'en-IN';
+      const next = prev === 'hi-IN' ? 'en-IN' : 'hi-IN';
+      languageRef.current = next;
       console.log('[SpeechRecognition] Switched recognition language to:', next);
+      if (activeRef.current && recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
       return next;
     });
   }, []);
@@ -203,9 +210,8 @@ export function useSpeechRecognition({
       rec.continuous = true;
       rec.interimResults = true;
 
-      // en-IN recognizes English, Hinglish, and Hindi accents with high accuracy
-      const browserLocale = typeof navigator !== 'undefined' ? navigator.language : 'en-IN';
-      rec.lang = browserLocale?.startsWith('en') ? 'en-IN' : (browserLocale || 'en-IN');
+      // Use active language (hi-IN recognizes Hindi, Hinglish, and English words seamlessly)
+      rec.lang = languageRef.current || 'hi-IN';
       rec.maxAlternatives = 3;
 
       rec.onresult = (event) => {

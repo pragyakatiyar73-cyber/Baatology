@@ -1092,6 +1092,13 @@ export default function App() {
             onEndCall={handleEndCall}
             onBackToDashboard={handleBackToDashboard}
             audioLevel={audioLevel}
+            speechLang={speechLang}
+            onToggleLanguage={toggleSpeechLang}
+            showTextInput={showTextInput}
+            onToggleTextInput={() => setShowTextInput((prev) => !prev)}
+            manualInputText={manualInputText}
+            setManualInputText={setManualInputText}
+            handleManualTextSubmit={handleManualTextSubmit}
           />
         </div>
       )}

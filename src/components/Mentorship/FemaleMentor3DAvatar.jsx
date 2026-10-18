@@ -155,40 +155,42 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    // ── 2. Natural Seated Arm & Hand Rest Posture (Resting on Chair Armrests) ──
-    // Left Arm & Forearm resting naturally on left armrest
+    // ── 2. Natural Seated Arm & Hand Rest Posture (Resting naturally down on lap / chair armrests) ──
+    // Left Arm & Forearm: Hanging naturally down along the torso, resting comfortably on armrest/lap
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-0.35); // Lower arm naturally towards ribcage
-      bones.LeftArm.rotateX(0.18);  // Slightly forward
+      bones.LeftArm.rotateZ(-1.08); // Lowers upper arm from A-pose down along ribcage
+      bones.LeftArm.rotateX(0.08);  // Natural relaxed angle
+      bones.LeftArm.rotateY(-0.04);
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(0.72); // Bend forearm forward horizontally
-      bones.LeftForeArm.rotateZ(0.24); // Angle inward towards lap/armrest
+      bones.LeftForeArm.rotateX(0.24); // Gentle natural elbow bend resting on armrest/lap
+      bones.LeftForeArm.rotateZ(0.10); // Slight inward angle towards lap
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(-0.15); // Relaxed wrist
-      bones.LeftHand.rotateZ(0.10);
+      bones.LeftHand.rotateX(-0.06); // Natural relaxed wrist
+      bones.LeftHand.rotateZ(0.04);
     }
 
-    // Right Arm & Forearm (Symmetrical resting on right armrest with subtle live speaking gesture)
-    const speakGesture = isSpeaking ? Math.sin(t * 2.8) * 0.035 : 0;
+    // Right Arm & Forearm: Symmetrical resting posture with subtle speaking micro-movement
+    const speakGesture = isSpeaking ? Math.sin(t * 3.0) * 0.015 : 0;
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(0.35);  // Lower arm naturally towards ribcage
-      bones.RightArm.rotateX(0.18 + speakGesture * 0.4);
+      bones.RightArm.rotateZ(1.08);  // Lowers right upper arm down along ribcage
+      bones.RightArm.rotateX(0.08 + speakGesture * 0.2);
+      bones.RightArm.rotateY(0.04);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(0.72 + speakGesture); // Natural conversational cadence
-      bones.RightForeArm.rotateZ(-0.24);
+      bones.RightForeArm.rotateX(0.24 + speakGesture * 0.3); // Gentle natural elbow bend
+      bones.RightForeArm.rotateZ(-0.10);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(-0.15 - speakGesture * 0.5);
-      bones.RightHand.rotateZ(-0.10);
+      bones.RightHand.rotateX(-0.06 - speakGesture * 0.2);
+      bones.RightHand.rotateZ(-0.04);
     }
 
     // Fingers remain in their natural relaxed hand rest pose
