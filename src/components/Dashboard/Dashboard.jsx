@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Video,
   Tv,
+  MessageCircle,
 } from 'lucide-react';
 import { MODES } from '../../utils/aiResponses';
 import { getPracticeHistory } from '../../utils/progressHistory';
