@@ -52,6 +52,8 @@ const MALE_VOICE_PATTERNS = [
   /^Google US English$/i, // In Chrome on Windows, 'Google US English' is a monotone male voice
 ];
 
+let cachedFemaleVoice = null;
+
 /**
  * Checks if a given voice is male
  */
@@ -81,30 +83,63 @@ export function isFemaleVoice(voice) {
 export function getBestFemaleVoice() {
   if (typeof window === 'undefined' || !window.speechSynthesis) return null;
   const voices = window.speechSynthesis.getVoices() || [];
-  if (voices.length === 0) return null;
+  if (voices.length === 0) return cachedFemaleVoice || null;
 
   // 1. Try exact or substring matches from PREFERRED_FEMALE_VOICES
   for (const preferred of PREFERRED_FEMALE_VOICES) {
     const v = voices.find(
       (voice) => voice.name === preferred || voice.name.toLowerCase().includes(preferred.toLowerCase())
     );
-    if (v && !isMaleVoice(v)) return v;
+    if (v && !isMaleVoice(v)) {
+      cachedFemaleVoice = v;
+      return v;
+    }
   }
 
   // 2. Try any English voice with female keywords
   const femaleEn = voices.find((v) => v.lang?.startsWith('en') && isFemaleVoice(v));
-  if (femaleEn) return femaleEn;
+  if (femaleEn) {
+    cachedFemaleVoice = femaleEn;
+    return femaleEn;
+  }
 
   // 3. Try any English voice that is NOT male
   const nonMaleEn = voices.find((v) => v.lang?.startsWith('en') && !isMaleVoice(v));
-  if (nonMaleEn) return nonMaleEn;
+  if (nonMaleEn) {
+    cachedFemaleVoice = nonMaleEn;
+    return nonMaleEn;
+  }
 
   // 4. Any voice that is not male
   const nonMaleAny = voices.find((v) => !isMaleVoice(v));
-  if (nonMaleAny) return nonMaleAny;
+  if (nonMaleAny) {
+    cachedFemaleVoice = nonMaleAny;
+    return nonMaleAny;
+  }
 
   // 5. Ultimate fallback
-  return voices.find((v) => v.lang?.startsWith('en')) || voices[0] || null;
+  const fallback = voices.find((v) => v.lang?.startsWith('en')) || voices[0] || null;
+  cachedFemaleVoice = fallback;
+  return fallback;
+}
+
+// Auto-cache voices as soon as Chrome emits onvoiceschanged
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    getBestFemaleVoice();
+  };
+}
+
+/**
+ * Unlocks browser audio and speech synthesis if blocked by Chrome autoplay policy
+ */
+export function unblockSpeechAutoplay() {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  try {
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+  } catch (e) {}
 }
 
 /**
@@ -121,6 +156,8 @@ export function configureFemaleUtterance(utterance) {
   const voice = getBestFemaleVoice();
   if (voice) {
     utterance.voice = voice;
-    if (voice.lang) utterance.lang = voice.lang;
+    utterance.lang = voice.lang || 'en-US';
+  } else {
+    utterance.lang = 'en-US';
   }
 }

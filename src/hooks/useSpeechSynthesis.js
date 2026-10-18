@@ -38,8 +38,10 @@ export function useSpeechSynthesis({ onStart, onEnd } = {}) {
       return;
     }
 
-    // Cancel any ongoing speech first
-    window.speechSynthesis.cancel();
+    // Cancel prior speech only if actively speaking to prevent Chromium speech queue lock
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
     if (timerRef.current) clearTimeout(timerRef.current);
 
     const utterance  = new SpeechSynthesisUtterance(addMicroPauses(text));
@@ -49,7 +51,7 @@ export function useSpeechSynthesis({ onStart, onEnd } = {}) {
       const femaleVoice = getBestFemaleVoice();
       if (femaleVoice) {
         utterance.voice = femaleVoice;
-        if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
+        utterance.lang = femaleVoice.lang || 'en-US';
       }
     };
 
@@ -95,15 +97,17 @@ export function useSpeechSynthesis({ onStart, onEnd } = {}) {
       }
     }, estimatedMs + 3000);
 
-    try {
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+    setTimeout(() => {
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn('[TTS] Speech synthesis speak error:', err);
+        finish();
       }
-      window.speechSynthesis.speak(utterance);
-    } catch (err) {
-      console.warn('[TTS] Speech synthesis speak error:', err);
-      finish();
-    }
+    }, 25);
   }, []);
 
   const stop = useCallback(() => {

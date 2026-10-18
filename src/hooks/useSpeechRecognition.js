@@ -35,6 +35,19 @@ export function useSpeechRecognition({
   const animFrameRef = useRef(null);
   const [audioLevel, setAudioLevel] = useState(0); // 0 to 100
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [micNotice, setMicNotice] = useState(null);
+  const [language, setLanguage] = useState(() => {
+    const browser = typeof navigator !== 'undefined' ? navigator.language : 'en-IN';
+    return browser?.startsWith('hi') ? 'hi-IN' : 'en-IN';
+  });
+
+  const toggleLanguage = useCallback(() => {
+    setLanguage((prev) => {
+      const next = prev === 'en-IN' ? 'hi-IN' : 'en-IN';
+      console.log('[SpeechRecognition] Switched recognition language to:', next);
+      return next;
+    });
+  }, []);
 
   // Callback refs to prevent stale closures
   const onResultRef = useRef(onResult);
@@ -386,6 +399,19 @@ export function useSpeechRecognition({
     };
   }, [stopAudioMeter]);
 
+  // ── Retry Listening Manually ──
+  const retryListening = useCallback(() => {
+    setMicNotice(null);
+    stopListening();
+    setTimeout(() => {
+      startListening();
+    }, 200);
+  }, [startListening, stopListening]);
+
+  const clearMicNotice = useCallback(() => {
+    setMicNotice(null);
+  }, []);
+
   return {
     startListening,
     stopListening,
@@ -394,5 +420,11 @@ export function useSpeechRecognition({
     isSupported,
     permissionDenied,
     audioLevel, // 0-100 real-time volume indicator
+    language,
+    setLanguage,
+    toggleLanguage,
+    micNotice,
+    clearMicNotice,
+    retryListening,
   };
 }

@@ -41,6 +41,7 @@ import {
   analyzeCasualWellness,
 } from './utils/aiResponses';
 import { getChatGPTConversationalResponse } from './utils/chatGptAssistant';
+import { unblockSpeechAutoplay } from './utils/femaleVoiceManager';
 import { calculateScores } from './utils/scoreCalculator';
 import { recordNewSession } from './utils/progressHistory';
 
@@ -181,14 +182,10 @@ export default function App() {
     },
   });
 
-  // Connected Mentor Voice Response (Speaks via HeyGen Streaming Avatar when in Arena)
+  // Mentor Voice Response (Always speaks via rawSpeak with femaleVoiceManager & 3D visemes)
   const speak = useCallback((text, callback) => {
     setAiSpeechSubtitle(text);
-    if (currentViewRef.current === 'arena' && heygenAvatarRef.current) {
-      heygenAvatarRef.current.speak(text, callback);
-    } else {
-      rawSpeak(text, callback);
-    }
+    rawSpeak(text, callback);
   }, [rawSpeak]);
 
   // ── AI Response Trigger (ChatGPT Voice Mode with Thought & Reasoning)
@@ -350,6 +347,11 @@ export default function App() {
     audioLevel,
     isSupported: sttSupported,
     permissionDenied: micPermissionDenied,
+    language: speechLang,
+    toggleLanguage: toggleSpeechLang,
+    micNotice,
+    clearMicNotice,
+    retryListening,
   } = useSpeechRecognition({
     onInterim: (text) => {
       spokenMemoryRef.current = text;
@@ -382,6 +384,7 @@ export default function App() {
 
   // ── Interrupt AI and speak immediately
   const handleImmediateSpeak = useCallback(() => {
+    unblockSpeechAutoplay();
     stopTTS();
     heygenAvatarRef.current?.interrupt();
     startListeningRef.current?.();
@@ -391,6 +394,7 @@ export default function App() {
 
   // ── Turn-Taking Execution (Feature 7: Group Discussion)
   const handleGDTurnChoice = useCallback((choice) => {
+    unblockSpeechAutoplay();
     setGdTurnChoice(choice);
     if (choice === 'user') {
       // 2. Turn-Taking Execution: If "I Will Start" is clicked:
@@ -426,6 +430,7 @@ export default function App() {
 
   // ── Enter Arena View ("kebal bo and me dheku")
   const handleStartArena = useCallback((modeId) => {
+    unblockSpeechAutoplay();
     currentViewRef.current = 'arena';
     setCurrentMode(modeId);
     setCurrentView('arena');
@@ -531,6 +536,7 @@ export default function App() {
 
   // ── Mic Toggle Handler
   const handleToggleMic = useCallback(() => {
+    unblockSpeechAutoplay();
     if (isListening) {
       stopListening();
       setIsListening(false);
@@ -821,6 +827,17 @@ export default function App() {
 
           {/* Top-Right: Subtle Minimal Floating Voice HUD Pill */}
           <div className="absolute top-6 right-6 z-30 pointer-events-auto flex items-center gap-2">
+            <button
+              onClick={() => {
+                unblockSpeechAutoplay();
+                speak("Hello! I am Aura. My audio output is fully active, and I am listening to your voice. Feel free to ask me anything!");
+              }}
+              className="px-3 py-1.5 rounded-full bg-purple-950/80 hover:bg-purple-900 border border-purple-400/50 text-purple-300 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 backdrop-blur-md cursor-pointer"
+              title="Click to verify avatar voice output"
+            >
+              <span>🔊 Test Voice</span>
+            </button>
+
             {isSpeaking && (
               <button
                 onClick={handleImmediateSpeak}
@@ -923,6 +940,13 @@ export default function App() {
                     </button>
                   )}
                   <button
+                    onClick={toggleSpeechLang}
+                    className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30 transition-all cursor-pointer shrink-0"
+                    title={`Recognition language: ${speechLang || 'en-IN'}. Click to toggle English / Hindi`}
+                  >
+                    🌐 {speechLang === 'hi-IN' ? 'Hindi (हिन्दी)' : 'English (EN)'}
+                  </button>
+                  <button
                     onClick={() => setShowTextInput((prev) => !prev)}
                     className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs cursor-pointer transition-all"
                     title={showTextInput ? 'Hide keyboard input' : 'Type response with keyboard'}
@@ -941,7 +965,7 @@ export default function App() {
                       type="text"
                       value={manualInputText}
                       onChange={(e) => setManualInputText(e.target.value)}
-                      placeholder="Type your response here..."
+                      placeholder="Type your question or response here..."
                       className="flex-1 bg-transparent px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none"
                       autoFocus
                     />
@@ -962,6 +986,30 @@ export default function App() {
               <div className="px-4 py-2 rounded-xl bg-amber-950/90 border border-amber-500/60 text-amber-200 text-xs font-bold shadow-2xl flex items-center gap-2 backdrop-blur-md animate-fade-in">
                 <span>⚠️</span>
                 <span>Microphone blocked in browser. Click the lock/tune icon in the address bar to allow microphone.</span>
+              </div>
+            )}
+
+            {/* Mic Notice / Troubleshooting Banner */}
+            {micNotice && (
+              <div className="px-4 py-2 rounded-xl bg-amber-950/90 border border-amber-500/60 text-amber-200 text-xs font-bold shadow-2xl flex items-center justify-between gap-3 backdrop-blur-md animate-fade-in w-full max-w-lg">
+                <div className="flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>{micNotice}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={retryListening}
+                    className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    Retry Mic
+                  </button>
+                  <button
+                    onClick={clearMicNotice}
+                    className="text-amber-400 hover:text-white text-xs px-1 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             )}
 

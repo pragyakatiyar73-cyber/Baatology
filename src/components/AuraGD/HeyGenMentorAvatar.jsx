@@ -72,46 +72,8 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
   useImperativeHandle(
     ref,
     () => ({
-      speak: async (text, onComplete) => {
+      speak: (text, onComplete) => {
         if (!text || !text.trim()) return;
-
-        // Step 1: Try ElevenLabs Neural TTS endpoint
-        try {
-          const res = await fetch('http://localhost:3001/api/assistant/tts/elevenlabs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text,
-              emotion: mode === 'casual' ? 'warm' : 'supportive',
-            }),
-          });
-
-          const contentType = res.headers.get('content-type') || '';
-          if (res.ok && contentType.includes('audio/mpeg')) {
-            const blob = await res.blob();
-            const audioUrl = URL.createObjectURL(blob);
-            const audio = new Audio(audioUrl);
-            currentAudioRef.current = audio;
-
-            audio.onplay = () => {
-              onSpeechStart?.();
-            };
-            audio.onended = () => {
-              onSpeechEnd?.();
-              onComplete?.();
-            };
-            audio.onerror = () => {
-              fallbackSpeak(text, onComplete);
-            };
-
-            await audio.play();
-            return;
-          }
-        } catch (err) {
-          console.warn('[ElevenLabs TTS] Falling back to Web Speech API:', err.message);
-        }
-
-        // Step 2: Fallback to high quality Web Speech API
         fallbackSpeak(text, onComplete);
       },
 
