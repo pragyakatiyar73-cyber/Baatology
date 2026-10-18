@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, OrbitControls, ContactShadows, Html, RoundedBox } from '@react-three/drei';
+import { useGLTF, OrbitControls, ContactShadows, Html, RoundedBox, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 /**
@@ -368,23 +368,15 @@ function getFileFolderTexture() {
 function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isThinking = false }) {
   const { scene } = useGLTF('/models/female_mentor.glb');
 
-  // Load executive tailored AuraGD blazer texture
-  const blazerTexture = useMemo(() => {
-    const loader = new THREE.TextureLoader();
-    const tex = loader.load('/models/blazer_texture.png', (loadedTex) => {
-      loadedTex.flipY = false;
-      loadedTex.colorSpace = THREE.SRGBColorSpace;
-      scene.traverse((child) => {
-        if (child.isMesh && (child.name === 'Wolf3D_Outfit_Top' || child.material?.name === 'Wolf3D_Outfit_Top')) {
-          child.material.map = loadedTex;
-          child.material.needsUpdate = true;
-        }
-      });
-    });
-    tex.flipY = false;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }, [scene]);
+  // Load executive tailored AuraGD pure-white cyber blazer texture
+  const blazerTexture = useTexture('/models/white_cyber_blazer.png');
+  useMemo(() => {
+    if (blazerTexture) {
+      blazerTexture.flipY = false;
+      blazerTexture.colorSpace = THREE.SRGBColorSpace;
+      blazerTexture.needsUpdate = true;
+    }
+  }, [blazerTexture]);
 
   // Traverse meshes and enhance materials for cinematic human realism
   const rig = useMemo(() => {
@@ -506,37 +498,40 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    // ── 2. Natural Table-Rested Arm & Hand Posture (Stable on Desk Pad) ──
-    // Left Arm & Hand on Desk Pad
+    // ── 2. Natural Seated Arm & Hand Rest Posture (Resting on Chair Armrests) ──
+    // Left Arm & Forearm resting naturally on left armrest
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateX(0.32);
-      bones.LeftArm.rotateZ(-0.20);
+      bones.LeftArm.rotateZ(-0.35); // Lower arm naturally towards ribcage
+      bones.LeftArm.rotateX(0.18);  // Slightly forward
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateZ(1.22);
+      bones.LeftForeArm.rotateX(0.72); // Bend forearm forward horizontally
+      bones.LeftForeArm.rotateZ(0.24); // Angle inward towards lap/armrest
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(-0.10);
-      bones.LeftHand.rotateZ(0.05);
+      bones.LeftHand.rotateX(-0.15); // Relaxed wrist
+      bones.LeftHand.rotateZ(0.10);
     }
 
-    // Right Arm & Hand on Desk Pad (Symmetrical)
+    // Right Arm & Forearm (Symmetrical resting on right armrest with subtle live speaking gesture)
+    const gesture = isSpeaking ? Math.sin(t * 2.8) * 0.04 : 0;
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateX(0.32);
-      bones.RightArm.rotateZ(0.20);
+      bones.RightArm.rotateZ(0.35);  // Lower arm naturally towards ribcage
+      bones.RightArm.rotateX(0.18 + gesture * 0.4);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateZ(-1.22);
+      bones.RightForeArm.rotateX(0.72 + gesture); // Natural conversational cadence
+      bones.RightForeArm.rotateZ(-0.24);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(-0.10);
-      bones.RightHand.rotateZ(-0.05);
+      bones.RightHand.rotateX(-0.15 - gesture * 0.5);
+      bones.RightHand.rotateZ(-0.10);
     }
 
     // Fingers remain in their natural relaxed hand rest pose
@@ -698,6 +693,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
 }
 
 useGLTF.preload('/models/female_mentor.glb');
+useTexture.preload('/models/white_cyber_blazer.png');
 
 /**
  * RealExecutiveOfficeChair
@@ -1090,17 +1086,6 @@ export default function FemaleMentor3DAvatar({
   isThinking = false,
   mentorName = 'Dr. Ann Vance',
 }) {
-  // Pre-generate procedural textures once on mount for performance & realism
-  const textures = useMemo(() => {
-    return {
-      walnut: getWalnutWoodTexture(),
-      leatherPad: getLeatherPadTexture(),
-      laptopScreen: getLaptopScreenTexture(),
-      laptopKeyboard: getLaptopKeyboardTexture(),
-      fileFolder: getFileFolderTexture(),
-    };
-  }, []);
-
   return (
     <div className="relative w-full h-full overflow-hidden select-none bg-[#090d16] flex items-center justify-center">
       {/* 1. FIXED FULL-SCREEN PHOTOREALISTIC FUTURISTIC GLASS BOARDROOM BACKGROUND (Matching Image 1) */}
@@ -1121,8 +1106,8 @@ export default function FemaleMentor3DAvatar({
         <Canvas
           shadows
           camera={{
-            position: [0, 0.10, 1.56],
-            fov: 44,
+            position: [0, 0.16, 0.98],
+            fov: 38,
             near: 0.1,
             far: 20,
           }}
@@ -1171,7 +1156,7 @@ export default function FemaleMentor3DAvatar({
           {/* ── Luxury Executive Ergonomic Chair ── */}
           <RealExecutiveOfficeChair />
 
-          {/* ── 3D Seated Mentor Avatar Model ── */}
+          {/* ── 3D Seated Mentor Avatar Model (White Cyber Blazer & Robotic Gloves) ── */}
           <Suspense fallback={<ModelLoader />}>
             <SeatedFemaleMentorModel
               isSpeaking={isSpeaking}
@@ -1180,22 +1165,19 @@ export default function FemaleMentor3DAvatar({
             />
           </Suspense>
 
-          {/* ── Real American Walnut Table with Photorealistic Laptop, Cup & File ── */}
-          <ExecutiveConsultationDesk textures={textures} />
-
-          {/* ── Floor / Desk Contact Shadows ── */}
+          {/* ── Floor / Chair Base Contact Shadows ── */}
           <ContactShadows
-            position={[0, -0.22, 0.16]}
-            opacity={0.65}
-            scale={2.6}
+            position={[0, -0.42, -0.20]}
+            opacity={0.48}
+            scale={2.2}
             blur={2.0}
             far={1.5}
             color="#000000"
           />
 
-          {/* ── Locked Camera Controls ── */}
+          {/* ── Locked Camera Controls Focused at Eye Level (0.8m - 1.2m Intimate Distance) ── */}
           <OrbitControls
-            target={[0, 0.08, 0]}
+            target={[0, 0.15, -0.15]}
             enableRotate={false}
             enableZoom={false}
             enablePan={false}
