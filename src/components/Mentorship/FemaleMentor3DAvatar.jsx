@@ -398,15 +398,20 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
         meshes[child.name] = child;
 
         if (child.name === 'Wolf3D_Outfit_Footwear') {
-          child.visible = false;
+          child.visible = true;
         }
 
         if (child.material) {
           const mat = child.material;
-          if (mat.name === 'Wolf3D_Skin' || mat.name === 'Wolf3D_Body') {
+          if (mat.name === 'Wolf3D_Skin') {
             mat.roughness = 0.65;
             mat.metalness = 0.0;
-            mat.color = new THREE.Color('#ffffff'); // Keep 100% natural skin texture for hands and face
+            mat.color = new THREE.Color('#ffffff'); // Natural realistic skin texture for face
+          } else if (mat.name === 'Wolf3D_Body' || child.name === 'Wolf3D_Body') {
+            // White futuristic cybernetic robotic AI gloves
+            mat.roughness = 0.28;
+            mat.metalness = 0.24;
+            mat.color = new THREE.Color('#f0f4f9'); // Pure white futuristic ceramic/cyber glove finish
           } else if (mat.name === 'Wolf3D_Eye' || mat.name === 'EyeLeft' || mat.name === 'EyeRight') {
             mat.roughness = 0.05;
             mat.metalness = 0.15;
@@ -419,21 +424,31 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
           } else if (mat.name === 'Wolf3D_Hair') {
             mat.roughness = 0.48;
             mat.metalness = 0.12;
-            mat.color = new THREE.Color('#221a15');
+            mat.color = new THREE.Color('#241a15');
           } else if (mat.name === 'Wolf3D_Teeth') {
             mat.roughness = 0.22;
             mat.metalness = 0.0;
             mat.color = new THREE.Color('#fcfbf7');
           } else if (child.name === 'Wolf3D_Outfit_Top' || mat.name === 'Wolf3D_Outfit_Top') {
-            // Apply executive tailored AuraGD blazer texture
+            // Apply tailored white futuristic cyber blazer texture
             mat.map = blazerTexture;
-            mat.roughness = 0.74;
-            mat.metalness = 0.10;
+            mat.roughness = 0.44;
+            mat.metalness = 0.12;
             mat.color = new THREE.Color('#ffffff');
             mat.needsUpdate = true;
+          } else if (child.name === 'Wolf3D_Outfit_Bottom' || mat.name?.includes('Bottom')) {
+            // Matching dark cyber navy trousers
+            mat.roughness = 0.70;
+            mat.metalness = 0.08;
+            mat.color = new THREE.Color('#0f172a');
+          } else if (child.name === 'Wolf3D_Outfit_Footwear' || mat.name?.includes('Footwear')) {
+            // White-blue futuristic cyber sneakers
+            mat.roughness = 0.35;
+            mat.metalness = 0.20;
+            mat.color = new THREE.Color('#f8fafc');
           } else if (mat.name?.includes('Outfit')) {
-            mat.roughness = 0.82;
-            mat.metalness = 0.05;
+            mat.roughness = 0.65;
+            mat.metalness = 0.10;
             mat.color = new THREE.Color('#ffffff');
           }
           mat.needsUpdate = true;
@@ -851,7 +866,7 @@ function RealExecutiveOfficeChair() {
 function ExecutiveConsultationDesk({ textures }) {
   return (
     <group position={[0, -0.20, 0.16]}>
-      {/* ── 1. REAL AMERICAN WALNUT WOODEN TABLETOP ── */}
+      {/* ── 1. MODERN PURE WHITE COMPOSITE TABLETOP WITH CYAN LED STRIP (Matching Image 1) ── */}
       <RoundedBox
         args={[2.4, 0.044, 0.88]}
         radius={0.016}
@@ -861,23 +876,34 @@ function ExecutiveConsultationDesk({ textures }) {
         castShadow
       >
         <meshStandardMaterial
-          map={textures.walnut}
-          color="#523624" // Warm, rich American Walnut wood tone
-          roughness={0.28} // High-end furniture satin lacquer reflection
-          metalness={0.06}
+          color="#f8fafc" // Pure white architectural composite tabletop
+          roughness={0.18} // High-end satin smooth surface sheen
+          metalness={0.08}
         />
       </RoundedBox>
 
-      {/* Front Beveled Edge Trim (Layered architectural profile) */}
-      <mesh position={[0, -0.024, 0.43]}>
-        <boxGeometry args={[2.38, 0.012, 0.02]} />
-        <meshStandardMaterial color="#2d1a0f" roughness={0.5} metalness={0.1} />
+      {/* Signature Glowing Cyan LED Neon Light Strip along front beveled edge */}
+      <mesh position={[0, -0.008, 0.442]}>
+        <boxGeometry args={[2.42, 0.014, 0.016]} />
+        <meshStandardMaterial
+          color="#00e5ff"
+          emissive="#00e5ff"
+          emissiveIntensity={2.8}
+          roughness={0.1}
+          metalness={0.1}
+        />
       </mesh>
 
-      {/* Brushed Brass Inlay Accent Line along the front edge */}
+      {/* Front Beveled Edge Trim (Lower dark cyber profile) */}
+      <mesh position={[0, -0.024, 0.43]}>
+        <boxGeometry args={[2.38, 0.012, 0.02]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.2} />
+      </mesh>
+
+      {/* Subtle Metallic Cyan Inlay Accent Line along the tabletop front */}
       <mesh position={[0, 0.0225, 0.38]}>
         <boxGeometry args={[2.3, 0.002, 0.005]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.92} roughness={0.2} />
+        <meshStandardMaterial color="#38bdf8" metalness={0.85} roughness={0.2} />
       </mesh>
 
       {/* ── 2. REAL NAPA LEATHER DESK PAD / BLOTTER ── */}
@@ -1028,7 +1054,12 @@ function ExecutiveConsultationDesk({ textures }) {
       {/* ── 6. FRONT MODESTY PANEL / DESK APRON ── */}
       <mesh position={[0, -0.24, -0.06]} castShadow receiveShadow>
         <boxGeometry args={[2.0, 0.44, 0.025]} />
-        <meshStandardMaterial color="#180e08" roughness={0.65} metalness={0.05} />
+        <meshStandardMaterial color="#f1f5f9" roughness={0.3} metalness={0.12} />
+      </mesh>
+      {/* Bottom subtle cyan LED trim */}
+      <mesh position={[0, -0.45, -0.048]}>
+        <boxGeometry args={[1.98, 0.008, 0.012]} />
+        <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={1.8} />
       </mesh>
     </group>
   );
@@ -1072,18 +1103,18 @@ export default function FemaleMentor3DAvatar({
 
   return (
     <div className="relative w-full h-full overflow-hidden select-none bg-[#090d16] flex items-center justify-center">
-      {/* 1. FIXED FULL-SCREEN PHOTOREALISTIC EXECUTIVE ROOM BACKGROUND */}
+      {/* 1. FIXED FULL-SCREEN PHOTOREALISTIC FUTURISTIC GLASS BOARDROOM BACKGROUND (Matching Image 1) */}
       <img
-        src="/backgrounds/executive_room_straight.jpg"
-        alt="AuraGD Executive Mentorship Room"
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[0.95] contrast-[1.04]"
+        src="/backgrounds/futuristic_glass_office_room.jpg"
+        alt="AuraGD Futuristic Glass Boardroom"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[1.02] contrast-[1.03]"
         onError={(e) => {
-          e.currentTarget.src = '/backgrounds/office_cozy.jpg';
+          e.currentTarget.src = '/backgrounds/futuristic_mentor_session.png';
         }}
       />
 
-      {/* Subtle Warm Studio Atmosphere Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none z-0" />
+      {/* Subtle Futuristic Tech Room Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/15 pointer-events-none z-0" />
 
       {/* 2. TRANSPARENT 3D CANVAS */}
       <div className="absolute inset-0 w-full h-full z-10">
@@ -1098,42 +1129,42 @@ export default function FemaleMentor3DAvatar({
           className="w-full h-full"
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         >
-          {/* ── Cinematic Multi-Source Studio Lighting ── */}
-          <ambientLight intensity={0.95} color="#fff6ed" />
+          {/* ── Cinematic Multi-Source Futuristic Studio Lighting ── */}
+          <ambientLight intensity={1.15} color="#f0f9ff" />
 
           {/* Key Directional Light */}
           <directionalLight
-            position={[1.2, 1.6, 1.8]}
-            intensity={1.8}
-            color="#fffaf5"
+            position={[1.2, 1.8, 1.8]}
+            intensity={1.85}
+            color="#ffffff"
             castShadow
             shadow-mapSize-width={1024}
             shadow-mapSize-height={1024}
             shadow-bias={-0.0001}
           />
 
-          {/* Left Warm Desk Lamp Specular Spotlight */}
+          {/* Left Cool Cyan Rim Light (Matching vertical glass LED pillars) */}
           <pointLight
-            position={[-0.7, 0.5, 0.4]}
-            intensity={1.2}
-            color="#ffe4b5"
-            distance={2.8}
+            position={[-1.2, 0.6, 0.4]}
+            intensity={1.5}
+            color="#00e5ff"
+            distance={3.2}
             castShadow
           />
 
-          {/* Right Soft Rim Light */}
+          {/* Right Soft Fill Light */}
           <pointLight
-            position={[1.4, 0.7, 0.5]}
-            intensity={0.6}
-            color="#e2e8f0"
+            position={[1.4, 0.8, 0.6]}
+            intensity={0.8}
+            color="#e0f2fe"
             distance={3.2}
           />
 
           {/* Top Hair Rim Light */}
           <pointLight
-            position={[0, 1.7, -0.9]}
-            intensity={0.7}
-            color="#fed7aa"
+            position={[0, 1.8, -0.8]}
+            intensity={0.9}
+            color="#bae6fd"
             distance={3.5}
           />
 
