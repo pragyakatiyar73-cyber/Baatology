@@ -367,16 +367,41 @@ function getFileFolderTexture() {
  */
 function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isThinking = false }) {
   const { scene } = useGLTF('/models/female_mentor.glb');
+  const { scene: hairScene } = useGLTF('/models/Celeste.glb');
 
   // Load executive tailored AuraGD pure-white cyber blazer texture
   const blazerTexture = useTexture('/models/white_cyber_blazer.png');
+  // Load refined face makeup texture (rosy lipstick, peach blush, winged eyeliner)
+  const makeupTexture = useTexture('/models/head_makeup_texture.png');
+
   useMemo(() => {
     if (blazerTexture) {
       blazerTexture.flipY = false;
       blazerTexture.colorSpace = THREE.SRGBColorSpace;
       blazerTexture.needsUpdate = true;
     }
-  }, [blazerTexture]);
+    if (makeupTexture) {
+      makeupTexture.flipY = false;
+      makeupTexture.colorSpace = THREE.SRGBColorSpace;
+      makeupTexture.needsUpdate = true;
+    }
+  }, [blazerTexture, makeupTexture]);
+
+  // Swap hairstyle with natural flowing hair from Celeste.glb
+  useMemo(() => {
+    if (scene && hairScene) {
+      const targetHair = scene.getObjectByName('Wolf3D_Hair');
+      const newHair = hairScene.getObjectByName('Wolf3D_Hair');
+      if (targetHair && newHair) {
+        targetHair.geometry = newHair.geometry;
+        targetHair.material = newHair.material.clone();
+        targetHair.material.color = new THREE.Color('#221711'); // Natural dark brunette espresso
+        targetHair.material.roughness = 0.42;
+        targetHair.material.metalness = 0.12;
+        targetHair.material.needsUpdate = true;
+      }
+    }
+  }, [scene, hairScene]);
 
   // Traverse meshes and enhance materials for cinematic human realism
   const rig = useMemo(() => {
@@ -389,16 +414,24 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
         child.receiveShadow = true;
         meshes[child.name] = child;
 
+        if (child.name === 'Wolf3D_Glasses' || child.material?.name === 'Wolf3D_Glasses') {
+          // Remove glasses completely from face
+          child.visible = false;
+        }
+
         if (child.name === 'Wolf3D_Outfit_Footwear') {
           child.visible = true;
         }
 
         if (child.material) {
           const mat = child.material;
-          if (mat.name === 'Wolf3D_Skin') {
-            mat.roughness = 0.65;
+          if (child.name === 'Wolf3D_Head' || mat.name === 'Wolf3D_Skin') {
+            // Apply refined makeup (rosy lips, soft peach blush, winged eyeliner, smooth radiant skin)
+            mat.map = makeupTexture;
+            mat.roughness = 0.55;
             mat.metalness = 0.0;
-            mat.color = new THREE.Color('#ffffff'); // Natural realistic skin texture for face
+            mat.color = new THREE.Color('#ffffff');
+            mat.needsUpdate = true;
           } else if (mat.name === 'Wolf3D_Body' || child.name === 'Wolf3D_Body') {
             // White futuristic cybernetic robotic AI gloves
             mat.roughness = 0.28;
@@ -407,16 +440,11 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
           } else if (mat.name === 'Wolf3D_Eye' || mat.name === 'EyeLeft' || mat.name === 'EyeRight') {
             mat.roughness = 0.05;
             mat.metalness = 0.15;
-          } else if (mat.name === 'Wolf3D_Glasses') {
-            mat.roughness = 0.12;
-            mat.metalness = 0.85;
-            mat.color = new THREE.Color('#1e2430');
-            mat.transparent = true;
-            mat.opacity = 0.95;
-          } else if (mat.name === 'Wolf3D_Hair') {
-            mat.roughness = 0.48;
+          } else if (child.name === 'Wolf3D_Hair' || mat.name === 'Wolf3D_Hair') {
+            mat.roughness = 0.42;
             mat.metalness = 0.12;
-            mat.color = new THREE.Color('#241a15');
+            mat.color = new THREE.Color('#221711'); // Natural dark brunette espresso
+            mat.needsUpdate = true;
           } else if (mat.name === 'Wolf3D_Teeth') {
             mat.roughness = 0.22;
             mat.metalness = 0.0;
@@ -424,8 +452,8 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
           } else if (child.name === 'Wolf3D_Outfit_Top' || mat.name === 'Wolf3D_Outfit_Top') {
             // Apply tailored white futuristic cyber blazer texture
             mat.map = blazerTexture;
-            mat.roughness = 0.44;
-            mat.metalness = 0.12;
+            mat.roughness = 0.42;
+            mat.metalness = 0.10;
             mat.color = new THREE.Color('#ffffff');
             mat.needsUpdate = true;
           } else if (child.name === 'Wolf3D_Outfit_Bottom' || mat.name?.includes('Bottom')) {
@@ -452,7 +480,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     });
 
     return { bones, meshes };
-  }, [scene, blazerTexture]);
+  }, [scene, blazerTexture, makeupTexture]);
 
   // Capture pristine rest quaternions
   const restQuats = useMemo(() => {
@@ -498,40 +526,40 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    // ── 2. Natural Seated Arm & Hand Rest Posture (Resting on Chair Armrests) ──
-    // Left Arm & Forearm resting naturally on left armrest
+    // ── 2. Natural Seated Arm & Hand Posture (Hands resting flat on desk pad) ──
+    // Left Arm & Forearm reaching forward and resting flat on desk pad
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-0.35); // Lower arm naturally towards ribcage
-      bones.LeftArm.rotateX(0.18);  // Slightly forward
+      bones.LeftArm.rotateZ(-0.24); // Lower arm naturally towards ribcage
+      bones.LeftArm.rotateX(0.28);  // Reach forward toward desk surface
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(0.72); // Bend forearm forward horizontally
-      bones.LeftForeArm.rotateZ(0.24); // Angle inward towards lap/armrest
+      bones.LeftForeArm.rotateX(0.92); // Forearm lies horizontal on desk surface
+      bones.LeftForeArm.rotateZ(0.26); // Angle hand inward onto the desk pad
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(-0.15); // Relaxed wrist
-      bones.LeftHand.rotateZ(0.10);
+      bones.LeftHand.rotateX(-0.18); // Hand rests flat against the desk pad
+      bones.LeftHand.rotateZ(0.08);
     }
 
-    // Right Arm & Forearm (Symmetrical resting on right armrest with subtle live speaking gesture)
-    const gesture = isSpeaking ? Math.sin(t * 2.8) * 0.04 : 0;
+    // Right Arm & Forearm (Resting flat on desk, with gentle conversational micro-gestures)
+    const speakGesture = isSpeaking ? Math.sin(t * 2.8) * 0.025 : 0;
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(0.35);  // Lower arm naturally towards ribcage
-      bones.RightArm.rotateX(0.18 + gesture * 0.4);
+      bones.RightArm.rotateZ(0.24);
+      bones.RightArm.rotateX(0.28 + speakGesture * 0.3);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(0.72 + gesture); // Natural conversational cadence
-      bones.RightForeArm.rotateZ(-0.24);
+      bones.RightForeArm.rotateX(0.92 + speakGesture); // Subtle conversational cadence
+      bones.RightForeArm.rotateZ(-0.26);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(-0.15 - gesture * 0.5);
-      bones.RightHand.rotateZ(-0.10);
+      bones.RightHand.rotateX(-0.18 - speakGesture * 0.4);
+      bones.RightHand.rotateZ(-0.08);
     }
 
     // Fingers remain in their natural relaxed hand rest pose
@@ -693,194 +721,125 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
 }
 
 useGLTF.preload('/models/female_mentor.glb');
+useGLTF.preload('/models/Celeste.glb');
 useTexture.preload('/models/white_cyber_blazer.png');
+useTexture.preload('/models/head_makeup_texture.png');
 
 /**
- * RealExecutiveOfficeChair
+ * ModernLightExecutiveChair
+ * Sleek, compact mid-back ergonomic consultation chair in pearl white & brushed silver
  */
-function RealExecutiveOfficeChair() {
+function ModernLightExecutiveChair() {
   return (
-    <group position={[0, -0.06, -0.30]}>
-      {/* Structural Chrome Exoskeleton Spine */}
-      <mesh position={[0, 0.06, -0.07]} castShadow>
-        <cylinderGeometry args={[0.018, 0.022, 0.72, 16]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.14} />
+    <group position={[0, -0.10, -0.26]}>
+      {/* 1. Sleek Brushed Aluminum Central Spine & Crossbar */}
+      <mesh position={[0, 0.04, -0.05]} castShadow>
+        <cylinderGeometry args={[0.014, 0.016, 0.52, 16]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.16} />
+      </mesh>
+      <mesh position={[0, 0.16, -0.04]}>
+        <boxGeometry args={[0.26, 0.018, 0.024]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.90} roughness={0.18} />
       </mesh>
 
-      <mesh position={[0, 0.28, -0.05]}>
-        <boxGeometry args={[0.32, 0.024, 0.035]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.92} roughness={0.16} />
-      </mesh>
-
-      <mesh position={[0, -0.12, -0.05]}>
-        <boxGeometry args={[0.36, 0.03, 0.035]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.92} roughness={0.16} />
-      </mesh>
-
-      {/* Lumbar Tension Adjustment Knobs */}
-      <mesh position={[-0.20, -0.12, -0.04]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.016, 0.016, 0.035, 16]} />
-        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.12} />
-      </mesh>
-      <mesh position={[0.20, -0.12, -0.04]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.016, 0.016, 0.035, 16]} />
-        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.12} />
-      </mesh>
-
-      {/* Contoured High Backrest */}
+      {/* 2. Compact Pearl-White Ergonomic Mid-Backrest */}
       <RoundedBox
-        args={[0.36, 0.50, 0.065]}
-        radius={0.028}
+        args={[0.34, 0.36, 0.045]}
+        radius={0.024}
         smoothness={4}
-        position={[0, 0.06, -0.02]}
+        position={[0, 0.08, -0.018]}
         castShadow
         receiveShadow
       >
-        <meshStandardMaterial color="#16181f" roughness={0.44} metalness={0.12} />
+        <meshStandardMaterial
+          color="#f8fafc" // Pure pearl white back shell
+          roughness={0.28}
+          metalness={0.10}
+        />
       </RoundedBox>
 
-      {/* Tailored Pleat Creases */}
-      {[-0.10, -0.02, 0.07, 0.16, 0.24].map((yPos, idx) => (
-        <mesh key={idx} position={[0, yPos, 0.014]}>
-          <boxGeometry args={[0.32, 0.005, 0.008]} />
-          <meshStandardMaterial color="#0b0c10" roughness={0.8} />
-        </mesh>
-      ))}
-
-      {/* Lateral Shoulder Bolster Wings */}
-      <group position={[-0.20, 0.08, -0.01]} rotation={[0, 0.28, 0]}>
-        <RoundedBox args={[0.08, 0.46, 0.055]} radius={0.02} smoothness={4} castShadow receiveShadow>
-          <meshStandardMaterial color="#14161c" roughness={0.46} metalness={0.1} />
-        </RoundedBox>
-        <mesh position={[-0.038, 0, 0]}>
-          <boxGeometry args={[0.006, 0.44, 0.04]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.18} />
-        </mesh>
-      </group>
-
-      <group position={[0.20, 0.08, -0.01]} rotation={[0, -0.28, 0]}>
-        <RoundedBox args={[0.08, 0.46, 0.055]} radius={0.02} smoothness={4} castShadow receiveShadow>
-          <meshStandardMaterial color="#14161c" roughness={0.46} metalness={0.1} />
-        </RoundedBox>
-        <mesh position={[0.038, 0, 0]}>
-          <boxGeometry args={[0.006, 0.44, 0.04]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.18} />
-        </mesh>
-      </group>
-
-      {/* Lumbar Cushion */}
+      {/* Soft Light Oyster Gray Lumbar / Back Cushion */}
       <RoundedBox
-        args={[0.33, 0.14, 0.045]}
-        radius={0.02}
+        args={[0.31, 0.32, 0.028]}
+        radius={0.018}
         smoothness={4}
-        position={[0, -0.12, 0.018]}
+        position={[0, 0.08, 0.008]}
         castShadow
         receiveShadow
       >
-        <meshStandardMaterial color="#1a1c24" roughness={0.48} metalness={0.12} />
+        <meshStandardMaterial
+          color="#eef2f6" // Light oyster cream / gray
+          roughness={0.55}
+          metalness={0.05}
+        />
       </RoundedBox>
 
-      {/* Ergonomic Headrest */}
-      <mesh position={[-0.06, 0.36, -0.045]} rotation={[-0.14, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.007, 0.007, 0.16, 16]} />
-        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.10} />
-      </mesh>
-      <mesh position={[0.06, 0.36, -0.045]} rotation={[-0.14, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.007, 0.007, 0.16, 16]} />
-        <meshStandardMaterial color="#e2e8f0" metalness={0.96} roughness={0.10} />
-      </mesh>
-      <mesh position={[0, 0.43, -0.038]}>
-        <boxGeometry args={[0.18, 0.018, 0.024]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.94} roughness={0.12} />
-      </mesh>
-      <RoundedBox
-        args={[0.28, 0.14, 0.07]}
-        radius={0.03}
-        smoothness={4}
-        position={[0, 0.44, -0.015]}
-        castShadow
-        receiveShadow
-      >
-        <meshStandardMaterial color="#16181f" roughness={0.42} metalness={0.12} />
-      </RoundedBox>
-
-      {/* Executive 4D Armrests */}
-      <group position={[-0.28, -0.16, 0.05]}>
-        <mesh position={[0, -0.07, -0.08]} castShadow>
-          <cylinderGeometry args={[0.012, 0.015, 0.18, 16]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
+      {/* 3. Sleek Low-Profile Pearl White Armrests */}
+      <group position={[-0.24, -0.08, 0.02]}>
+        {/* Support Post */}
+        <mesh position={[0, -0.06, 0]} castShadow>
+          <cylinderGeometry args={[0.010, 0.012, 0.15, 16]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.15} />
         </mesh>
-        <mesh position={[0.02, -0.01, -0.03]} rotation={[0, 0, -0.15]}>
-          <boxGeometry args={[0.05, 0.02, 0.14]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
-        </mesh>
-        <RoundedBox args={[0.085, 0.032, 0.26]} radius={0.014} smoothness={4} position={[0.02, 0.01, 0.0]} castShadow>
-          <meshStandardMaterial color="#1a1c22" roughness={0.52} metalness={0.1} />
+        {/* Armrest Pad */}
+        <RoundedBox args={[0.065, 0.022, 0.22]} radius={0.012} smoothness={4} position={[0, 0.01, 0]} castShadow>
+          <meshStandardMaterial color="#f8fafc" roughness={0.35} metalness={0.08} />
         </RoundedBox>
       </group>
 
-      <group position={[0.28, -0.16, 0.05]}>
-        <mesh position={[0, -0.07, -0.08]} castShadow>
-          <cylinderGeometry args={[0.012, 0.015, 0.18, 16]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
+      <group position={[0.24, -0.08, 0.02]}>
+        {/* Support Post */}
+        <mesh position={[0, -0.06, 0]} castShadow>
+          <cylinderGeometry args={[0.010, 0.012, 0.15, 16]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.15} />
         </mesh>
-        <mesh position={[-0.02, -0.01, -0.03]} rotation={[0, 0, 0.15]}>
-          <boxGeometry args={[0.05, 0.02, 0.14]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.15} />
-        </mesh>
-        <RoundedBox args={[0.085, 0.032, 0.26]} radius={0.014} smoothness={4} position={[-0.02, 0.01, 0.0]} castShadow>
-          <meshStandardMaterial color="#1a1c22" roughness={0.52} metalness={0.1} />
+        {/* Armrest Pad */}
+        <RoundedBox args={[0.065, 0.022, 0.22]} radius={0.012} smoothness={4} position={[0, 0.01, 0]} castShadow>
+          <meshStandardMaterial color="#f8fafc" roughness={0.35} metalness={0.08} />
         </RoundedBox>
       </group>
 
-      {/* Seat Cushion */}
+      {/* 4. Compact Pearl-White Seat Cushion */}
       <RoundedBox
-        args={[0.52, 0.09, 0.48]}
-        radius={0.032}
+        args={[0.42, 0.065, 0.40]}
+        radius={0.024}
         smoothness={4}
-        position={[0, -0.28, 0.04]}
+        position={[0, -0.19, 0.02]}
         castShadow
         receiveShadow
       >
-        <meshStandardMaterial color="#16181f" roughness={0.46} metalness={0.12} />
+        <meshStandardMaterial color="#f1f5f9" roughness={0.48} metalness={0.08} />
       </RoundedBox>
     </group>
   );
 }
 
 /**
- * ExecutiveConsultationDesk
- *
- * Ultra-Realistic Executive Consultation Table with Photorealistic Props:
- * - Real American Walnut Polished Wood Surface (authentic grain, warm tones & lacquer sheen)
- * - Napa Leather Desk Pad with real golden saddle-stitch seam
- * - Photorealistic Slim MacBook Pro with live IDE evaluation dashboard screen, keyboard keycaps & trackpad
- * - Glossy Porcelain Ceramic Coffee Mug with C-Handle, Saucer, and hot Crema Espresso
- * - Executive Candidate Portfolio File / Dossier Folder with evaluation rubrics & brass corner clips
- * - Luxury Brushed Gold & Black Executive Pen
+ * ExecutiveCloseUpDesk
+ * Sleek modern white conference desk placed close up with glowing cyan front edge strip
  */
-function ExecutiveConsultationDesk({ textures }) {
+function ExecutiveCloseUpDesk() {
   return (
-    <group position={[0, -0.20, 0.16]}>
-      {/* ── 1. MODERN PURE WHITE COMPOSITE TABLETOP WITH CYAN LED STRIP (Matching Image 1) ── */}
+    <group position={[0, -0.22, 0.32]}>
+      {/* 1. Sleek Pure White Composite Tabletop */}
       <RoundedBox
-        args={[2.4, 0.044, 0.88]}
-        radius={0.016}
+        args={[1.80, 0.028, 0.42]}
+        radius={0.012}
         smoothness={4}
         position={[0, 0, 0]}
         receiveShadow
         castShadow
       >
         <meshStandardMaterial
-          color="#f8fafc" // Pure white architectural composite tabletop
-          roughness={0.18} // High-end satin smooth surface sheen
+          color="#f8fafc" // Pure white architectural composite
+          roughness={0.18}
           metalness={0.08}
         />
       </RoundedBox>
 
-      {/* Signature Glowing Cyan LED Neon Light Strip along front beveled edge */}
-      <mesh position={[0, -0.008, 0.442]}>
-        <boxGeometry args={[2.42, 0.014, 0.016]} />
+      {/* 2. Signature Glowing Cyan LED Neon Light Strip along Front Beveled Edge */}
+      <mesh position={[0, -0.006, 0.212]}>
+        <boxGeometry args={[1.82, 0.010, 0.012]} />
         <meshStandardMaterial
           color="#00e5ff"
           emissive="#00e5ff"
@@ -890,172 +849,31 @@ function ExecutiveConsultationDesk({ textures }) {
         />
       </mesh>
 
-      {/* Front Beveled Edge Trim (Lower dark cyber profile) */}
-      <mesh position={[0, -0.024, 0.43]}>
-        <boxGeometry args={[2.38, 0.012, 0.02]} />
+      {/* 3. Subtle Cyber Navy Lower Trim */}
+      <mesh position={[0, -0.016, 0.205]}>
+        <boxGeometry args={[1.80, 0.008, 0.015]} />
         <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.2} />
       </mesh>
 
-      {/* Subtle Metallic Cyan Inlay Accent Line along the tabletop front */}
-      <mesh position={[0, 0.0225, 0.38]}>
-        <boxGeometry args={[2.3, 0.002, 0.005]} />
-        <meshStandardMaterial color="#38bdf8" metalness={0.85} roughness={0.2} />
-      </mesh>
-
-      {/* ── 2. REAL NAPA LEATHER DESK PAD / BLOTTER ── */}
-      {/* Both mentor hands rest stably & flat on this pad */}
+      {/* 4. Executive Dark Charcoal Desk Blotter / Pad (Where hands rest flat) */}
       <RoundedBox
-        args={[0.82, 0.008, 0.40]}
+        args={[0.84, 0.005, 0.32]}
         radius={0.008}
         smoothness={4}
-        position={[0, 0.024, -0.05]}
+        position={[0, 0.016, 0.02]}
         receiveShadow
       >
         <meshStandardMaterial
-          map={textures.leatherPad}
-          color="#ffffff"
-          roughness={0.45}
+          color="#161820" // Dark Napa leather pad
+          roughness={0.50}
           metalness={0.08}
         />
       </RoundedBox>
 
-      {/* ── 3. PHOTOREALISTIC SLIM EXECUTIVE LAPTOP (On the Left) ── */}
-      <group position={[-0.52, 0.026, -0.01]} rotation={[0, 0.28, 0]}>
-        {/* Precision Unibody Aluminum Base Chassis */}
-        <RoundedBox args={[0.30, 0.010, 0.20]} radius={0.006} smoothness={4} castShadow receiveShadow>
-          <meshStandardMaterial color="#474b54" metalness={0.92} roughness={0.22} />
-        </RoundedBox>
-
-        {/* Keyboard & Trackpad Surface */}
-        <mesh position={[0, 0.0055, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.29, 0.19]} />
-          <meshStandardMaterial map={textures.laptopKeyboard} roughness={0.3} metalness={0.2} />
-        </mesh>
-
-        {/* Open Display Screen Lid (Tilted back at 108 degrees) */}
-        <group position={[0, 0.005, -0.10]} rotation={[-0.30, 0, 0]}>
-          {/* Aluminum Display Lid Backing */}
-          <RoundedBox args={[0.30, 0.19, 0.006]} radius={0.006} smoothness={4} position={[0, 0.095, 0]} castShadow>
-            <meshStandardMaterial color="#474b54" metalness={0.92} roughness={0.22} />
-          </RoundedBox>
-
-          {/* Glowing Retina Display Screen with IDE Evaluation Dashboard */}
-          <mesh position={[0, 0.095, 0.0035]}>
-            <planeGeometry args={[0.285, 0.175]} />
-            <meshStandardMaterial
-              map={textures.laptopScreen}
-              emissive="#112233"
-              emissiveIntensity={0.2}
-              roughness={0.12}
-            />
-          </mesh>
-
-          {/* Display Glass Specular Rim */}
-          <mesh position={[0, 0.095, 0.0038]}>
-            <planeGeometry args={[0.285, 0.175]} />
-            <meshPhysicalMaterial
-              transmission={0.3}
-              opacity={0.3}
-              transparent
-              roughness={0.05}
-              ior={1.5}
-            />
-          </mesh>
-        </group>
-      </group>
-
-      {/* ── 4. REAL EXECUTIVE CANDIDATE FILE / DOSSIER FOLDER (On the Right) ── */}
-      <group position={[0.50, 0.025, -0.02]} rotation={[0, -0.18, 0]}>
-        {/* Leather Dossier Binder */}
-        <RoundedBox args={[0.25, 0.008, 0.31]} radius={0.006} smoothness={4} castShadow receiveShadow>
-          <meshStandardMaterial color="#0f172a" roughness={0.5} metalness={0.15} />
-        </RoundedBox>
-
-        {/* Document Sheet with Evaluation Rubrics & Metrics */}
-        <mesh position={[0, 0.0045, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.24, 0.30]} />
-          <meshStandardMaterial map={textures.fileFolder} roughness={0.7} metalness={0.05} />
-        </mesh>
-
-        {/* 4 Brass Corner Protectors */}
-        {[
-          [-0.12, -0.15],
-          [0.12, -0.15],
-          [-0.12, 0.15],
-          [0.12, 0.15],
-        ].map(([cx, cz], i) => (
-          <mesh key={i} position={[cx, 0.005, cz]}>
-            <boxGeometry args={[0.015, 0.003, 0.015]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.95} roughness={0.15} />
-          </mesh>
-        ))}
-
-        {/* Luxury Gold & Black Ballpoint Pen resting on the Dossier */}
-        <group position={[0.02, 0.012, 0.02]} rotation={[0, 0.25, 0]}>
-          {/* Pen Body */}
-          <mesh castShadow>
-            <cylinderGeometry args={[0.004, 0.004, 0.14, 20]} />
-            <meshStandardMaterial color="#090a0f" roughness={0.2} metalness={0.8} />
-          </mesh>
-          {/* Gold Pocket Clip */}
-          <mesh position={[0.005, 0.03, 0]} rotation={[0, 0, -0.05]}>
-            <boxGeometry args={[0.002, 0.05, 0.003]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.96} roughness={0.12} />
-          </mesh>
-          {/* Gold Accent Rings */}
-          <mesh position={[0, 0.01, 0]}>
-            <cylinderGeometry args={[0.0043, 0.0043, 0.008, 20]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.96} roughness={0.12} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* ── 5. REAL PORCELAIN CERAMIC COFFEE CUP WITH C-HANDLE & SAUCER ── */}
-      <group position={[0.30, 0.025, -0.13]}>
-        {/* Ceramic Saucer with Beveled Glaze Rim */}
-        <mesh position={[0, 0.004, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.058, 0.042, 0.008, 32]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.12} metalness={0.06} />
-        </mesh>
-        {/* Saucer Inner Indentation */}
-        <mesh position={[0, 0.0081, 0]}>
-          <cylinderGeometry args={[0.036, 0.034, 0.001, 32]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.15} />
-        </mesh>
-
-        {/* Glossy White Ceramic Mug Body */}
-        <mesh position={[0, 0.044, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.036, 0.030, 0.072, 32]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.12} metalness={0.06} />
-        </mesh>
-
-        {/* Real C-Shaped Ceramic Handle */}
-        <mesh position={[0.036, 0.044, 0]} rotation={[0, 0, -Math.PI / 2]} castShadow>
-          <torusGeometry args={[0.020, 0.0045, 16, 32, Math.PI * 1.15]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.12} metalness={0.06} />
-        </mesh>
-
-        {/* Fresh Hot Espresso Liquid with Golden Crema Swirl */}
-        <mesh position={[0, 0.072, 0]}>
-          <cylinderGeometry args={[0.033, 0.033, 0.002, 32]} />
-          <meshStandardMaterial color="#2b1509" roughness={0.18} metalness={0.1} />
-        </mesh>
-        {/* Crema Froth Foam Ring */}
-        <mesh position={[0, 0.073, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.024, 0.032, 24]} />
-          <meshStandardMaterial color="#966138" roughness={0.35} />
-        </mesh>
-      </group>
-
-      {/* ── 6. FRONT MODESTY PANEL / DESK APRON ── */}
-      <mesh position={[0, -0.24, -0.06]} castShadow receiveShadow>
-        <boxGeometry args={[2.0, 0.44, 0.025]} />
-        <meshStandardMaterial color="#f1f5f9" roughness={0.3} metalness={0.12} />
-      </mesh>
-      {/* Bottom subtle cyan LED trim */}
-      <mesh position={[0, -0.45, -0.048]}>
-        <boxGeometry args={[1.98, 0.008, 0.012]} />
-        <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={1.8} />
+      {/* Subtle Cyan Saddle Stitch Accent */}
+      <mesh position={[0, 0.019, 0.02]}>
+        <boxGeometry args={[0.82, 0.001, 0.30]} />
+        <meshStandardMaterial color="#38bdf8" metalness={0.7} roughness={0.3} wireframe />
       </mesh>
     </group>
   );
@@ -1106,7 +924,7 @@ export default function FemaleMentor3DAvatar({
         <Canvas
           shadows
           camera={{
-            position: [0, 0.16, 0.98],
+            position: [0, 0.15, 0.96],
             fov: 38,
             near: 0.1,
             far: 20,
@@ -1153,10 +971,10 @@ export default function FemaleMentor3DAvatar({
             distance={3.5}
           />
 
-          {/* ── Luxury Executive Ergonomic Chair ── */}
-          <RealExecutiveOfficeChair />
+          {/* ── Modern Light-Colored Compact Executive Chair ── */}
+          <ModernLightExecutiveChair />
 
-          {/* ── 3D Seated Mentor Avatar Model (White Cyber Blazer & Robotic Gloves) ── */}
+          {/* ── 3D Seated Mentor Avatar Model (White Cyber Blazer, Makeup, Natural Hair & Gloves) ── */}
           <Suspense fallback={<ModelLoader />}>
             <SeatedFemaleMentorModel
               isSpeaking={isSpeaking}
@@ -1165,19 +983,22 @@ export default function FemaleMentor3DAvatar({
             />
           </Suspense>
 
+          {/* ── Sleek Close-Up White Conference Desk with Cyan LED Strip ── */}
+          <ExecutiveCloseUpDesk />
+
           {/* ── Floor / Chair Base Contact Shadows ── */}
           <ContactShadows
-            position={[0, -0.42, -0.20]}
-            opacity={0.48}
-            scale={2.2}
+            position={[0, -0.24, 0.20]}
+            opacity={0.45}
+            scale={2.4}
             blur={2.0}
             far={1.5}
             color="#000000"
           />
 
-          {/* ── Locked Camera Controls Focused at Eye Level (0.8m - 1.2m Intimate Distance) ── */}
+          {/* ── Locked Camera Controls Focused at Eye Level (Approx. 3 feet / 1 meter) ── */}
           <OrbitControls
-            target={[0, 0.15, -0.15]}
+            target={[0, 0.12, -0.15]}
             enableRotate={false}
             enableZoom={false}
             enablePan={false}
