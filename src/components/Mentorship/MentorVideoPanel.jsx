@@ -1,35 +1,34 @@
 import React from 'react';
-import DigitalRobotAvatar from './DigitalRobotAvatar';
+import FemaleMentor3DAvatar from './FemaleMentor3DAvatar';
 
 /**
  * MentorVideoPanel
  *
- * Fullscreen Interactive Digital AI Robot Companion:
- * - 100% Pure Black Backdrop (#000000)
- * - Direct face-to-face empathetic presence
- * - Expresses real-time emotions (listening, speaking, thinking, empathetic)
- * - Zero judgement & warm student comfort
+ * Standalone 3D Photorealistic Female Mentor Panel:
+ * - Powered by Three.js, @react-three/fiber, and @react-three/drei
+ * - Ready Player Me female 3D model with 15 Oculus facial visemes & morph targets
+ * - Realistic executive office background, walnut wood desk, laptop, and ceramic coffee mug
  */
 export default function MentorVideoPanel({
-  avatarState = 'listening', // 'speaking' | 'listening' | 'thinking' | 'empathetic'
+  avatarState = 'listening',
   speakingText = '',
-  mentorName = 'Aura',
-  mentorRole = 'AI Companion & Guide',
+  mentorName = 'Dr. Ann Vance',
+  mentorRole = 'Staff Software Engineer & Evaluator',
   isSpeaking = false,
   isListening = true,
   isThinking = false,
-  emotionalTone = 'warm_encouraging',
 }) {
+  const speaking = avatarState === 'speaking' || isSpeaking;
+  const listening = avatarState === 'listening' || isListening;
+  const thinking = avatarState === 'thinking' || isThinking;
+
   return (
-    <div className="relative w-full h-full bg-[#000000] overflow-hidden flex flex-col justify-between select-none">
-      <DigitalRobotAvatar
-        avatarState={avatarState}
-        speakingText={speakingText}
+    <div className="relative w-full h-full bg-[#080d18] overflow-hidden flex flex-col justify-between select-none">
+      <FemaleMentor3DAvatar
+        isSpeaking={speaking}
+        isListening={listening}
+        isThinking={thinking}
         mentorName={mentorName}
-        isSpeaking={isSpeaking}
-        isListening={isListening}
-        isThinking={isThinking}
-        emotionalTone={emotionalTone}
       />
     </div>
   );

@@ -16,7 +16,7 @@ import {
 import { MODES } from '../../utils/aiResponses';
 import { getPracticeHistory } from '../../utils/progressHistory';
 import robotMascotImg from '../../assets/robot_mascot_transparent.png';
-import AuraMentorDesk from './AuraMentorDesk';
+
 
 export default function Dashboard({
   userName = 'Pragya',
@@ -243,12 +243,19 @@ export default function Dashboard({
                 </div>
               </div>
 
-              {/* Right Column (4 cols): 3D AI Robot Mentor (Aura GD) Seated Behind Desk */}
+              {/* Right Column (4 cols): Large Prominent 3D Robot Mascot */}
               <div className="lg:col-span-4 flex items-center justify-center relative w-full h-full">
-                <AuraMentorDesk
-                  onStartTalk={() => onStartArena(MODES.CASUAL)}
-                  className="w-full"
-                />
+                <div
+                  onClick={() => onStartArena(MODES.CASUAL)}
+                  className="cursor-pointer group relative flex items-center justify-center transition-transform hover:scale-105 duration-300 w-full"
+                  title="Click to talk with your 3D AI Coach!"
+                >
+                  <img
+                    src={robotMascotImg}
+                    alt="AuraGD AI - Let's Talk!"
+                    className="w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[420px] xl:max-w-[460px] h-auto object-contain drop-shadow-2xl"
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -1,16 +1,16 @@
-import React, { useRef, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
-import DigitalRobotAvatar from '../Mentorship/DigitalRobotAvatar';
-import { Smile, Heart, Sparkles, Volume2, Mic, Brain } from 'lucide-react';
+import React, { useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
+import FemaleMentor3DAvatar from '../Mentorship/FemaleMentor3DAvatar';
+import { Volume2, Bot } from 'lucide-react';
 
 /**
- * HeyGenMentorAvatar (Now upgraded to Digital AI Robot Companion: Aura)
+ * HeyGenMentorAvatar (3D Photorealistic AI Mentor)
  *
- * 100% Pure Black (#000000) Face-to-Face Robot Conversation:
- * - Direct, empathetic connection ("Aamne-saamne ek dusre se baat kar rahe hain")
- * - 4 Expressive Emotional States: listening, speaking, empathetic, thinking
- * - Pure Black Background with zero clutter (No 3D desk, chair, laptop, or room)
- * - Safe space & zero judgement for students to speak freely
- * - Reliable Voice Output: ElevenLabs Neural Voice with instant Web Speech fallback
+ * Standalone, Reliable 3D Photorealistic Female Mentor:
+ * - Powered by Three.js, @react-three/fiber, and @react-three/drei
+ * - Uses Ready Player Me female 3D model with 15 Oculus facial visemes & morph targets
+ * - Natural breathing, attentive listening head movements, and synchronized lip-sync
+ * - Realistic executive office background, walnut wood desk, laptop, and ceramic coffee mug
+ * - ElevenLabs Neural TTS with instant Web Speech API fallback
  */
 const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
   {
@@ -21,7 +21,7 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
     mode = 'presentation',
     onSpeechStart,
     onSpeechEnd,
-    mentorName = 'Aura',
+    mentorName = 'Dr. Ann Vance',
     speakingText = '',
   },
   ref
@@ -99,11 +99,12 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
             const audio = new Audio(audioUrl);
             currentAudioRef.current = audio;
 
-            onSpeechStart?.();
+            audio.onplay = () => {
+              onSpeechStart?.();
+            };
             audio.onended = () => {
               onSpeechEnd?.();
               onComplete?.();
-              URL.revokeObjectURL(audioUrl);
             };
             audio.onerror = () => {
               fallbackSpeak(text, onComplete);
@@ -112,11 +113,11 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
             await audio.play();
             return;
           }
-        } catch (e) {
-          // Fallback if backend is unreachable
+        } catch (err) {
+          console.warn('[ElevenLabs TTS] Falling back to Web Speech API:', err.message);
         }
 
-        // Step 2: Smooth fallback to Web Speech
+        // Step 2: Fallback to high quality Web Speech API
         fallbackSpeak(text, onComplete);
       },
 
@@ -135,47 +136,34 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
 
       reconnect: () => {},
     }),
-    [fallbackSpeak, mode, onSpeechStart, onSpeechEnd]
+    [fallbackSpeak, mode, onSpeechEnd, onSpeechStart]
   );
 
-  // Determine avatar emotional state
-  const robotState = useMemo(() => {
-    if (isConcluding) return 'empathetic';
-    if (isSpeaking) {
-      const lower = (speakingText || '').toLowerCase();
-      if (
-        mode === 'casual' ||
-        lower.includes('proud') ||
-        lower.includes('great job') ||
-        lower.includes('no problem') ||
-        lower.includes('mistake') ||
-        lower.includes('empathy') ||
-        lower.includes('relax') ||
-        lower.includes('comfort')
-      ) {
-        return 'empathetic';
-      }
-      return 'speaking';
-    }
-    if (isThinking) return 'thinking';
-    return 'listening';
-  }, [isConcluding, isSpeaking, isThinking, mode, speakingText]);
-
   return (
-    <div className="relative w-full h-full bg-[#000000] overflow-hidden select-none flex items-center justify-center">
-
-
-      {/* ── Center Stage: Digital AI Robot Avatar on Pure Black ── */}
-      <div className="relative w-full h-full flex items-center justify-center bg-[#000000]">
-        <DigitalRobotAvatar
-          avatarState={robotState}
-          speakingText={speakingText}
-          mentorName={mentorName}
+    <div className="relative w-full h-full bg-[#080d1a] overflow-hidden select-none flex items-center justify-center">
+      {/* ── Main 3D Photorealistic Female Mentor & Executive Office ── */}
+      <div className="relative w-full h-full flex items-center justify-center">
+        <FemaleMentor3DAvatar
           isSpeaking={isSpeaking}
           isListening={isListening}
           isThinking={isThinking}
-          emotionalTone={robotState}
+          mentorName={mentorName}
         />
+
+        {/* Live Spoken Subtitle Overlay */}
+        {isSpeaking && speakingText && (
+          <div className="absolute bottom-16 left-6 right-6 z-30 flex justify-center pointer-events-none animate-fade-in">
+            <div className="max-w-xl px-5 py-2.5 rounded-2xl bg-black/85 border border-cyan-400/40 backdrop-blur-xl shadow-2xl text-center">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-400 block mb-0.5 flex items-center justify-center gap-1.5">
+                <Volume2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                <span>{mentorName} • Spoken Feedback</span>
+              </span>
+              <p className="text-xs sm:text-sm font-semibold text-cyan-100 leading-relaxed">
+                "{speakingText}"
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ import {
   MessageCircleHeart,
 } from 'lucide-react';
 
-import DigitalRobotAvatar from './DigitalRobotAvatar';
+import FemaleMentor3DAvatar from './FemaleMentor3DAvatar';
 import CandidateVideoPanel from './CandidateVideoPanel';
 import { useWebRTCInterview } from '../../hooks/useWebRTCInterview';
 import { useEmpatheticVoiceAssistant } from '../../hooks/useEmpatheticVoiceAssistant';
@@ -182,17 +182,26 @@ export default function DualVideoMentorshipRoom({
           2. MAIN FULLSCREEN FACE-TO-FACE DIGITAL ROBOT CANVAS
       ══════════════════════════════════════════════════════════════ */}
       <main className="relative flex-1 w-full h-full flex flex-col items-center justify-center overflow-hidden bg-[#000000]">
-        {/* Fullscreen Digital Robot Companion */}
+        {/* Fullscreen 3D Photorealistic Female Mentor */}
         <div className="w-full h-full flex items-center justify-center">
-          <DigitalRobotAvatar
-            avatarState={currentRobotState}
-            speakingText={spokenResponse}
-            mentorName={mentorName}
+          <FemaleMentor3DAvatar
             isSpeaking={isSpeaking}
             isListening={isListening}
             isThinking={isThinking}
-            emotionalTone={currentRobotState}
+            mentorName={mentorName}
           />
+          {isSpeaking && spokenResponse && (
+            <div className="absolute bottom-24 left-6 right-6 z-30 flex justify-center pointer-events-none animate-fade-in">
+              <div className="max-w-xl px-5 py-2.5 rounded-2xl bg-black/85 border border-cyan-400/40 backdrop-blur-xl shadow-2xl text-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-400 block mb-0.5">
+                  {mentorName} • Spoken Feedback
+                </span>
+                <p className="text-xs sm:text-sm font-semibold text-cyan-100 leading-relaxed">
+                  "{spokenResponse}"
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Floating Student Camera PIP (Optional & Minimal) */}
