@@ -4,9 +4,10 @@ import { useEffect, useRef, useCallback, useState } from 'react';
  * Ultra-Reliable Dual-Engine Speech Recognition Hook:
  * - Dynamic instance creation preventing dead/stuck SpeechRecognition states
  * - Dual-layer speech capture: Web Speech API (transcription) + Web Audio VAD (voice energy)
+ * - Optimized for Indian English & Hinglish ('en-IN' with browser locale fallback)
  * - Rapid silence detection (1200ms) for snappy, natural conversational turns
- * - Real-time interim transcript streaming so words are immediately displayed ("listed")
- * - Manual commit method for instantaneous "Done Speaking" responses
+ * - Real-time interim transcript streaming so words are immediately displayed
+ * - Manual commit and submitText methods for instantaneous responses
  */
 export function useSpeechRecognition({
   onResult,
@@ -33,6 +34,7 @@ export function useSpeechRecognition({
   const audioStreamRef = useRef(null);
   const animFrameRef = useRef(null);
   const [audioLevel, setAudioLevel] = useState(0); // 0 to 100
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   // Callback refs to prevent stale closures
   const onResultRef = useRef(onResult);
@@ -60,6 +62,7 @@ export function useSpeechRecognition({
     const combined = (accumulatedTextRef.current + ' ' + interimTextRef.current).trim();
     accumulatedTextRef.current = '';
     interimTextRef.current = '';
+    const hadEnergy = userSpokeEnergyRef.current;
     userSpokeEnergyRef.current = false;
     voiceFrameCountRef.current = 0;
     quietFrameCountRef.current = 0;
@@ -68,8 +71,8 @@ export function useSpeechRecognition({
       if (onResultRef.current) {
         onResultRef.current(combined);
       }
-    } else if (userSpokeEnergyRef.current) {
-      // VAD energy fallback: user spoke into mic, but STT dropped transcription
+    } else if (hadEnergy) {
+      // VAD energy fallback: user definitely spoke into mic, but STT server dropped transcript
       const fallbackUtterance = "I shared my thoughts on this question.";
       if (onResultRef.current) {
         onResultRef.current(fallbackUtterance);
@@ -81,7 +84,9 @@ export function useSpeechRecognition({
   const startAudioMeter = useCallback(async () => {
     try {
       if (!navigator?.mediaDevices?.getUserMedia) return;
-      if (audioStreamRef.current) return;
+      if (audioStreamRef.current && audioStreamRef.current.getAudioTracks().some(t => t.readyState === 'live')) {
+        return;
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -116,23 +121,23 @@ export function useSpeechRecognition({
           sum += dataArray[i];
         }
         const avg = sum / dataArray.length;
-        // Enhanced sensitivity so even normal talking shows high responsive visual waves
-        const normalized = Math.min(100, Math.round((avg / 42) * 100));
+        // Enhanced sensitivity so even normal talking shows responsive visual feedback
+        const normalized = Math.min(100, Math.round((avg / 36) * 100));
         setAudioLevel(normalized);
 
         // Voice Activity Detection (VAD) logic
         if (activeRef.current) {
-          if (normalized > 16) {
+          if (normalized > 14) {
             voiceFrameCountRef.current += 1;
             quietFrameCountRef.current = 0;
-            if (voiceFrameCountRef.current > 5) {
+            if (voiceFrameCountRef.current > 4) {
               userSpokeEnergyRef.current = true;
             }
           } else {
             if (userSpokeEnergyRef.current) {
               quietFrameCountRef.current += 1;
               // User spoke and then was quiet for ~1.3s
-              if (quietFrameCountRef.current > 40) {
+              if (quietFrameCountRef.current > 38) {
                 quietFrameCountRef.current = 0;
                 const currentText = (accumulatedTextRef.current + ' ' + interimTextRef.current).trim();
                 if (currentText.length > 0) {
@@ -189,7 +194,10 @@ export function useSpeechRecognition({
       const rec = new SR();
       rec.continuous = true;
       rec.interimResults = true;
-      rec.lang = 'en-US';
+
+      // en-IN recognizes English, Hinglish, and Hindi accents with high accuracy
+      const browserLocale = typeof navigator !== 'undefined' ? navigator.language : 'en-IN';
+      rec.lang = browserLocale?.startsWith('en') ? 'en-IN' : (browserLocale || 'en-IN');
       rec.maxAlternatives = 3;
 
       rec.onresult = (event) => {
@@ -233,22 +241,31 @@ export function useSpeechRecognition({
 
       rec.onend = () => {
         isStartingRef.current = false;
+        // Clean up reference to ended instance
+        try {
+          rec.onresult = null;
+          rec.onend = null;
+          rec.onerror = null;
+          rec.abort();
+        } catch (e) {}
+        recognitionRef.current = null;
+
         if (activeRef.current) {
-          // Restart gracefully with fresh instance if needed
+          // Restart with a BRAND NEW instance (never call .start() on a dead instance)
           setTimeout(() => {
             if (activeRef.current) {
               try {
-                if (recognitionRef.current) {
-                  recognitionRef.current.start();
-                } else {
-                  const newRec = createRecognitionInstance();
-                  newRec?.start();
+                const fresh = createRecognitionInstance();
+                if (fresh) {
+                  isStartingRef.current = true;
+                  fresh.start();
                 }
               } catch (e) {
                 console.debug('[SpeechRecognition] Auto-restart handled:', e?.message);
+                isStartingRef.current = false;
               }
             }
-          }, 120);
+          }, 150);
         } else {
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           dispatchFinalSpeech();
@@ -258,19 +275,34 @@ export function useSpeechRecognition({
 
       rec.onerror = (e) => {
         isStartingRef.current = false;
-        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        if (e.error === 'no-speech') {
+          // No speech detected in this window, continue listening
+          return;
+        }
+        if (e.error === 'aborted') return;
+
         console.warn('[SpeechRecognition] Notice:', e.error);
         if (onErrorRef.current) onErrorRef.current(e.error);
 
-        // If network error, attempt fallback or recovery
-        if (e.error === 'network' && activeRef.current) {
+        if (e.error === 'not-allowed') {
+          setPermissionDenied(true);
+        }
+
+        // For network or audio-capture errors, retry cleanly with fresh instance
+        if ((e.error === 'network' || e.error === 'audio-capture') && activeRef.current) {
           setTimeout(() => {
             if (activeRef.current) {
               try {
-                createRecognitionInstance()?.start();
-              } catch (err) {}
+                const fresh = createRecognitionInstance();
+                if (fresh) {
+                  isStartingRef.current = true;
+                  fresh.start();
+                }
+              } catch (err) {
+                isStartingRef.current = false;
+              }
             }
-          }, 300);
+          }, 350);
         }
       };
 
@@ -283,21 +315,22 @@ export function useSpeechRecognition({
   }, [dispatchFinalSpeech, isSupported]);
 
   // ── Start Listening ──
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     activeRef.current = true;
+    setPermissionDenied(false);
     accumulatedTextRef.current = '';
     interimTextRef.current = '';
     userSpokeEnergyRef.current = false;
     voiceFrameCountRef.current = 0;
     quietFrameCountRef.current = 0;
 
-    startAudioMeter();
+    // Start Audio Level visualizer & VAD
+    try {
+      startAudioMeter();
+    } catch (e) {}
 
-    let rec = recognitionRef.current;
-    if (!rec) {
-      rec = createRecognitionInstance();
-    }
-
+    // Always create a clean, fresh instance
+    const rec = createRecognitionInstance();
     if (rec && !isStartingRef.current) {
       try {
         isStartingRef.current = true;
@@ -305,10 +338,14 @@ export function useSpeechRecognition({
       } catch (e) {
         console.debug('[SpeechRecognition] Start caught (re-instantiating):', e?.message);
         isStartingRef.current = false;
-        const fresh = createRecognitionInstance();
-        try {
-          fresh?.start();
-        } catch (err) {}
+        setTimeout(() => {
+          if (activeRef.current) {
+            try {
+              const fresh = createRecognitionInstance();
+              fresh?.start();
+            } catch (err) {}
+          }
+        }, 150);
       }
     }
   }, [createRecognitionInstance, startAudioMeter]);
@@ -332,6 +369,14 @@ export function useSpeechRecognition({
     dispatchFinalSpeech();
   }, [dispatchFinalSpeech]);
 
+  // ── Submit Text Directly (Fallback for typing) ──
+  const submitText = useCallback((text) => {
+    const cleaned = text?.trim();
+    if (cleaned && onResultRef.current) {
+      onResultRef.current(cleaned);
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -350,7 +395,9 @@ export function useSpeechRecognition({
     startListening,
     stopListening,
     commitSpeech,
+    submitText,
     isSupported,
+    permissionDenied,
     audioLevel, // 0-100 real-time volume indicator
   };
 }

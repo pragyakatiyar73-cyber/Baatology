@@ -35,7 +35,7 @@ export default function DualVideoMentorshipRoom({
   onEndCall,
 }) {
   const mentorName = 'Aura';
-  const [showCandidatePip, setShowCandidatePip] = useState(false);
+  const [showCandidatePip, setShowCandidatePip] = useState(true);
 
   // ── Empathetic Voice Assistant Hook (Thought Reasoning + Voice STT/TTS + Sentiment) ──
   const {
@@ -287,6 +287,26 @@ export default function DualVideoMentorshipRoom({
             {micActive && !isSpeaking && !isThinking && (
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             )}
+          </button>
+
+          {/* Divider */}
+          <div className="w-[1px] h-7 bg-white/15" />
+
+          {/* Camera Toggle Button */}
+          <button
+            onClick={() => {
+              toggleCamera();
+              setShowCandidatePip(true);
+            }}
+            className={`px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+              cameraActive
+                ? 'bg-teal-500/20 text-teal-300 border border-teal-400/50 shadow-lg shadow-teal-500/20'
+                : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
+            }`}
+            title={cameraActive ? 'Turn Off Camera' : 'Turn On Camera'}
+          >
+            {cameraActive ? <Video className="w-4 h-4 text-teal-400" /> : <VideoOff className="w-4 h-4 text-slate-400" />}
+            <span>{cameraActive ? 'Camera ON' : 'Turn On Camera'}</span>
           </button>
 
           {/* Divider */}

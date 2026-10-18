@@ -93,6 +93,8 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [hasStartedVoice, setHasStartedVoice] = useState(false);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [manualInputText, setManualInputText] = useState('');
 
   // ── Stable Hook Coordination Refs
   const startListeningRef = useRef(null);
@@ -123,7 +125,7 @@ export default function App() {
   showScoreModalRef.current = showScoreModal;
 
   // ── Webcam Hook
-  const { videoRef, stream, isActive: cameraActive, hasPermission, error: cameraError, toggleCamera } = useWebcam(true);
+  const { videoRef, stream, isActive: cameraActive, hasPermission, error: cameraError, toggleCamera, startCamera } = useWebcam(true);
 
   // ── Real-Time Vision Posture & Mistake Detection Hook (Feature 3)
   const { getEyeContactPercentage, resetTelemetry } = useVisionPostureTracker({
@@ -283,8 +285,27 @@ export default function App() {
     }, 380);
   }, [currentMode, isSpeaking, speak, userName]);
 
+  // ── Manual Text Input Fallback Handler
+  const handleManualTextSubmit = useCallback((e) => {
+    e?.preventDefault();
+    if (!manualInputText.trim()) return;
+    const text = manualInputText.trim();
+    setManualInputText('');
+    setShowTextInput(false);
+    setLiveTranscript(text);
+    triggerAIResponse(text);
+  }, [manualInputText, triggerAIResponse]);
+
   // ── STT Hook (webkitSpeechRecognition continuous listening with VAD energy fallback)
-  const { startListening, stopListening, commitSpeech, audioLevel, isSupported: sttSupported } = useSpeechRecognition({
+  const {
+    startListening,
+    stopListening,
+    commitSpeech,
+    submitText,
+    audioLevel,
+    isSupported: sttSupported,
+    permissionDenied: micPermissionDenied,
+  } = useSpeechRecognition({
     onInterim: (text) => {
       spokenMemoryRef.current = text;
       setLiveTranscript(text);
@@ -305,7 +326,7 @@ export default function App() {
     },
 
     onEnd: () => {
-      if (!isSpeaking && !showScoreModal && hasStartedVoice && currentView === 'arena') {
+      if (!isSpeaking && !showScoreModal && hasStartedVoice && currentViewRef.current === 'arena') {
         setIsListening(true);
       }
     },
@@ -369,6 +390,9 @@ export default function App() {
     setPostureAlert(null);
     stopTTS();
 
+    // Proactively activate candidate webcam upon entering the arena
+    startCamera();
+
     // 1. Immediately set 3D Robot state to 'SPEAKING' with mouth movement and cyan visor pulsing
     setIsSpeaking(true);
     setIsListening(false);
@@ -410,7 +434,7 @@ export default function App() {
         }
       }, 350);
     });
-  }, [resetTelemetry, speak, stopTTS]);
+  }, [resetTelemetry, speak, startCamera, stopTTS]);
 
   // ── Return to Dashboard
   const handleBackToDashboard = useCallback(() => {
@@ -833,25 +857,66 @@ export default function App() {
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-xl w-[92vw] sm:w-auto flex flex-col items-center gap-2">
             {/* When Candidate is speaking / mic detects speech */}
             {isListening && (
-              <div className="px-5 py-2.5 rounded-2xl bg-black/85 border border-emerald-500/50 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in text-left max-w-lg">
-                <span className={`w-2.5 h-2.5 rounded-full ${audioLevel > 15 ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]' : 'bg-emerald-500/60'} shrink-0`} />
-                <div className="flex-1 min-w-[200px]">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
-                    {audioLevel > 15 ? '● You (Speaking...)' : 'Microphone Live'}
-                  </span>
-                  <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
-                    {liveTranscript ? `"${liveTranscript}"` : 'Listening... Speak your response naturally.'}
-                  </p>
-                </div>
-                {liveTranscript && (
+              <div className="flex flex-col items-center gap-2 max-w-lg w-full">
+                <div className="w-full px-5 py-2.5 rounded-2xl bg-black/85 border border-emerald-500/50 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in text-left">
+                  <span className={`w-2.5 h-2.5 rounded-full ${audioLevel > 14 ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]' : 'bg-emerald-500/60'} shrink-0`} />
+                  <div className="flex-1 min-w-[200px]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
+                      {audioLevel > 14 ? '● You (Speaking...)' : 'Microphone Live'}
+                    </span>
+                    <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
+                      {liveTranscript ? `"${liveTranscript}"` : 'Listening... Speak your response naturally.'}
+                    </p>
+                  </div>
+                  {liveTranscript && (
+                    <button
+                      onClick={commitSpeech}
+                      className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
+                      title="Send answer to AI now"
+                    >
+                      <span>Done ➔</span>
+                    </button>
+                  )}
                   <button
-                    onClick={commitSpeech}
-                    className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
-                    title="Send answer to AI now"
+                    onClick={() => setShowTextInput((prev) => !prev)}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs cursor-pointer transition-all"
+                    title={showTextInput ? 'Hide keyboard input' : 'Type response with keyboard'}
                   >
-                    <span>Done ➔</span>
+                    ⌨️
                   </button>
+                </div>
+
+                {/* Optional manual text input fallback */}
+                {showTextInput && (
+                  <form
+                    onSubmit={handleManualTextSubmit}
+                    className="w-full flex items-center gap-2 p-1.5 rounded-2xl bg-black/90 border border-white/20 backdrop-blur-xl shadow-2xl animate-fade-in"
+                  >
+                    <input
+                      type="text"
+                      value={manualInputText}
+                      onChange={(e) => setManualInputText(e.target.value)}
+                      placeholder="Type your response here..."
+                      className="flex-1 bg-transparent px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={!manualInputText.trim()}
+                      className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                    >
+                      Send
+                    </button>
+                  </form>
                 )}
+              </div>
+            )}
+
+            {/* Mic Blocked / Denied Banner */}
+            {micPermissionDenied && (
+              <div className="px-4 py-2 rounded-xl bg-amber-950/90 border border-amber-500/60 text-amber-200 text-xs font-bold shadow-2xl flex items-center gap-2 backdrop-blur-md animate-fade-in">
+                <span>⚠️</span>
+                <span>Microphone blocked in browser. Click the lock/tune icon in the address bar to allow microphone.</span>
               </div>
             )}
 

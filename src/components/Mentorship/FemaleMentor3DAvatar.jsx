@@ -1090,8 +1090,8 @@ export default function FemaleMentor3DAvatar({
         <Canvas
           shadows
           camera={{
-            position: [0, 0.04, 1.45],
-            fov: 42,
+            position: [0, 0.10, 1.56],
+            fov: 44,
             near: 0.1,
             far: 20,
           }}
@@ -1164,7 +1164,7 @@ export default function FemaleMentor3DAvatar({
 
           {/* ── Locked Camera Controls ── */}
           <OrbitControls
-            target={[0, 0.02, 0]}
+            target={[0, 0.08, 0]}
             enableRotate={false}
             enableZoom={false}
             enablePan={false}

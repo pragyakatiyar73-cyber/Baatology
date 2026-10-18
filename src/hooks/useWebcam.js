@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 
 /**
  * Webcam access hook with guaranteed video element binding,
- * graceful permission handling, and reactive stream state.
+ * resilient constraint fallbacks, graceful permission handling, and reactive stream state.
  */
 export function useWebcam(autoStart = true) {
   const videoRef = useRef(null);
@@ -32,7 +32,8 @@ export function useWebcam(autoStart = true) {
   }, []);
 
   const startCamera = useCallback(async () => {
-    if (streamRef.current) {
+    // If active live stream already exists, re-bind
+    if (streamRef.current && streamRef.current.getVideoTracks().some((t) => t.readyState === 'live')) {
       attachStreamToVideo(streamRef.current);
       setIsActive(true);
       return;
@@ -45,14 +46,24 @@ export function useWebcam(autoStart = true) {
     }
 
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: 'user',
-        },
-        audio: false,
-      });
+      let mediaStream = null;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'user',
+          },
+          audio: false,
+        });
+      } catch (firstErr) {
+        // Fallback for strict USB/Windows webcam constraints
+        console.debug('[Camera] Fallback to basic constraints:', firstErr?.message);
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
 
       streamRef.current = mediaStream;
       setStream(mediaStream);
@@ -65,7 +76,11 @@ export function useWebcam(autoStart = true) {
     } catch (err) {
       console.warn('[Camera] Access error:', err?.name, err?.message);
       setHasPermission(false);
-      setError(err?.name === 'NotAllowedError' ? 'Camera permission was denied in browser settings.' : err?.message || 'Could not access webcam.');
+      setError(
+        err?.name === 'NotAllowedError'
+          ? 'Camera permission denied. Click the lock/tune icon in the browser address bar to allow camera.'
+          : err?.message || 'Could not access webcam.'
+      );
       setIsActive(false);
     }
   }, [attachStreamToVideo]);
