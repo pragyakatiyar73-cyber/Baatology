@@ -1,15 +1,16 @@
-import React, { useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
-import FemaleMentor3DAvatar from '../Mentorship/FemaleMentor3DAvatar';
-import { Sparkles, Bot, ShieldCheck } from 'lucide-react';
+import React, { useRef, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
+import DigitalRobotAvatar from '../Mentorship/DigitalRobotAvatar';
+import { Smile, Heart, Sparkles, Volume2, Mic, Brain } from 'lucide-react';
 
 /**
- * HeyGenMentorAvatar (Now powered by standalone 3D FemaleMentor3DAvatar)
+ * HeyGenMentorAvatar (Now upgraded to Digital AI Robot Companion: Aura)
  *
- * Standalone, Reliable 3D Photorealistic Female Mentor:
- * - Powered by Three.js, @react-three/fiber, and @react-three/drei
- * - Uses Ready Player Me female .glb model with 15 Oculus facial visemes & morph targets
- * - Natural breathing, attentive listening head movements, and synchronized lip-sync
- * - Completely eliminates black screens and paid video API failures
+ * 100% Pure Black (#000000) Face-to-Face Robot Conversation:
+ * - Direct, empathetic connection ("Aamne-saamne ek dusre se baat kar rahe hain")
+ * - 4 Expressive Emotional States: listening, speaking, empathetic, thinking
+ * - Pure Black Background with zero clutter (No 3D desk, chair, laptop, or room)
+ * - Safe space & zero judgement for students to speak freely
+ * - Reliable Voice Output: ElevenLabs Neural Voice with instant Web Speech fallback
  */
 const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
   {
@@ -20,59 +21,113 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
     mode = 'presentation',
     onSpeechStart,
     onSpeechEnd,
-    mentorName = 'Dr. Ann Vance',
+    mentorName = 'Aura',
+    speakingText = '',
   },
   ref
 ) {
-  // ── Imperative Speak and Interrupt Methods for App.jsx ──
+  const currentAudioRef = useRef(null);
+
+  // Fallback to browser SpeechSynthesis
+  const fallbackSpeak = useCallback(
+    (text, onComplete) => {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+        onSpeechStart?.();
+        setTimeout(() => {
+          onSpeechEnd?.();
+          onComplete?.();
+        }, Math.max(2000, (text.split(' ').length / 2.5) * 1000));
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.05;
+
+      const voices = window.speechSynthesis.getVoices();
+      const naturalVoice = voices.find(
+        (v) =>
+          v.lang.startsWith('en') &&
+          (v.name.includes('Natural') ||
+            v.name.includes('Google') ||
+            v.name.includes('Samantha') ||
+            v.name.includes('Victoria') ||
+            v.name.includes('Zira'))
+      );
+      if (naturalVoice) utterance.voice = naturalVoice;
+
+      utterance.onstart = () => {
+        onSpeechStart?.();
+      };
+      utterance.onend = () => {
+        onSpeechEnd?.();
+        onComplete?.();
+      };
+      utterance.onerror = () => {
+        onSpeechEnd?.();
+        onComplete?.();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    },
+    [onSpeechStart, onSpeechEnd]
+  );
+
+  // Imperative Speak and Interrupt Methods for App.jsx
   useImperativeHandle(
     ref,
     () => ({
-      speak: (text, onComplete) => {
-        if (!text) return;
+      speak: async (text, onComplete) => {
+        if (!text || !text.trim()) return;
 
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 1.0;
-          utterance.pitch = 1.05;
+        // Step 1: Try ElevenLabs Neural TTS endpoint
+        try {
+          const res = await fetch('http://localhost:3001/api/assistant/tts/elevenlabs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text,
+              emotion: mode === 'casual' ? 'warm' : 'supportive',
+            }),
+          });
 
-          const voices = window.speechSynthesis.getVoices();
-          const femaleVoice = voices.find(
-            (v) =>
-              v.lang.startsWith('en') &&
-              (v.name.includes('Natural') ||
-                v.name.includes('Google') ||
-                v.name.includes('Samantha') ||
-                v.name.includes('Victoria') ||
-                v.name.includes('Zira'))
-          );
-          if (femaleVoice) utterance.voice = femaleVoice;
+          const contentType = res.headers.get('content-type') || '';
+          if (res.ok && contentType.includes('audio/mpeg')) {
+            const blob = await res.blob();
+            const audioUrl = URL.createObjectURL(blob);
+            const audio = new Audio(audioUrl);
+            currentAudioRef.current = audio;
 
-          utterance.onstart = () => {
             onSpeechStart?.();
-          };
-          utterance.onend = () => {
-            onSpeechEnd?.();
-            onComplete?.();
-          };
-          utterance.onerror = () => {
-            onSpeechEnd?.();
-            onComplete?.();
-          };
+            audio.onended = () => {
+              onSpeechEnd?.();
+              onComplete?.();
+              URL.revokeObjectURL(audioUrl);
+            };
+            audio.onerror = () => {
+              fallbackSpeak(text, onComplete);
+            };
 
-          window.speechSynthesis.speak(utterance);
-        } else {
-          onSpeechStart?.();
-          setTimeout(() => {
-            onSpeechEnd?.();
-            onComplete?.();
-          }, Math.max(2500, (text.split(' ').length / 2.8) * 1000));
+            await audio.play();
+            return;
+          }
+        } catch (e) {
+          // Fallback if backend is unreachable
         }
+
+        // Step 2: Smooth fallback to Web Speech
+        fallbackSpeak(text, onComplete);
       },
 
       interrupt: () => {
-        if ('speechSynthesis' in window) {
+        if (currentAudioRef.current) {
+          try {
+            currentAudioRef.current.pause();
+            currentAudioRef.current.currentTime = 0;
+          } catch (e) {}
+        }
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
           window.speechSynthesis.cancel();
         }
         onSpeechEnd?.();
@@ -80,21 +135,37 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
 
       reconnect: () => {},
     }),
-    [onSpeechStart, onSpeechEnd]
+    [fallbackSpeak, mode, onSpeechStart, onSpeechEnd]
   );
 
-  return (
-    <div className="relative w-full h-full bg-[#080d1a] overflow-hidden select-none flex items-center justify-center">
-      {/* ── Studio Ambient Rim Glows ── */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute -top-16 -right-16 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[100px]" />
-        <div className="absolute top-1/4 -left-16 w-[450px] h-[450px] rounded-full bg-teal-500/10 blur-[100px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(30,41,59,0.3)_0%,rgba(8,13,26,0.98)_100%)]" />
-      </div>
+  // Determine avatar emotional state
+  const robotState = useMemo(() => {
+    if (isConcluding) return 'empathetic';
+    if (isSpeaking) {
+      const lower = (speakingText || '').toLowerCase();
+      if (
+        mode === 'casual' ||
+        lower.includes('proud') ||
+        lower.includes('great job') ||
+        lower.includes('no problem') ||
+        lower.includes('mistake') ||
+        lower.includes('empathy') ||
+        lower.includes('relax') ||
+        lower.includes('comfort')
+      ) {
+        return 'empathetic';
+      }
+      return 'speaking';
+    }
+    if (isThinking) return 'thinking';
+    return 'listening';
+  }, [isConcluding, isSpeaking, isThinking, mode, speakingText]);
 
-      {/* ── Top-Left Floating Avatar Telemetry Pill ── */}
+  return (
+    <div className="relative w-full h-full bg-[#000000] overflow-hidden select-none flex items-center justify-center">
+      {/* ── Top-Left Floating Avatar Identity Pill ── */}
       <div className="absolute top-6 left-6 z-30 pointer-events-auto flex items-center gap-2.5">
-        <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/75 border border-white/15 backdrop-blur-xl shadow-2xl">
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/85 border border-white/10 backdrop-blur-xl shadow-2xl">
           <span
             className={`w-2.5 h-2.5 rounded-full ${
               isSpeaking
@@ -102,36 +173,35 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
                 : isListening
                 ? 'bg-emerald-400 animate-pulse shadow-[0_0_10px_#10b981]'
                 : isThinking
-                ? 'bg-sky-400 animate-pulse shadow-[0_0_10px_#38bdf8]'
-                : 'bg-emerald-400'
+                ? 'bg-indigo-400 animate-pulse shadow-[0_0_10px_#818cf8]'
+                : 'bg-cyan-400'
             }`}
           />
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-extrabold text-white tracking-wide">{mentorName}</span>
-              <span className="text-[10px] font-black uppercase tracking-wider text-teal-300 bg-teal-950/80 px-2 py-0.5 rounded-full border border-teal-500/30">
-                3D AI Mentor
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-white tracking-wide">{mentorName}</span>
+              <span className="text-[10px] font-bold text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-500/30 flex items-center gap-1">
+                <Smile className="w-2.5 h-2.5 text-cyan-400" />
+                <span>AI Robot Companion</span>
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium">
-              Ready Player Me 3D Engine • Oculus Visemes Synced
+            <span className="text-[10px] text-emerald-400 font-medium">
+              Zero Judgement • Direct Face-to-Face Conversation
             </span>
           </div>
         </div>
-
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-black/60 border border-teal-500/30 text-teal-300 text-[10px] font-bold backdrop-blur-md shadow-lg">
-          <Bot className="w-3.5 h-3.5 text-teal-400" />
-          <span>Standalone 60 FPS</span>
-        </div>
       </div>
 
-      {/* ── Main 3D Canvas Container ── */}
-      <div className="relative w-full h-full flex items-center justify-center">
-        <FemaleMentor3DAvatar
+      {/* ── Center Stage: Digital AI Robot Avatar on Pure Black ── */}
+      <div className="relative w-full h-full flex items-center justify-center bg-[#000000]">
+        <DigitalRobotAvatar
+          avatarState={robotState}
+          speakingText={speakingText}
+          mentorName={mentorName}
           isSpeaking={isSpeaking}
           isListening={isListening}
           isThinking={isThinking}
-          mentorName={mentorName}
+          emotionalTone={robotState}
         />
       </div>
     </div>

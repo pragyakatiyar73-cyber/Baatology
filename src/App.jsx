@@ -651,7 +651,7 @@ export default function App() {
     <div
       className={`relative w-full h-full min-h-screen overflow-hidden ${
         currentView === 'arena'
-          ? `bg-[#0a0f1d] text-slate-100 ${edgeGlowClass}`
+          ? `bg-[#000000] text-slate-100 ${edgeGlowClass}`
           : 'bg-[#f8faff] text-[#1e1b4b]'
       } select-none`}
     >
@@ -736,13 +736,13 @@ export default function App() {
           VIEW: ARENA 1-ON-1 CALL VIEW ("kebal bo and me dheku")
       ══════════════════════════════════════════════════════════════ */}
       {currentView === 'arena' && (
-        <div className="w-full h-screen relative overflow-hidden bg-[#070b12]">
+        <div className="w-full h-screen relative overflow-hidden bg-[#000000]">
           {/* ── Top Minimal Floating Controls ── */}
           {/* Top-Left: Minimal Return Button */}
           <div className="absolute top-6 left-6 z-30 pointer-events-auto">
             <button
               onClick={handleBackToDashboard}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/60 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 shadow-lg backdrop-blur-md cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-black/80 hover:bg-white/10 border border-white/15 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5 shadow-lg backdrop-blur-md cursor-pointer"
               title="Return to Dashboard"
             >
               <span>←</span>
@@ -763,7 +763,7 @@ export default function App() {
               </button>
             )}
 
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 backdrop-blur-md shadow-xl text-xs font-bold">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 border border-white/15 backdrop-blur-md shadow-xl text-xs font-bold">
               <span
                 className={`w-2 h-2 rounded-full ${
                   isSpeaking
@@ -786,13 +786,13 @@ export default function App() {
                     : 'text-slate-300'
                 }
               >
-                {isSpeaking ? 'AI Speaking...' : isListening ? '● Listening...' : '● AI Voice Active'}
+                {isSpeaking ? 'Aura Speaking...' : isListening ? '● Listening...' : '● Aura Voice Active'}
               </span>
             </div>
           </div>
 
-          {/* Photorealistic Interactive Human Female Mentor Video (HeyGen Streaming Avatar) */}
-          <main className="w-full h-full absolute inset-0 z-10">
+          {/* Digital AI Robot Avatar Companion (Aura) on Pure Black Canvas */}
+          <main className="w-full h-full absolute inset-0 z-10 bg-[#000000]">
             <ErrorBoundary>
               <HeyGenMentorAvatar
                 ref={heygenAvatarRef}
@@ -801,7 +801,8 @@ export default function App() {
                 isThinking={isThinking}
                 isConcluding={isConcluding}
                 mode={currentMode}
-                mentorName="Elena Vance"
+                mentorName="Aura"
+                speakingText={aiSpeechSubtitle}
                 onSpeechStart={() => {
                   setIsSpeaking(true);
                   setIsThinking(false);
