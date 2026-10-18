@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Clock,
   Sparkles,
@@ -10,6 +10,9 @@ import {
   MessageSquare,
   ShieldCheck,
   CheckCircle,
+  Trash2,
+  Play,
+  Pause,
 } from 'lucide-react';
 
 export default function GDDigitalScreenBoard({
@@ -18,15 +21,23 @@ export default function GDDigitalScreenBoard({
   transcripts = [],
   onOpenTopicModal,
   onAddBulletPoint,
+  onRemoveBulletPoint,
   sessionStatus = 'running',
   onToggleSession,
+  onSubmitManualArgument,
 }) {
   const [newBulletText, setNewBulletText] = useState('');
   const [typedArgument, setTypedArgument] = useState('');
+  const transcriptEndRef = useRef(null);
 
   const min = Math.floor(timerSeconds / 60);
   const sec = timerSeconds % 60;
   const timeFormatted = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+
+  // Auto-scroll transcript feed on new messages
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
+  }, [transcripts]);
 
   const handleAddPoint = (e) => {
     e?.preventDefault?.();
@@ -35,16 +46,23 @@ export default function GDDigitalScreenBoard({
     setNewBulletText('');
   };
 
+  const handleSendArgument = (e) => {
+    e?.preventDefault?.();
+    if (!typedArgument.trim()) return;
+    onSubmitManualArgument?.(typedArgument.trim());
+    setTypedArgument('');
+  };
+
   return (
-    <div className="w-full h-full rounded-3xl bg-[#0f1422]/90 border border-white/10 p-5 flex flex-col justify-between shadow-2xl relative select-none overflow-hidden">
-      {/* ── Top Bar matching screenshot header: "Roundtable 2D View" & "Start Session v" ── */}
+    <div className="w-full h-full rounded-3xl bg-[#0f1422]/90 border border-white/10 p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative select-none overflow-hidden">
+      {/* ── Top Bar ── */}
       <div className="flex items-center justify-between pb-3 border-b border-white/10">
         <div>
           <h3 className="text-sm sm:text-base font-extrabold text-white tracking-wide">
-            Roundtable 2D View
+            Digital Screen Board
           </h3>
           <p className="text-[11px] text-slate-400">
-            Active Digital Board &amp; Collaborative Transcript
+            Active motion topic, live debate points &amp; collaborative transcript
           </p>
         </div>
 
@@ -52,23 +70,33 @@ export default function GDDigitalScreenBoard({
           {/* Change Topic Button */}
           <button
             onClick={onOpenTopicModal}
-            className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm"
+            className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
             title="Change or select GD topic"
           >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             <span>Change Topic</span>
           </button>
 
-          {/* Start Session / End Session Dropdown Button (Matching screenshot) */}
+          {/* Start / Pause Session Button */}
           <button
             onClick={onToggleSession}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
               sessionStatus === 'running'
                 ? 'bg-blue-600 hover:bg-blue-500 text-white'
                 : 'bg-emerald-600 hover:bg-emerald-500 text-white'
             }`}
           >
-            <span>{sessionStatus === 'running' ? 'Active Session' : 'Start Session'}</span>
-            <ChevronDown className="w-3.5 h-3.5" />
+            {sessionStatus === 'running' ? (
+              <>
+                <Pause className="w-3.5 h-3.5" />
+                <span>Active Session</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5" />
+                <span>Resume Session</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -83,8 +111,12 @@ export default function GDDigitalScreenBoard({
             </span>
 
             {/* Live Countdown Timer */}
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-cyan-300 bg-black/50 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
-              <Clock className="w-3.5 h-3.5 text-cyan-400" />
+            <div className={`flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+              timerSeconds < 60
+                ? 'text-rose-400 bg-rose-950/60 border-rose-500/40 animate-pulse'
+                : 'text-cyan-300 bg-black/50 border-cyan-500/20'
+            }`}>
+              <Clock className="w-3.5 h-3.5" />
               <span>{timeFormatted}</span>
             </div>
           </div>
@@ -100,20 +132,31 @@ export default function GDDigitalScreenBoard({
         {/* ── Key Discussion Bullet Points on Board ── */}
         <div className="p-3.5 rounded-2xl bg-[#0c1220] border border-white/5 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-blue-400" />
-              <span>Key Debate Points on Board</span>
+              <span>Key Debate Points on Board ({topic?.keyPoints?.length || 0})</span>
             </span>
           </div>
 
-          <div className="space-y-1.5 max-h-24 overflow-y-auto">
+          <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
             {topic?.keyPoints?.map((point, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-2 text-xs text-slate-200 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5"
+                className="flex items-center justify-between gap-2 text-xs text-slate-200 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 group"
               >
-                <span className="text-cyan-400 font-bold shrink-0">{idx + 1}.</span>
-                <span className="font-medium leading-relaxed">{point}</span>
+                <div className="flex items-start gap-2 flex-1">
+                  <span className="text-cyan-400 font-bold shrink-0">{idx + 1}.</span>
+                  <span className="font-medium leading-relaxed">{point}</span>
+                </div>
+                {onRemoveBulletPoint && (
+                  <button
+                    onClick={() => onRemoveBulletPoint(idx)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity"
+                    title="Remove point"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -138,51 +181,85 @@ export default function GDDigitalScreenBoard({
         </div>
 
         {/* ── Live Roundtable Discussion Transcript Feed ── */}
-        <div className="flex-1 p-3.5 rounded-2xl bg-[#0a0f1c] border border-white/5 flex flex-col justify-between space-y-2 min-h-[160px]">
-          <div className="flex items-center justify-between pb-1 border-b border-white/5 text-[11px] text-slate-400">
-            <span className="font-bold uppercase tracking-wider flex items-center gap-1.5 text-emerald-400">
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Live Dialogue Stream</span>
+        <div className="flex-1 min-h-[170px] rounded-2xl bg-[#0c1220] border border-white/5 p-3.5 flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Live Collaborative Discussion Feed</span>
             </span>
-            <span>{transcripts.length} contributions</span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              Auto-Transcribing Voice
+            </span>
           </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto max-h-48 pr-1">
-            {transcripts.map((entry) => (
-              <div
-                key={entry.id}
-                className={`p-2.5 rounded-xl text-xs space-y-1 transition-all ${
-                  entry.speakerId === 'student-1'
-                    ? 'bg-blue-950/40 border border-blue-500/30'
-                    : 'bg-slate-900/60 border border-white/5'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`font-bold ${
-                      entry.speakerId === 'student-1' ? 'text-cyan-300' : 'text-purple-300'
-                    }`}
+          {/* Transcript Messages List */}
+          <div className="flex-1 space-y-2.5 overflow-y-auto pr-1 max-h-52">
+            {transcripts.map((item) => {
+              if (item.isSystem) {
+                return (
+                  <div
+                    key={item.id}
+                    className="p-2 rounded-xl bg-purple-950/30 border border-purple-500/20 text-center text-[11px] text-purple-300 font-medium"
                   >
-                    {entry.speakerName}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono">{entry.timestamp}</span>
-                </div>
-                <p className="text-slate-200 leading-relaxed font-normal">{entry.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+                    {item.text}
+                  </div>
+                );
+              }
 
-      {/* ── Bottom Candidate Quick Response Bar ── */}
-      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
-          <span className="font-semibold text-slate-300">
-            Microphone Open • Speak your argument naturally
-          </span>
+              const isHost = item.speakerId === 'student-1';
+
+              return (
+                <div
+                  key={item.id}
+                  className={`p-2.5 rounded-xl border flex items-start gap-2.5 ${
+                    isHost
+                      ? 'bg-blue-950/30 border-blue-500/30 text-blue-100'
+                      : 'bg-slate-900/70 border-white/5 text-slate-200'
+                  }`}
+                >
+                  {/* Speaker Avatar */}
+                  <img
+                    src={item.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'}
+                    alt={item.speakerName}
+                    className="w-7 h-7 rounded-full object-cover shrink-0 border border-white/15"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="text-xs font-extrabold text-white">
+                        {item.speakerName}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {item.timestamp}
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed font-normal">
+                      {item.text}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={transcriptEndRef} />
+          </div>
+
+          {/* Quick Typed Argument Input (Allows instant participation alongside mic) */}
+          <form onSubmit={handleSendArgument} className="flex items-center gap-2 pt-1 border-t border-white/10">
+            <input
+              type="text"
+              value={typedArgument}
+              onChange={(e) => setTypedArgument(e.target.value)}
+              placeholder="Type an argument or speak into your microphone..."
+              className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+            />
+            <button
+              type="submit"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Send</span>
+            </button>
+          </form>
         </div>
-        <span className="text-[11px] font-mono text-cyan-400">Turn: Open Floor</span>
       </div>
     </div>
   );

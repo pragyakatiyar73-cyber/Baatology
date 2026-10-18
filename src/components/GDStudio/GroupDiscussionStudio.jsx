@@ -3,10 +3,12 @@ import {
   Users,
   Bell,
   ArrowLeft,
-  Settings,
-  HelpCircle,
   Sparkles,
-  Layers,
+  UserPlus,
+  Mic,
+  MicOff,
+  Copy,
+  Check,
   ChevronDown,
 } from 'lucide-react';
 
@@ -14,6 +16,7 @@ import Roundtable2DView from './Roundtable2DView';
 import GDDigitalScreenBoard from './GDDigitalScreenBoard';
 import DiscussionToolsPanel from './DiscussionToolsPanel';
 import GDTopicModal from './GDTopicModal';
+import AddStudentModal from './AddStudentModal';
 import { useGroupDiscussionSession } from '../../hooks/useGroupDiscussionSession';
 
 export default function GroupDiscussionStudio({
@@ -21,11 +24,11 @@ export default function GroupDiscussionStudio({
   userEmail = 'borfa@rgmail.com',
   onBackToDashboard,
 }) {
-  const [activeTab, setActiveTab] = useState('Discussions');
-  const [showTopicModal, setShowTopicModal] = useState(true); // Open initially to match screenshot
+  const [showTopicModal, setShowTopicModal] = useState(false);
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Hook managing roundtable, active speakers, timer, and AI analysis
+  // Hook managing roundtable, active speakers, timer, AudioContext mic analyser, STT, and AI analysis
   const {
     topic,
     sessionStatus,
@@ -36,12 +39,25 @@ export default function GroupDiscussionStudio({
     codeCopied,
     transcripts,
     isMicActive,
+    audioLevel,
     liveCandidateTranscript,
     aiAnalysis,
+    activePoll,
+    notes,
+    toggleMic,
+    setSessionStatus,
+    resetTimer,
+    addMinutes,
+    addParticipant,
+    removeParticipant,
+    submitManualArgument,
+    votePoll,
+    updateNotes,
     copyInviteCode,
     addBulletPoint,
+    removeBulletPoint,
     selectTopic,
-    setSessionStatus,
+    setActiveSpeakerId,
   } = useGroupDiscussionSession({
     userName,
   });
@@ -51,29 +67,22 @@ export default function GroupDiscussionStudio({
     setIsPaused((prev) => !prev);
   };
 
-  const handleResetTimer = () => {
-    // Reset timer to 10:00
-  };
-
-  const handleAddMinutes = () => {
-    // Add +2 minutes
-  };
-
   return (
     <div className="relative w-full h-screen bg-[#0b0e14] text-white flex flex-col justify-between overflow-hidden select-none">
       {/* ══════════════════════════════════════════════════════════════
-          1. TOP NAVIGATION HEADER BAR (Matching Exact Screenshot)
+          1. TOP NAVIGATION HEADER (Navbar tabs removed as requested)
       ══════════════════════════════════════════════════════════════ */}
-      <header className="w-full px-6 py-3.5 flex items-center justify-between border-b border-white/10 bg-[#0d111a]/80 backdrop-blur-xl shrink-0 z-30">
+      <header className="w-full px-5 py-3 flex items-center justify-between border-b border-white/10 bg-[#0d111a]/90 backdrop-blur-xl shrink-0 z-30">
         {/* Left: App Logo & Return Button */}
         <div className="flex items-center gap-3">
           {onBackToDashboard && (
             <button
               onClick={onBackToDashboard}
-              className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer mr-1"
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-sm text-xs font-bold"
               title="Return to Dashboard"
             >
               <ArrowLeft className="w-4 h-4 text-cyan-400" />
+              <span className="hidden sm:inline">Dashboard</span>
             </button>
           )}
 
@@ -82,53 +91,71 @@ export default function GroupDiscussionStudio({
             <Users className="w-4 h-4" />
           </div>
 
-          <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
-            Group Discussion Studio
-          </h1>
+          <div>
+            <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+              Group Discussion Studio
+            </h1>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
+              <span className="text-[10px] text-slate-400 font-medium">
+                {participants.length} Students Connected • 2D Spatial Audio
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Center: Navigation Tabs (Dashboard, Discussions, Students, Settings, Help) */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-semibold">
-          {['Dashboard', 'Discussions', 'Students', 'Settings', 'Help'].map((tab) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => {
-                  if (tab === 'Dashboard' && onBackToDashboard) {
-                    onBackToDashboard();
-                  } else {
-                    setActiveTab(tab);
-                  }
-                }}
-                className={`relative py-1 transition-colors cursor-pointer ${
-                  isActive
-                    ? 'text-cyan-400 font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>{tab}</span>
-                {isActive && (
-                  <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full shadow-[0_0_8px_#38bdf8]" />
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        {/* Center: Active Topic Pill */}
+        <div className="hidden xl:flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-950/40 border border-blue-500/20 text-xs text-blue-200 max-w-md truncate">
+          <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          <span className="truncate font-semibold">{topic?.title}</span>
+        </div>
 
-        {/* Right: Notifications & User Profile (John Chey, borfa@rgmail.com) */}
-        <div className="flex items-center gap-4">
-          {/* Notification Bell with Red Dot */}
+        {/* Right: Add Student, Invite Code, Mic Toggle & Profile */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Add Student Button */}
           <button
-            className="relative p-2 rounded-full hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
-            title="Notifications"
+            onClick={() => setShowAddStudentModal(true)}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Add a new student to the discussion"
           >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#0d111a]" />
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>+ Add Student</span>
           </button>
 
-          {/* User Profile Pill (Matching Screenshot: John Chey, borfa@rgmail.com) */}
-          <div className="flex items-center gap-2.5 pl-2 border-l border-white/10">
+          {/* Student Invite Code Box */}
+          <button
+            onClick={copyInviteCode}
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/10 text-xs font-mono text-cyan-300 transition-all cursor-pointer shadow-sm"
+            title="Copy Student Invite Code"
+          >
+            <span>Code: {inviteCode}</span>
+            {codeCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+          </button>
+
+          {/* Mic Toggle Button with Live Volume Level Wave */}
+          <button
+            onClick={toggleMic}
+            className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+              isMicActive
+                ? audioLevel > 14
+                  ? 'bg-emerald-500/25 border-emerald-400/60 text-emerald-300 shadow-md shadow-emerald-500/20'
+                  : 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300'
+                : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+            }`}
+            title={isMicActive ? 'Mute Microphone' : 'Unmute Microphone'}
+          >
+            {isMicActive ? (
+              <Mic className={`w-3.5 h-3.5 ${audioLevel > 14 ? 'text-emerald-400 animate-pulse' : 'text-cyan-400'}`} />
+            ) : (
+              <MicOff className="w-3.5 h-3.5 text-rose-400" />
+            )}
+            <span className="hidden sm:inline">
+              {isMicActive ? (audioLevel > 14 ? 'Speaking' : 'Mic Active') : 'Muted'}
+            </span>
+          </button>
+
+          {/* User Profile Pill */}
+          <div className="flex items-center gap-2 pl-2 border-l border-white/10">
             <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shadow-sm shrink-0">
               <img
                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"
@@ -136,7 +163,7 @@ export default function GroupDiscussionStudio({
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="text-left hidden sm:block">
+            <div className="text-left hidden lg:block">
               <span className="text-xs font-bold text-white block leading-tight">
                 {userName}
               </span>
@@ -151,15 +178,18 @@ export default function GroupDiscussionStudio({
       {/* ══════════════════════════════════════════════════════════════
           2. MAIN 3-COLUMN STUDIO LAYOUT
       ══════════════════════════════════════════════════════════════ */}
-      <main className="flex-1 w-full p-4 sm:p-5 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch">
+      <main className="flex-1 w-full p-3 sm:p-4 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch">
         {/* Left Column (4 cols): Roundtable 2D View */}
         <div className="lg:col-span-4 h-full">
           <Roundtable2DView
             participants={participants}
             activeSpeakerId={activeSpeakerId}
             isMicActive={isMicActive}
+            audioLevel={audioLevel}
             liveCandidateTranscript={liveCandidateTranscript}
             onToggleFullscreen={() => {}}
+            onOpenAddStudent={() => setShowAddStudentModal(true)}
+            onSelectSpeaker={(speakerId) => setActiveSpeakerId(speakerId)}
           />
         </div>
 
@@ -171,8 +201,10 @@ export default function GroupDiscussionStudio({
             transcripts={transcripts}
             onOpenTopicModal={() => setShowTopicModal(true)}
             onAddBulletPoint={addBulletPoint}
+            onRemoveBulletPoint={removeBulletPoint}
             sessionStatus={sessionStatus}
             onToggleSession={handleToggleSession}
+            onSubmitManualArgument={submitManualArgument}
           />
         </div>
 
@@ -182,16 +214,22 @@ export default function GroupDiscussionStudio({
             participants={participants}
             aiAnalysis={aiAnalysis}
             timerSeconds={timerSeconds}
-            onResetTimer={handleResetTimer}
-            onAddMinutes={handleAddMinutes}
+            onResetTimer={resetTimer}
+            onAddMinutes={addMinutes}
             isPaused={isPaused}
             onTogglePause={handleToggleSession}
+            activePoll={activePoll}
+            onVotePoll={votePoll}
+            notes={notes}
+            onUpdateNotes={updateNotes}
+            onOpenAddStudent={() => setShowAddStudentModal(true)}
+            onRemoveParticipant={removeParticipant}
           />
         </div>
       </main>
 
       {/* ══════════════════════════════════════════════════════════════
-          3. OVERLAID GD TOPIC SELECTION MODAL (Matching Screenshot)
+          3. OVERLAID GD TOPIC SELECTION MODAL
       ══════════════════════════════════════════════════════════════ */}
       <GDTopicModal
         isOpen={showTopicModal}
@@ -201,6 +239,16 @@ export default function GroupDiscussionStudio({
         inviteCode={inviteCode}
         onCopyInviteCode={copyInviteCode}
         codeCopied={codeCopied}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          4. OVERLAID ADD STUDENT MODAL
+      ══════════════════════════════════════════════════════════════ */}
+      <AddStudentModal
+        isOpen={showAddStudentModal}
+        onClose={() => setShowAddStudentModal(false)}
+        onAddStudent={addParticipant}
+        currentCount={participants.length}
       />
     </div>
   );

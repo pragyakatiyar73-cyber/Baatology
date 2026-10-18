@@ -1,37 +1,67 @@
 import React from 'react';
-import { Maximize2, Mic, Users, Sparkles } from 'lucide-react';
+import { Maximize2, Mic, MicOff, Users, Sparkles, UserPlus, Volume2 } from 'lucide-react';
 
 export default function Roundtable2DView({
   participants = [],
   activeSpeakerId = 'student-1',
   isMicActive = true,
+  audioLevel = 0,
   liveCandidateTranscript = '',
   onToggleFullscreen,
+  onOpenAddStudent,
+  onSelectSpeaker,
 }) {
+  const count = Math.max(1, participants.length);
+  // Radius percentage for 2D circular arrangement around center (50, 50)
+  const radius = count <= 4 ? 37 : count <= 6 ? 39 : 41;
+
   return (
-    <div className="w-full h-full rounded-3xl bg-[#0f1422]/90 border border-white/10 p-5 flex flex-col justify-between relative shadow-2xl overflow-hidden select-none">
-      {/* ── Top Header of Left Panel ── */}
-      <div className="flex items-center justify-between z-10">
-        <h3 className="text-sm sm:text-base font-extrabold text-white tracking-wide">
-          Roundtable Layout
-        </h3>
-        <button
-          onClick={onToggleFullscreen}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-          title="Fullscreen Roundtable View"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </button>
+    <div className="w-full h-full rounded-3xl bg-[#0f1422]/90 border border-white/10 p-4 sm:p-5 flex flex-col justify-between relative shadow-2xl overflow-hidden select-none">
+      {/* ── Top Header ── */}
+      <div className="flex items-center justify-between z-10 border-b border-white/10 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+            <Users className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-extrabold text-white tracking-wide">
+              Roundtable 2D View
+            </h3>
+            <span className="text-[10px] text-slate-400 font-medium">
+              {count} Active Students in Session
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Quick Add Student Button */}
+          <button
+            onClick={onOpenAddStudent}
+            className="px-2.5 py-1.5 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/40 text-cyan-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Add new student to roundtable"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Add Student</span>
+          </button>
+
+          <button
+            onClick={onToggleFullscreen}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            title="Fullscreen Roundtable View"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* ── Main 2D Roundtable Circular Ring Arena ── */}
-      <div className="relative flex-1 w-full min-h-[380px] sm:min-h-[420px] flex items-center justify-center my-2">
+      {/* ── Main 2D Roundtable Arena with Trigonometric Placement ── */}
+      <div className="relative flex-1 w-full min-h-[360px] sm:min-h-[400px] flex items-center justify-center my-2">
         {/* Glowing Gradient Circular Ring */}
-        <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border-2 border-transparent bg-origin-border flex items-center justify-center p-1 shadow-[0_0_50px_rgba(59,130,246,0.15)]">
+        <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border-2 border-transparent bg-origin-border flex items-center justify-center p-1 shadow-[0_0_60px_rgba(59,130,246,0.15)]">
           {/* Circular SVG Ring with Cyan-to-Purple Neon Gradient */}
           <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
             <defs>
-              <linearGradient id="roundtableGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient id="roundtableNeonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#38bdf8" />
                 <stop offset="50%" stopColor="#818cf8" />
                 <stop offset="100%" stopColor="#c084fc" />
@@ -42,164 +72,154 @@ export default function Roundtable2DView({
               cy="50"
               r="46"
               fill="none"
-              stroke="url(#roundtableGrad)"
+              stroke="url(#roundtableNeonGrad)"
               strokeWidth="1.2"
               strokeDasharray="4 2"
               className="opacity-80"
             />
           </svg>
 
-          {/* Center Table Label (Matching Screenshot) */}
+          {/* Central Circular Table HUD */}
           <div className="text-center z-10 pointer-events-none space-y-1">
             <span className="text-sm sm:text-base font-extrabold text-slate-200 block tracking-tight">
               Roundtable
             </span>
-            <span className="text-xs sm:text-sm font-semibold text-slate-400 block">
+            <span className="text-xs sm:text-sm font-semibold text-cyan-400 block">
               2D View
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono block">
+              {count} Students Connected
             </span>
           </div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════
-            4 ROUNDTABLE PARTICIPANT AVATARS (Placed around the ring)
+            DYNAMIC CIRCULAR SLOTS FOR EVERY PARTICIPANT
         ══════════════════════════════════════════════════════════════ */}
+        {participants.map((p, index) => {
+          // Angle in radians: Start at top (-PI/2) and distribute evenly
+          const angle = (index / count) * 2 * Math.PI - Math.PI / 2;
+          const leftPercent = 50 + radius * Math.cos(angle);
+          const topPercent = 50 + radius * Math.sin(angle);
 
-        {/* ── 1. TOP AVATAR: Student 1 (Host / Candidate) ── */}
-        <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
-          {/* Talking Pill Badge Above */}
-          <div className="mb-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-white/15 flex items-center gap-1 shadow-md">
-            <Mic className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-bold text-slate-200">Talking</span>
-          </div>
+          const isSpeaker = activeSpeakerId === p.id;
+          const isHost = p.isLocalUser;
 
-          {/* Circular Photo with Green Dot */}
-          <div className="relative group">
+          return (
             <div
-              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 transition-all ${
-                activeSpeakerId === 'student-1'
-                  ? 'border-emerald-400 ring-4 ring-emerald-500/40 shadow-[0_0_20px_#10b981]'
-                  : 'border-slate-600'
-              }`}
+              key={p.id}
+              onClick={() => onSelectSpeaker?.(p.id)}
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-20 cursor-pointer group transition-transform duration-300"
+              style={{
+                left: `${leftPercent}%`,
+                top: `${topPercent}%`,
+              }}
+              title={`Click to focus on ${p.name}`}
             >
-              <img
-                src={participants[0]?.avatar || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop&crop=faces'}
-                alt="Student 1"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            {/* Status Green Circle on Bottom-Right */}
-            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0f1422] shadow-[0_0_8px_#10b981]" />
-          </div>
+              {/* Floating "Talking" Pill Badge */}
+              {isSpeaker && (
+                <div className="mb-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/95 border border-emerald-400/60 flex items-center gap-1 shadow-lg shadow-emerald-500/20 animate-bounce">
+                  <Mic className="w-3 h-3 text-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-extrabold text-emerald-300">Talking</span>
+                </div>
+              )}
 
-          <span className="text-[11px] font-bold text-slate-200 mt-1">
-            Student 1 (Host)
-          </span>
-        </div>
+              {/* Circular Avatar Photo */}
+              <div className="relative group">
+                <div
+                  className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full overflow-hidden border-2 transition-all duration-300 ${
+                    isSpeaker
+                      ? 'border-emerald-400 ring-4 ring-emerald-500/50 shadow-[0_0_25px_#10b981] scale-110'
+                      : isHost
+                      ? 'border-cyan-400/80 ring-2 ring-cyan-500/20'
+                      : 'border-slate-600 hover:border-slate-400'
+                  }`}
+                >
+                  <img
+                    src={p.avatar}
+                    alt={p.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
 
-        {/* ── 2. LEFT AVATAR: Student 2 ── */}
-        <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 flex flex-col items-center z-20">
-          <div className="flex items-center gap-2">
-            {/* Talking Pill to the Left */}
-            <div className="px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-white/15 flex items-center gap-1 shadow-md">
-              <Mic className="w-3 h-3 text-emerald-400" />
-              <span className="text-[10px] font-bold text-slate-200">Talking</span>
-            </div>
-
-            {/* Circular Photo */}
-            <div className="relative group">
-              <div
-                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 transition-all ${
-                  activeSpeakerId === 'student-2'
-                    ? 'border-emerald-400 ring-4 ring-emerald-500/40 shadow-[0_0_20px_#10b981]'
-                    : 'border-slate-600'
-                }`}
-              >
-                <img
-                  src={participants[1]?.avatar || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=faces'}
-                  alt="Student 2"
-                  className="w-full h-full object-cover"
+                {/* Status Dot */}
+                <span
+                  className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#0f1422] ${
+                    isSpeaker
+                      ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]'
+                      : 'bg-emerald-500'
+                  }`}
                 />
               </div>
-              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0f1422] shadow-[0_0_8px_#10b981]" />
-            </div>
-          </div>
 
-          <span className="text-[11px] font-bold text-slate-200 mt-1">
-            Student 2
-          </span>
-        </div>
-
-        {/* ── 3. BOTTOM-LEFT AVATAR: Student 3 ── */}
-        <div className="absolute bottom-12 sm:bottom-14 left-6 sm:left-8 flex flex-col items-center z-20">
-          <div className="flex items-center gap-2">
-            {/* Pill to the Left */}
-            <div className="px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-white/15 flex items-center gap-1 shadow-md">
-              <Mic className="w-3 h-3 text-emerald-400" />
-              <span className="text-[10px] font-bold text-slate-200">Student 1</span>
-            </div>
-
-            {/* Circular Photo */}
-            <div className="relative group">
-              <div
-                className={`w-13 h-13 sm:w-15 sm:h-15 rounded-full overflow-hidden border-2 transition-all ${
-                  activeSpeakerId === 'student-3'
-                    ? 'border-emerald-400 ring-4 ring-emerald-500/40 shadow-[0_0_20px_#10b981]'
-                    : 'border-slate-600'
-                }`}
-              >
-                <img
-                  src={participants[2]?.avatar || 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&h=150&fit=crop&crop=faces'}
-                  alt="Student 3"
-                  className="w-full h-full object-cover"
-                />
+              {/* Student Name & Role Badge */}
+              <div className="text-center mt-1">
+                <span className={`text-[11px] font-bold block leading-tight ${isSpeaker ? 'text-emerald-300' : 'text-slate-200'}`}>
+                  {p.name}
+                </span>
+                <span className="text-[9px] text-slate-400 block leading-tight font-medium">
+                  {p.role}
+                </span>
               </div>
-              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0f1422] shadow-[0_0_8px_#10b981]" />
+
+              {/* Live Speech Bubble if Host is speaking interim text */}
+              {isHost && liveCandidateTranscript && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1 rounded-xl bg-black/90 border border-emerald-400/50 text-[11px] text-emerald-200 shadow-xl pointer-events-none z-30 animate-fade-in max-w-xs overflow-hidden text-ellipsis">
+                  "{liveCandidateTranscript}"
+                </div>
+              )}
             </div>
-          </div>
-
-          <span className="text-[11px] font-bold text-slate-200 mt-1">
-            Student 3
-          </span>
-        </div>
-
-        {/* ── 4. BOTTOM AVATAR: Student 4 ── */}
-        <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
-          <span className="text-[11px] font-bold text-slate-200 mb-1">
-            Student 4
-          </span>
-
-          <div className="relative group">
-            <div
-              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 transition-all ${
-                activeSpeakerId === 'student-4'
-                  ? 'border-emerald-400 ring-4 ring-emerald-500/40 shadow-[0_0_20px_#10b981]'
-                  : 'border-slate-600'
-              }`}
-            >
-              <img
-                src={participants[3]?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=faces'}
-                alt="Student 4"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0f1422] shadow-[0_0_8px_#10b981]" />
-          </div>
-
-          {/* Talking Pill Badge Below */}
-          <div className="mt-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-white/15 flex items-center gap-1 shadow-md">
-            <Mic className="w-3 h-3 text-emerald-400" />
-            <span className="text-[10px] font-bold text-slate-200">Talking</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
-      {/* ── Bottom Live Audio State ── */}
-      <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/10">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
-          <span>Active Roundtable: 4 Students Connected</span>
+      {/* ── Bottom Voice Waveform & Microphone Telemetry ── */}
+      <div className="flex items-center justify-between text-[11px] text-slate-300 pt-2.5 border-t border-white/10">
+        <div className="flex items-center gap-2">
+          {/* Animated Mic Audio Level Meter */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 border border-white/10">
+            {isMicActive ? (
+              <Mic className={`w-3.5 h-3.5 ${audioLevel > 14 ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
+            ) : (
+              <MicOff className="w-3.5 h-3.5 text-rose-400" />
+            )}
+
+            {/* Live Volume Bars */}
+            <div className="flex items-end gap-[2px] h-3 w-7">
+              {[0.4, 0.9, 1.2, 0.7, 1.0].map((factor, i) => {
+                const barHeight = isMicActive
+                  ? Math.max(2, Math.min(12, Math.round((audioLevel / 100) * 12 * factor)))
+                  : 2;
+                return (
+                  <span
+                    key={i}
+                    className={`w-[3px] rounded-full transition-all duration-75 ${
+                      audioLevel > 14 ? 'bg-emerald-400' : 'bg-slate-600'
+                    }`}
+                    style={{ height: `${barHeight}px` }}
+                  />
+                );
+              })}
+            </div>
+
+            <span className="text-[10px] font-mono text-slate-300">
+              {isMicActive ? (audioLevel > 14 ? 'Speaking' : 'Listening...') : 'Muted'}
+            </span>
+          </div>
+
+          <span className="text-slate-400 hidden sm:inline">•</span>
+          <span className="text-slate-400 hidden sm:inline">
+            {count} Students Connected
+          </span>
         </div>
-        <span className="text-cyan-400 font-mono font-bold">2D Spatial Ring</span>
+
+        <button
+          onClick={onOpenAddStudent}
+          className="text-cyan-400 hover:text-cyan-300 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+        >
+          <UserPlus className="w-3 h-3" />
+          <span>+ Add Student</span>
+        </button>
       </div>
     </div>
   );
