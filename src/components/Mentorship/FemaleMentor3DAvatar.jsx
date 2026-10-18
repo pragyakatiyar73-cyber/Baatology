@@ -368,6 +368,24 @@ function getFileFolderTexture() {
 function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isThinking = false }) {
   const { scene } = useGLTF('/models/female_mentor.glb');
 
+  // Load executive tailored AuraGD blazer texture
+  const blazerTexture = useMemo(() => {
+    const loader = new THREE.TextureLoader();
+    const tex = loader.load('/models/blazer_texture.png', (loadedTex) => {
+      loadedTex.flipY = false;
+      loadedTex.colorSpace = THREE.SRGBColorSpace;
+      scene.traverse((child) => {
+        if (child.isMesh && (child.name === 'Wolf3D_Outfit_Top' || child.material?.name === 'Wolf3D_Outfit_Top')) {
+          child.material.map = loadedTex;
+          child.material.needsUpdate = true;
+        }
+      });
+    });
+    tex.flipY = false;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, [scene]);
+
   // Traverse meshes and enhance materials for cinematic human realism
   const rig = useMemo(() => {
     const bones = {};
@@ -406,7 +424,14 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
             mat.roughness = 0.22;
             mat.metalness = 0.0;
             mat.color = new THREE.Color('#fcfbf7');
-          } else if (mat.name === 'Wolf3D_Outfit_Top' || mat.name?.includes('Outfit')) {
+          } else if (child.name === 'Wolf3D_Outfit_Top' || mat.name === 'Wolf3D_Outfit_Top') {
+            // Apply executive tailored AuraGD blazer texture
+            mat.map = blazerTexture;
+            mat.roughness = 0.74;
+            mat.metalness = 0.10;
+            mat.color = new THREE.Color('#ffffff');
+            mat.needsUpdate = true;
+          } else if (mat.name?.includes('Outfit')) {
             mat.roughness = 0.82;
             mat.metalness = 0.05;
             mat.color = new THREE.Color('#ffffff');
@@ -420,7 +445,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     });
 
     return { bones, meshes };
-  }, [scene]);
+  }, [scene, blazerTexture]);
 
   // Capture pristine rest quaternions
   const restQuats = useMemo(() => {
