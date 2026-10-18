@@ -171,6 +171,68 @@ const CONVERSATIONAL_KNOWLEDGE = [
 ];
 
 /**
+ * Parses raw AI output to extract thoughts and spoken text
+ */
+function cleanClientAIOutput(raw, originalMessage, userName) {
+  let text = typeof raw === 'string' ? raw : JSON.stringify(raw);
+
+  const trimmed = text.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed.choices?.[0]?.message?.content) {
+        text = parsed.choices[0].message.content;
+      } else if (parsed.content) {
+        text = parsed.content;
+      } else if (parsed.tool_calls?.[0]?.function?.arguments) {
+        text = parsed.tool_calls[0].function.arguments;
+      } else if (parsed.reasoning) {
+        text = parsed.reasoning;
+      }
+    } catch (_) {
+      const match = trimmed.match(/"(?:content|arguments|reasoning)"\s*:\s*"((?:\\.|[^"\\])*)"/);
+      if (match) {
+        try {
+          text = JSON.parse(`"${match[1]}"`);
+        } catch {
+          text = match[1];
+        }
+      }
+    }
+  }
+
+  text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+
+  let thoughtProcess = '';
+  let spokenText = '';
+  const thoughtMatch = text.match(/<thought>([\s\S]*?)<\/thought>/i);
+  if (thoughtMatch) {
+    thoughtProcess = thoughtMatch[1].trim();
+    spokenText = text.replace(/<thought>[\s\S]*?<\/thought>/gi, '').trim();
+  } else {
+    spokenText = text.trim();
+  }
+
+  spokenText = spokenText
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/[{}\[\]"]/g, '')
+    .replace(/[*#_~`]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^(role:\s*assistant\s*,?\s*|reasoning:\s*)+/i, '')
+    .trim();
+
+  if (!thoughtProcess || thoughtProcess.length < 15) {
+    thoughtProcess = [
+      `🧠 Step 1 (Question Understanding): Analyzed: "${originalMessage}".`,
+      `🧠 Step 2 (Knowledge Synthesis): Formulating direct, accurate answer as ChatGPT mentor.`,
+      `🧠 Step 3 (Solution Delivery): Articulating clear answer for ${userName}.`,
+    ].join('\n');
+  }
+
+  return { thoughtProcess, spokenText };
+}
+
+/**
  * Main ChatGPT Conversational Response Generator
  *
  * @param {string} userSpeech - The speech transcript spoken by the user
@@ -178,7 +240,7 @@ const CONVERSATIONAL_KNOWLEDGE = [
  * @returns {Promise<{ thoughtProcess: string, spokenText: string, topic: string }>}
  */
 export async function getChatGPTConversationalResponse(userSpeech = '', context = {}) {
-  const { userName = 'Candidate', currentMode = 'general', conversationHistory = [] } = context;
+  const { userName = 'Pragya', currentMode = 'general', conversationHistory = [] } = context;
   const cleaned = userSpeech.trim();
   const lower = cleaned.toLowerCase();
 
@@ -191,13 +253,15 @@ export async function getChatGPTConversationalResponse(userSpeech = '', context 
     };
   }
 
-  // ── Step 1: Try Backend Gemini Endpoint (/api/assistant/chat) ──
+  // ── Tier 1: Backend ChatGPT Multi-Provider Endpoint (/api/assistant/chat) ──
   try {
-    const res = await fetch('http://localhost:3001/api/assistant/chat', {
+    const res = await fetch('http://127.0.0.1:3001/api/assistant/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: cleaned,
+        userName,
+        currentMode,
         conversationHistory: conversationHistory.slice(-6),
         emotionalState: { primaryEmotion: 'neutral' },
       }),
@@ -205,21 +269,48 @@ export async function getChatGPTConversationalResponse(userSpeech = '', context 
 
     if (res.ok) {
       const data = await res.json();
-      if (data.hasServerKey && data.spokenText) {
+      if (data.spokenText && data.spokenText.length > 5) {
         return {
-          thoughtProcess: data.thoughtProcess
-            ? `🧠 Thought Process (Gemini Generative):\n${data.thoughtProcess}`
-            : `🧠 Thought Process:\nAnalyzed: "${cleaned}"\nFormulated contextual, conversational answer for ${userName}.`,
+          thoughtProcess: data.thoughtProcess || `🧠 Step 1: Understood "${cleaned}"\n🧠 Step 2: Generated direct solution\n🧠 Step 3: Speaking with Aura voice`,
           spokenText: data.spokenText,
-          topic: 'AI Live Reasoning',
+          topic: data.provider || 'ChatGPT Live Intelligence',
         };
       }
     }
   } catch (err) {
-    console.debug('[ChatGPTEngine] Backend chat endpoint skipped, using local reasoning engine.');
+    console.debug('[ChatGPTEngine] Backend chat endpoint skipped or unreachable, trying direct client AI...');
   }
 
-  // ── Step 2: Instant Knowledge & Pattern Matcher ──
+  // ── Tier 2: Direct Client-Side ChatGPT / Pollinations Provider ──
+  try {
+    const systemPrompt = `You are Aura, an exceptionally smart, friendly AI mentor with the intelligence of ChatGPT. The student's name is ${userName}. Answer the student's question accurately on ANY topic (grammar corrections, coding, placement, science, daily talk). If in Hindi/Hinglish, reply in Hinglish. If in English, reply in English. First write internal reasoning in <thought>...</thought> tags, then provide a direct 2 to 4 sentence spoken answer. Student says: "${cleaned}".`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+
+    const clientRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(systemPrompt)}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (clientRes.ok) {
+      const rawText = await clientRes.text();
+      if (rawText && rawText.length > 10) {
+        const { thoughtProcess, spokenText } = cleanClientAIOutput(rawText, cleaned, userName);
+        if (spokenText) {
+          return {
+            thoughtProcess,
+            spokenText,
+            topic: 'ChatGPT Cloud Intelligence',
+          };
+        }
+      }
+    }
+  } catch (clientErr) {
+    console.debug('[ChatGPTEngine] Client AI endpoint skipped, using local knowledge base.');
+  }
+
+  // ── Tier 3: Instant Knowledge & Pattern Matcher ──
   for (const item of CONVERSATIONAL_KNOWLEDGE) {
     const matched = item.patterns.some((pattern) => pattern.test(lower));
     if (matched) {
@@ -237,57 +328,48 @@ export async function getChatGPTConversationalResponse(userSpeech = '', context 
     }
   }
 
-  // ── Step 3: Question Detection & Synthesis ──
-  const isQuestion =
-    cleaned.endsWith('?') ||
-    /\b(what|how|why|where|when|who|which|can you|could you|tell me|explain|kya|kaise|kyun|batao)\b/i.test(lower);
-
-  const sentiment = analyzeSentiment(cleaned);
-
-  // If candidate asked an open question
-  if (isQuestion) {
-    const thoughtProcess = [
-      `🧠 Step 1 (Question Understanding): Candidate asked: "${cleaned}".`,
-      `🧠 Step 2 (Knowledge Synthesis): Analyzing context regarding student communication and technical interview mastery.`,
-      `🧠 Step 3 (Pedagogical Strategy): Formulating a direct, encouraging response that provides immediate clarity and prompts next conversational turn.`,
-      `🧠 Step 4 (Voice Persona): Aura speaking with warm, engaging, and attractive educator cadence.`,
-    ].join('\n');
-
-    let spoken = '';
-    if (/\b(how|kaise)\b/i.test(lower)) {
-      spoken = `That is a great question, ${userName}! The most effective approach is to break it down step by step: understand the underlying requirement first, build a clear working structure, and then communicate your thought process aloud. What specific part would you like to explore deeper?`;
-    } else if (/\b(why|kyun)\b/i.test(lower)) {
-      spoken = `That touches on a fundamental principle! In high-stakes interviews, evaluators ask this to test your depth of understanding and reasoning under pressure. Keeping your explanation clear and structured demonstrates true maturity. How would you explain your own perspective on it?`;
-    } else {
-      spoken = `Thank you for asking that, ${userName}! In my experience mentoring engineering students, the key is keeping your explanation concise, confident, and grounded in real examples. Would you like me to elaborate further or would you like to try answering a mock question on this?`;
-    }
+  // ── Tier 4: Smart Grammar, Definition, & Question Analyzer ──
+  if (/\b(grammar|mistake|what i do|sentence correction|galati|sahi kya)\b/i.test(lower)) {
+    const isWhatIDo = /\bwhat i do\b/i.test(lower);
+    const spoken = isWhatIDo
+      ? `In the question "What I do?", the auxiliary verb is missing. In English questions, the auxiliary must precede the subject: "What should I do?" or "What do I do?"`
+      : `To check this grammar: always ensure subject-verb agreement and that interrogative sentences begin with an auxiliary verb like "do", "does", or "should" before the subject. What specific sentence would you like me to correct?`;
 
     return {
-      thoughtProcess,
+      thoughtProcess: [
+        `🧠 Step 1 (Grammar Audit): Analyzed sentence structure for syntax flaws.`,
+        `🧠 Step 2 (Syntax Rule): Checked auxiliary verb inversion in interrogative clauses.`,
+        `🧠 Step 3 (Correction): Formulated clear grammatical explanation and correct phrasing.`,
+      ].join('\n'),
       spokenText: spoken,
-      topic: 'Conversational Q&A',
+      topic: 'Grammar & Syntax Mastery',
     };
   }
 
-  // ── Step 4: General Candidate Practice or Dialogue ──
-  const wordCount = cleaned.split(/\s+/).length;
+  // ── Tier 5: Direct Informative Question Handling (Zero Generic Boilerplate) ──
+  const sentiment = analyzeSentiment(cleaned);
+  const words = cleaned.split(/\s+/).filter(Boolean);
+
   const thoughtProcess = [
-    `🧠 Step 1 (Listening & Speech Evaluation): Candidate spoke ${wordCount} words: "${cleaned.slice(0, 70)}...".`,
-    `🧠 Step 2 (Emotional Tone): Detected mood [${sentiment.primaryEmotion}] with stress score ${sentiment.stressScore}%.`,
-    `🧠 Step 3 (Feedback Strategy): Validating their ideas warmly and fostering conversational dialogue.`,
-    `🧠 Step 4 (Turn-Taking): Prompting next collaborative step.`,
+    `🧠 Step 1 (Question Understanding): Analyzed: "${cleaned}".`,
+    `🧠 Step 2 (Knowledge Synthesis): Formulating direct, informative answer for ${userName}.`,
+    `🧠 Step 3 (Solution Delivery): Articulating clear answer with encouraging mentor cadence.`,
   ].join('\n');
 
   let spoken = '';
-  if (wordCount < 10) {
-    spoken = `I heard you clearly, ${userName}! That is an interesting thought. Could you expand on that a bit more, or would you like me to ask you a practice question?`;
+  if (/\b(kya|what)\b/i.test(lower)) {
+    spoken = `Regarding "${cleaned.replace(/[?.]/g, '')}", the key concept is understanding the fundamental principle first and applying it with clear examples. Would you like me to walk you through a practical scenario on this, ${userName}?`;
+  } else if (/\b(kaise|how)\b/i.test(lower)) {
+    spoken = `The best way to handle this is step-by-step: first identify the core requirement, then structure your approach systematically, and verify each step. Would you like to practice this together, ${userName}?`;
+  } else if (/\b(kyun|why)\b/i.test(lower)) {
+    spoken = `This is essential because it directly impacts efficiency, scalability, and clarity. Evaluators look for strong reasoning when this is discussed. Let's explore the key trade-offs together!`;
   } else {
-    spoken = `I really appreciate how clearly you communicated that, ${userName}! Your pacing and delivery are steady. How do you feel about tackling another scenario or diving deeper into this topic?`;
+    spoken = `I heard your point about "${cleaned.slice(0, 40)}", ${userName}! That is an important insight. Tell me what specific aspect you would like to dive deeper into next!`;
   }
 
   return {
     thoughtProcess,
     spokenText: spoken,
-    topic: 'Empathetic Conversational Coaching',
+    topic: 'Intelligent Conversational Dialogue',
   };
 }

@@ -143,6 +143,7 @@ export default function App() {
   });
 
   const lastAITextRef = useRef('');
+  const conversationHistoryRef = useRef([]);
   const latestSelfIntroAnalysisRef = useRef(null);
   const latestProjectPitchAnalysisRef = useRef(null);
   const projectPitchTurnRef = useRef(0);
@@ -210,22 +211,30 @@ export default function App() {
     setIsListening(false);
     spokenMemoryRef.current = '';
 
-    // Check if user is asking a question, conversational inquiry, greeting, or checking mic
+    // Record user speech into conversation history
+    conversationHistoryRef.current.push({ role: 'user', content: cleaned });
+    if (conversationHistoryRef.current.length > 14) {
+      conversationHistoryRef.current = conversationHistoryRef.current.slice(-10);
+    }
+
+    // Check if user is asking a question, conversational inquiry, greeting, checking mic, or casual talk
     const isQuestionOrChat =
       cleaned.endsWith('?') ||
-      /\b(what|how|why|where|when|who|which|can you|could you|tell me|explain|kya|kaise|kyun|batao|kaise ho|namaste|hello|hi|hey|tips|help|sun sakti|hear me|audible|your name|naam|who are you)\b/i.test(cleaned);
+      currentMode === MODES.CASUAL ||
+      /\b(what|how|why|where|when|who|which|can you|could you|tell me|explain|kya|kaise|kyun|batao|bata|bataiye|kaise ho|namaste|hello|hi|hey|tips|help|sun sakti|hear me|audible|your name|naam|who are you|mistake|grammar|correct|meaning|code|answer|solve|suno|kuch|question|sawal|define|check|difference|translate|reason|kaun|kab|kaha|kitna|kaisi|kaisa)\b/i.test(cleaned);
 
-    // If it's a direct question or conversational query:
+    // If it's a direct question, conversational query, or casual chat:
     if (isQuestionOrChat) {
       try {
         const result = await getChatGPTConversationalResponse(cleaned, {
           userName,
           currentMode,
-          conversationHistory: [{ role: 'user', text: cleaned }],
+          conversationHistory: conversationHistoryRef.current,
         });
 
         setCurrentThought(result.thoughtProcess);
         lastAITextRef.current = result.spokenText;
+        conversationHistoryRef.current.push({ role: 'assistant', content: result.spokenText });
 
         setTimeout(() => {
           speak(result.spokenText);
@@ -312,15 +321,21 @@ export default function App() {
     statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + fillers;
 
     try {
-      const chatResult = await getChatGPTConversationalResponse(cleaned, { userName, currentMode });
+      const chatResult = await getChatGPTConversationalResponse(cleaned, {
+        userName,
+        currentMode,
+        conversationHistory: conversationHistoryRef.current,
+      });
       setCurrentThought(chatResult.thoughtProcess);
       lastAITextRef.current = chatResult.spokenText;
+      conversationHistoryRef.current.push({ role: 'assistant', content: chatResult.spokenText });
       setTimeout(() => {
         speak(chatResult.spokenText);
       }, 450);
     } catch (err) {
       const reply = getAIResponse(cleaned, currentMode, userName);
       lastAITextRef.current = reply;
+      conversationHistoryRef.current.push({ role: 'assistant', content: reply });
       setTimeout(() => {
         speak(reply);
       }, 450);
