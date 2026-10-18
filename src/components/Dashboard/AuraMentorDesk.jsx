@@ -21,22 +21,22 @@ function RobotModel({ isSpeaking = false }) {
     const t = state.clock.getElapsedTime();
     if (groupRef.current) {
       // Continuous breathing up & down
-      groupRef.current.position.y = -1.05 + Math.sin(t * 2) * 0.015;
+      groupRef.current.position.y = -1.38 + Math.sin(t * 1.8) * 0.009;
       // Gentle side-to-side natural mentor engagement
-      groupRef.current.rotation.y = Math.sin(t * 1) * 0.04;
+      groupRef.current.rotation.y = Math.sin(t * 0.8) * 0.024;
       // Slight forward nod while listening
-      groupRef.current.rotation.x = Math.sin(t * 1.5) * 0.02;
+      groupRef.current.rotation.x = Math.sin(t * 1.1) * 0.010;
 
       // If speaking, add subtle head nod energy
       if (isSpeaking) {
-        groupRef.current.position.y += Math.sin(t * 6.5) * 0.008;
-        groupRef.current.rotation.x += Math.sin(t * 5.0) * 0.015;
+        groupRef.current.position.y += Math.sin(t * 7.0) * 0.005;
+        groupRef.current.rotation.x += Math.sin(t * 5.2) * 0.018;
       }
     }
   });
 
   return (
-    <group ref={groupRef} position={[0, -1.05, 0]} rotation={[0, 0, 0]} scale={[1.35, 1.35, 1.35]}>
+    <group ref={groupRef} position={[-0.04, -1.38, 0]} rotation={[0, 0, 0]} scale={[1.0, 1.0, 1.0]}>
       <primitive object={clone} />
     </group>
   );
@@ -113,18 +113,18 @@ export default function AuraMentorDesk({
       {/* ── MAIN 3D THREE.JS CANVAS ── */}
       <div className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden z-10 -mb-6">
         <Canvas
-          camera={{ position: [0, 0.35, 1.8], fov: 38 }}
+          camera={{ position: [0, 0.22, 1.45], fov: 38 }}
           gl={{ antialias: true, alpha: true }}
           className="w-full h-full"
         >
           {/* Studio Lighting Rig */}
-          <ambientLight intensity={1.2} />
+          <ambientLight intensity={1.25} />
           {/* Key Light */}
-          <directionalLight position={[3, 4, 3]} intensity={1.8} color="#ffffff" />
+          <directionalLight position={[2, 3, 3]} intensity={1.8} color="#ffffff" />
           {/* Cyber Cyan Rim Light */}
-          <pointLight position={[-2, 1, 1]} color="#00e5ff" intensity={2} />
+          <pointLight position={[-2, 1, 1]} color="#00e5ff" intensity={2.2} />
           {/* Soft fill accent */}
-          <pointLight position={[2, 0.8, 1.5]} color="#818cf8" intensity={0.9} />
+          <pointLight position={[2, 0.8, 1.5]} color="#818cf8" intensity={1.0} />
 
           {/* 3D Robot with Continuous useFrame Movement */}
           <Suspense fallback={<ModelLoadingFallback />}>
@@ -133,7 +133,7 @@ export default function AuraMentorDesk({
 
           {/* Gentle Floor / Desk Contact Shadow */}
           <ContactShadows
-            position={[0, -1.05, 0]}
+            position={[0, -0.45, 0]}
             opacity={0.65}
             scale={2.2}
             blur={1.8}
@@ -141,9 +141,9 @@ export default function AuraMentorDesk({
             color="#000000"
           />
 
-          {/* Smooth Subtle Interaction Orbit Control focused at [0, 0.35, 0] */}
+          {/* Smooth Subtle Interaction Orbit Control focused at [0, 0.22, 0] */}
           <OrbitControls
-            target={[0, 0.35, 0]}
+            target={[0, 0.22, 0]}
             enableZoom={false}
             enablePan={false}
             minPolarAngle={Math.PI / 2.3}

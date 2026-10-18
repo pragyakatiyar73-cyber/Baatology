@@ -163,34 +163,7 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
 
   return (
     <div className="relative w-full h-full bg-[#000000] overflow-hidden select-none flex items-center justify-center">
-      {/* ── Top-Left Floating Avatar Identity Pill ── */}
-      <div className="absolute top-6 left-6 z-30 pointer-events-auto flex items-center gap-2.5">
-        <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/85 border border-white/10 backdrop-blur-xl shadow-2xl">
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              isSpeaking
-                ? 'bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]'
-                : isListening
-                ? 'bg-emerald-400 animate-pulse shadow-[0_0_10px_#10b981]'
-                : isThinking
-                ? 'bg-indigo-400 animate-pulse shadow-[0_0_10px_#818cf8]'
-                : 'bg-cyan-400'
-            }`}
-          />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black text-white tracking-wide">{mentorName}</span>
-              <span className="text-[10px] font-bold text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-500/30 flex items-center gap-1">
-                <Smile className="w-2.5 h-2.5 text-cyan-400" />
-                <span>AI Robot Companion</span>
-              </span>
-            </div>
-            <span className="text-[10px] text-emerald-400 font-medium">
-              Zero Judgement • Direct Face-to-Face Conversation
-            </span>
-          </div>
-        </div>
-      </div>
+
 
       {/* ── Center Stage: Digital AI Robot Avatar on Pure Black ── */}
       <div className="relative w-full h-full flex items-center justify-center bg-[#000000]">
