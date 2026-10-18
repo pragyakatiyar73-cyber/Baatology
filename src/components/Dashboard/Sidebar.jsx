@@ -29,22 +29,8 @@ export default function Sidebar({
       isActive: currentView === 'dashboard',
     },
     {
-      id: 'presentation_studio',
-      label: 'AI Presentation Studio',
-      icon: Tv,
-      action: () => onNavigate('presentation_studio'),
-      isActive: currentView === 'presentation_studio',
-    },
-    {
-      id: 'mentorship',
-      label: 'Dual-Video Mentorship',
-      icon: Video,
-      action: () => onNavigate('mentorship'),
-      isActive: currentView === 'mentorship',
-    },
-    {
       id: 'gd_studio',
-      label: 'Group Discussion Studio',
+      label: 'Group Discussion',
       icon: Users,
       action: () => onNavigate('gd_studio'),
       isActive: currentView === 'gd_studio',
@@ -58,7 +44,7 @@ export default function Sidebar({
     },
     {
       id: MODES.PRESENTATION,
-      label: 'Project Presentation',
+      label: 'Presentation',
       icon: FileText,
       action: () => onStartArena(MODES.PRESENTATION),
       isActive: false,
@@ -146,15 +132,6 @@ export default function Sidebar({
             }`}
           />
           <span className="truncate">My Progress</span>
-        </button>
-
-        {/* Settings */}
-        <button
-          onClick={onOpenSettings}
-          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm text-[#475467] hover:bg-[#f9fafb] hover:text-[#1e1b4b] font-medium transition-all duration-150"
-        >
-          <Settings className="w-4 h-4 text-[#667085]" />
-          <span className="truncate">Settings</span>
         </button>
       </nav>
 

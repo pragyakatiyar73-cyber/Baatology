@@ -173,27 +173,27 @@ export default function Dashboard({
                   </div>
 
                   {/* Card 3: Project Presentation */}
-                  {/* Card 3: Project Presentation (2D AI Smart Presentation Studio) */}
+                  {/* Card 3: Project Presentation */}
                   <div
-                    onClick={() => onNavigate('presentation_studio')}
+                    onClick={() => onStartArena(MODES.PRESENTATION)}
                     className="bg-white rounded-[26px] p-6 border-2 border-[#d1fae5] shadow-xs hover:shadow-xl hover:border-[#10b981] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
                   >
                     <div className="w-14 h-14 rounded-full bg-[#10b981] flex items-center justify-center text-white shadow-md shadow-emerald-200 group-hover:scale-105 transition-transform">
                       <FileText className="w-7 h-7" />
                     </div>
                     <h3 className="text-base font-bold text-[#1e1b4b] mt-3">
-                      Project Presentation
+                      Presentation
                     </h3>
                     <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
-                      Present your slides on HD digital screen board with real-time AI mistake detection & voice navigation.
+                      Deliver your engineering project pitch with real-time STAR framework coaching & instant AI feedback.
                     </p>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onNavigate('presentation_studio');
+                        onStartArena(MODES.PRESENTATION);
                       }}
                       className="mt-3 w-9 h-9 rounded-full bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#059669] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
-                      title="Launch AI Smart Presentation Studio"
+                      title="Start Presentation Practice"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>
@@ -211,33 +211,40 @@ export default function Dashboard({
                         Ready to Improve?
                       </h3>
                       <p className="text-xs text-[#64748b] mt-0.5">
-                        Choose a feature above and start your first session now!
+                        Choose your session and start practicing today!
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <button
-                      onClick={() => onNavigate('presentation_studio')}
-                      className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
-                    >
-                      <Tv className="w-3.5 h-3.5" />
-                      <span>AI Presentation Studio</span>
-                    </button>
-                    <button
-                      onClick={() => onNavigate('mentorship')}
-                      className="px-5 py-2.5 rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold shadow-md shadow-teal-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
-                    >
-                      <Video className="w-3.5 h-3.5" />
-                      <span>Dual-Video Mentorship</span>
-                    </button>
-                    <button
                       onClick={() => onNavigate('gd_studio')}
-                      className="px-5 py-2.5 rounded-full bg-[#5b51e8] hover:bg-[#4a3ecc] text-white text-xs font-semibold shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                      className="px-4 py-2 rounded-full bg-[#5b51e8] hover:bg-[#4a3ecc] text-white text-xs font-semibold shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
                     >
                       <Users className="w-3.5 h-3.5" />
-                      <span>Start GD Studio</span>
+                      <span>Start GD</span>
                       <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onStartArena(MODES.PRESENTATION)}
+                      className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Presentation</span>
+                    </button>
+                    <button
+                      onClick={() => onStartArena(MODES.SELF_INTRO)}
+                      className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>Self Intro</span>
+                    </button>
+                    <button
+                      onClick={() => onStartArena(MODES.CASUAL)}
+                      className="px-4 py-2 rounded-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md shadow-purple-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Casual Talk</span>
                     </button>
                   </div>
                 </div>
