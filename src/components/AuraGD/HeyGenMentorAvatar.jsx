@@ -1,6 +1,7 @@
 import React, { useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import FemaleMentor3DAvatar from '../Mentorship/FemaleMentor3DAvatar';
 import { Volume2, Bot } from 'lucide-react';
+import { getBestFemaleVoice, configureFemaleUtterance } from '../../utils/femaleVoiceManager';
 
 /**
  * HeyGenMentorAvatar (3D Photorealistic AI Mentor)
@@ -42,20 +43,13 @@ const HeyGenMentorAvatar = forwardRef(function HeyGenMentorAvatar(
 
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.05;
+      configureFemaleUtterance(utterance);
 
-      const voices = window.speechSynthesis.getVoices();
-      const naturalVoice = voices.find(
-        (v) =>
-          v.lang.startsWith('en') &&
-          (v.name.includes('Natural') ||
-            v.name.includes('Google') ||
-            v.name.includes('Samantha') ||
-            v.name.includes('Victoria') ||
-            v.name.includes('Zira'))
-      );
-      if (naturalVoice) utterance.voice = naturalVoice;
+      const femaleVoice = getBestFemaleVoice();
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+        if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
+      }
 
       utterance.onstart = () => {
         onSpeechStart?.();

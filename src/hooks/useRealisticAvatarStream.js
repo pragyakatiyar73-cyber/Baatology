@@ -6,6 +6,7 @@ import StreamingAvatar, {
   TaskType,
   VoiceEmotion,
 } from '@heygen/streaming-avatar';
+import { getBestFemaleVoice, configureFemaleUtterance } from '../utils/femaleVoiceManager';
 
 /**
  * useRealisticAvatarStream
@@ -198,20 +199,13 @@ export function useRealisticAvatarStream({
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.02;
+        configureFemaleUtterance(utterance);
 
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(
-          (v) =>
-            v.lang.startsWith('en') &&
-            (v.name.includes('Natural') ||
-              v.name.includes('Samantha') ||
-              v.name.includes('Google') ||
-              v.name.includes('Victoria') ||
-              v.name.includes('Zira'))
-        );
-        if (preferred) utterance.voice = preferred;
+        const preferred = getBestFemaleVoice();
+        if (preferred) {
+          utterance.voice = preferred;
+          if (preferred.lang) utterance.lang = preferred.lang;
+        }
 
         utterance.onend = () => {
           setAvatarState('listening');

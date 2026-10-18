@@ -23,6 +23,7 @@ import {
 import PriyaAvatar from './PriyaAvatar';
 import WebcamHUD from './WebcamHUD';
 import SpeechBiomarkersPanel from './SpeechBiomarkersPanel';
+import { getBestFemaleVoice, configureFemaleUtterance } from '../../utils/femaleVoiceManager';
 import ScorecardModal from './ScorecardModal';
 import SettingsModal from './SettingsModal';
 
@@ -220,19 +221,12 @@ export default function StudentPracticeRoom({ onBackToDashboard }) {
     setPriyaSpeechText(textToSpeak);
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.05; // Friendly, clear mentor tone
-    utterance.lang = 'en-US';
+    configureFemaleUtterance(utterance);
 
-    // Pick best available voice
-    const voices = window.speechSynthesis.getVoices();
-    const naturalVoice = voices.find(
-      (v) =>
-        (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Zira')) &&
-        v.lang.startsWith('en')
-    );
-    if (naturalVoice) {
-      utterance.voice = naturalVoice;
+    const femaleVoice = getBestFemaleVoice();
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
+      if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
     }
 
     utterance.onend = () => {

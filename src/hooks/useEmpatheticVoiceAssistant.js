@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getEmpatheticAssistantResponse } from '../utils/empatheticAssistant';
 import { analyzeSentiment } from '../utils/sentimentAnalyzer';
+import { getBestFemaleVoice, configureFemaleUtterance } from '../utils/femaleVoiceManager';
 
 /**
  * useEmpatheticVoiceAssistant
@@ -102,21 +103,13 @@ export function useEmpatheticVoiceAssistant({
 
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.rate = 0.96; // Slightly slower, warm and relaxed pacing
-      utterance.pitch = 1.04;
+      configureFemaleUtterance(utterance);
 
-      // Select warm, natural voice
-      const voices = window.speechSynthesis.getVoices();
-      const naturalVoice = voices.find(
-        (v) =>
-          v.lang.startsWith('en') &&
-          (v.name.includes('Natural') ||
-            v.name.includes('Samantha') ||
-            v.name.includes('Google') ||
-            v.name.includes('Victoria') ||
-            v.name.includes('Zira'))
-      );
-      if (naturalVoice) utterance.voice = naturalVoice;
+      const femaleVoice = getBestFemaleVoice();
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+        if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
+      }
 
       utterance.onend = () => {
         setAssistantState('listening');

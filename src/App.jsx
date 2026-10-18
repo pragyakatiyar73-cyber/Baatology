@@ -40,6 +40,7 @@ import {
   CASUAL_ROBOT_WELCOME,
   analyzeCasualWellness,
 } from './utils/aiResponses';
+import { getChatGPTConversationalResponse } from './utils/chatGptAssistant';
 import { calculateScores } from './utils/scoreCalculator';
 import { recordNewSession } from './utils/progressHistory';
 
@@ -92,6 +93,8 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [currentThought, setCurrentThought] = useState('');
+  const [showThoughtDetails, setShowThoughtDetails] = useState(false);
   const [hasStartedVoice, setHasStartedVoice] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const [manualInputText, setManualInputText] = useState('');
@@ -188,8 +191,8 @@ export default function App() {
     }
   }, [rawSpeak]);
 
-  // ── AI Response Trigger
-  const triggerAIResponse = useCallback((speechText) => {
+  // ── AI Response Trigger (ChatGPT Voice Mode with Thought & Reasoning)
+  const triggerAIResponse = useCallback(async (speechText) => {
     // If AI is currently speaking, completely ignore any audio input
     if (isSpeaking) {
       console.debug('[Echo Filter] Discarded sound captured while AI was speaking');
@@ -210,6 +213,32 @@ export default function App() {
     setIsListening(false);
     spokenMemoryRef.current = '';
 
+    // Check if user is asking a question, conversational inquiry, greeting, or checking mic
+    const isQuestionOrChat =
+      cleaned.endsWith('?') ||
+      /\b(what|how|why|where|when|who|which|can you|could you|tell me|explain|kya|kaise|kyun|batao|kaise ho|namaste|hello|hi|hey|tips|help|sun sakti|hear me|audible|your name|naam|who are you)\b/i.test(cleaned);
+
+    // If it's a direct question or conversational query:
+    if (isQuestionOrChat) {
+      try {
+        const result = await getChatGPTConversationalResponse(cleaned, {
+          userName,
+          currentMode,
+          conversationHistory: [{ role: 'user', text: cleaned }],
+        });
+
+        setCurrentThought(result.thoughtProcess);
+        lastAITextRef.current = result.spokenText;
+
+        setTimeout(() => {
+          speak(result.spokenText);
+        }, 450);
+        return;
+      } catch (err) {
+        console.warn('[ChatGPT AI] Fallback:', err);
+      }
+    }
+
     // Mode-specific analysis: Project Presentation (Feature 6: STAR Framework & Tech Follow-up)
     if (currentMode === MODES.PRESENTATION) {
       const isFollowUp = projectPitchTurnRef.current >= 1;
@@ -221,10 +250,12 @@ export default function App() {
       const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically|you know)\b/g) || []).length;
       statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + fillers;
 
+      setCurrentThought(`🧠 Step 1 (STAR Architecture Audit): Analyzed technical pitch structure.\n🧠 Step 2 (Tech Stack): Checked framework alignment and problem-solving impact.\n🧠 Step 3 (Coaching): Formulated constructive placement feedback.`);
+
       setTimeout(() => {
         lastAITextRef.current = analysis.feedback;
         speak(analysis.feedback);
-      }, 380);
+      }, 450);
       return;
     }
 
@@ -241,10 +272,12 @@ export default function App() {
       latestGDAnalysisRef.current = analysis;
       gdTurnRef.current += 1;
 
+      setCurrentThought(`🧠 Step 1 (Debate Analysis): Evaluated argument structure on topic "${gdTopic}".\n🧠 Step 2 (Synthesis): Formulating supportive counter-perspective to stimulate active dialogue.\n🧠 Step 3 (Turn-Taking): Prompting next conversational point.`);
+
       setTimeout(() => {
         lastAITextRef.current = analysis.feedback;
         speak(analysis.feedback);
-      }, 380);
+      }, 450);
       return;
     }
 
@@ -254,36 +287,48 @@ export default function App() {
       latestSelfIntroAnalysisRef.current = analysis;
       statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + analysis.fillerCount;
 
+      setCurrentThought(`🧠 Step 1 (Elevator Pitch Audit): Assessed Present-Past-Future coverage.\n🧠 Step 2 (Vocal Flaws): Detected opening phrasing and ${analysis.fillerCount} hesitation fillers.\n🧠 Step 3 (Action Plan): Providing clear recommendations for campus placement rounds.`);
+
       setTimeout(() => {
         lastAITextRef.current = analysis.feedback;
         speak(analysis.feedback);
-      }, 380);
+      }, 450);
       return;
     }
 
     // Mode-specific analysis: Casual Talk & Empathetic Mental Wellness (Feature 8)
     if (currentMode === MODES.CASUAL) {
-      // Disable all numerical scoring, filler penalties, and STAR evaluation logic
       const analysis = analyzeCasualWellness(cleaned, statsRef.current.turnCount, userName);
       statsRef.current.turnCount++;
+
+      setCurrentThought(`🧠 Step 1 (Empathetic Listening): Detected student mood and emotional tone.\n🧠 Step 2 (Psychological Safety): Validating feelings with unconditional warmth.\n🧠 Step 3 (Caring Cadence): Providing gentle, grounded reassurance.`);
 
       setTimeout(() => {
         lastAITextRef.current = analysis.feedback;
         speak(analysis.feedback);
-      }, 380);
+      }, 450);
       return;
     }
 
-    // Track filler words count for standard modes
+    // General Conversational Fallback via ChatGPT Assistant
     const fillers = (cleaned.toLowerCase().match(/\b(umm|um|uh|uhh|like|actually|basically|you know)\b/g) || []).length;
     statsRef.current.fillersCount = (statsRef.current.fillersCount || 0) + fillers;
 
-    setTimeout(() => {
+    try {
+      const chatResult = await getChatGPTConversationalResponse(cleaned, { userName, currentMode });
+      setCurrentThought(chatResult.thoughtProcess);
+      lastAITextRef.current = chatResult.spokenText;
+      setTimeout(() => {
+        speak(chatResult.spokenText);
+      }, 450);
+    } catch (err) {
       const reply = getAIResponse(cleaned, currentMode, userName);
       lastAITextRef.current = reply;
-      speak(reply);
-    }, 380);
-  }, [currentMode, isSpeaking, speak, userName]);
+      setTimeout(() => {
+        speak(reply);
+      }, 450);
+    }
+  }, [currentMode, gdTopic, isSpeaking, speak, userName]);
 
   // ── Manual Text Input Fallback Handler
   const handleManualTextSubmit = useCallback((e) => {
@@ -795,7 +840,7 @@ export default function App() {
                     : isListening
                     ? 'bg-emerald-400 pulse-dot shadow-[0_0_8px_#10b981]'
                     : isThinking
-                    ? 'bg-sky-400 pulse-dot shadow-[0_0_8px_#38bdf8]'
+                    ? 'bg-purple-400 pulse-dot shadow-[0_0_8px_#c084fc]'
                     : 'bg-emerald-400'
                 }`}
               />
@@ -806,11 +851,11 @@ export default function App() {
                     : isListening
                     ? 'text-emerald-300'
                     : isThinking
-                    ? 'text-sky-300'
+                    ? 'text-purple-300'
                     : 'text-slate-300'
                 }
               >
-                {isSpeaking ? 'Aura Speaking...' : isListening ? '● Listening...' : '● Aura Voice Active'}
+                {isSpeaking ? 'Aura Speaking...' : isListening ? '● Listening...' : isThinking ? '🧠 Aura Thinking...' : '● Aura Voice Active'}
               </span>
             </div>
           </div>
@@ -920,13 +965,51 @@ export default function App() {
               </div>
             )}
 
+            {/* When AI is Thinking (ChatGPT Thought Process Mode) */}
+            {isThinking && (
+              <div className="px-5 py-3 rounded-2xl bg-black/90 border border-purple-500/60 backdrop-blur-xl shadow-2xl flex flex-col gap-1.5 animate-fade-in text-left max-w-lg w-full">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse shadow-[0_0_8px_#c084fc] shrink-0" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-purple-300">
+                    Aura Thinking (ChatGPT Mode)...
+                  </span>
+                </div>
+                <div className="text-xs text-purple-100/90 leading-relaxed font-mono whitespace-pre-line bg-purple-950/40 p-2.5 rounded-xl border border-purple-500/20 max-h-36 overflow-y-auto">
+                  {currentThought || '🧠 Step 1: Processing your speech...\n🧠 Step 2: Formulating intelligent response...'}
+                </div>
+              </div>
+            )}
+
             {/* When AI is speaking */}
             {isSpeaking && aiSpeechSubtitle && (
-              <div className="px-5 py-2.5 rounded-2xl bg-black/85 border border-cyan-500/40 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in text-center max-w-lg">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00e5ff] shrink-0" />
-                <p className="text-xs sm:text-sm font-semibold text-cyan-200 leading-snug">
-                  "{aiSpeechSubtitle}"
-                </p>
+              <div className="flex flex-col items-center gap-1.5 max-w-lg w-full">
+                <div className="w-full px-5 py-2.5 rounded-2xl bg-black/85 border border-cyan-500/40 backdrop-blur-xl shadow-2xl flex items-center gap-3 animate-fade-in text-center">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00e5ff] shrink-0" />
+                  <p className="text-xs sm:text-sm font-semibold text-cyan-200 leading-snug flex-1">
+                    "{aiSpeechSubtitle}"
+                  </p>
+                  {currentThought && (
+                    <button
+                      onClick={() => setShowThoughtDetails((prev) => !prev)}
+                      className="px-2 py-1 rounded-lg bg-purple-900/50 hover:bg-purple-800/60 border border-purple-400/40 text-[10px] font-bold text-purple-200 transition-all shrink-0 cursor-pointer"
+                      title="View Thought Process"
+                    >
+                      🧠 {showThoughtDetails ? 'Hide' : 'Thought'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Optional Expandable Thought Process while speaking */}
+                {showThoughtDetails && currentThought && (
+                  <div className="w-full px-4 py-2.5 rounded-xl bg-purple-950/90 border border-purple-400/40 text-left backdrop-blur-xl shadow-xl animate-fade-in">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block mb-1">
+                      🧠 Aura Internal Reasoning Chain:
+                    </span>
+                    <p className="text-[11px] text-purple-100/90 font-mono whitespace-pre-line leading-relaxed max-h-28 overflow-y-auto">
+                      {currentThought}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

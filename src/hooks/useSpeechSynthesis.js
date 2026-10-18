@@ -1,27 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
-
-// Prioritized list of high-quality neural voices
-const PREFERRED_VOICES = [
-  'Google US English',
-  'Google UK English Female',
-  'Microsoft Jenny Online (Natural) - English (United States)',
-  'Microsoft Aria Online (Natural) - English (United States)',
-  'Microsoft Zira - English (United States)',
-  'Samantha',
-  'Karen',
-  'Moira',
-  'Tessa',
-];
-
-function getBestVoice() {
-  const voices = window.speechSynthesis?.getVoices() || [];
-  for (const name of PREFERRED_VOICES) {
-    const v = voices.find((v) => v.name === name);
-    if (v) return v;
-  }
-  // Fallback: first English-language voice available
-  return voices.find((v) => v.lang?.startsWith('en')) || voices[0] || null;
-}
+import { getBestFemaleVoice, configureFemaleUtterance } from '../utils/femaleVoiceManager';
 
 /** Add micro-pauses at sentence boundaries for natural cadence */
 function addMicroPauses(text) {
@@ -31,7 +9,7 @@ function addMicroPauses(text) {
 }
 
 /**
- * Speech synthesis hook with natural high-fidelity voice selection,
+ * Speech synthesis hook with natural high-fidelity female educator voice selection,
  * freeze recovery, and guaranteed callback execution.
  */
 export function useSpeechSynthesis({ onStart, onEnd } = {}) {
@@ -65,13 +43,14 @@ export function useSpeechSynthesis({ onStart, onEnd } = {}) {
     if (timerRef.current) clearTimeout(timerRef.current);
 
     const utterance  = new SpeechSynthesisUtterance(addMicroPauses(text));
-    utterance.rate   = 1.02;
-    utterance.pitch  = 1.04;
-    utterance.volume = 1.0;
+    configureFemaleUtterance(utterance);
 
     const applyVoice = () => {
-      const voice = getBestVoice();
-      if (voice) utterance.voice = voice;
+      const femaleVoice = getBestFemaleVoice();
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+        if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
+      }
     };
 
     if (window.speechSynthesis.getVoices().length > 0) {

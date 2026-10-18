@@ -14,7 +14,7 @@ export function useSpeechRecognition({
   onInterim,
   onEnd,
   onError,
-  silenceDebounceMs = 1200,
+  silenceDebounceMs = 1600,
 } = {}) {
   const recognitionRef = useRef(null);
   const activeRef = useRef(false);
@@ -71,13 +71,8 @@ export function useSpeechRecognition({
       if (onResultRef.current) {
         onResultRef.current(combined);
       }
-    } else if (hadEnergy) {
-      // VAD energy fallback: user definitely spoke into mic, but STT server dropped transcript
-      const fallbackUtterance = "I shared my thoughts on this question.";
-      if (onResultRef.current) {
-        onResultRef.current(fallbackUtterance);
-      }
     }
+    // If combined is empty, do nothing! Never emit phantom fallback speech.
   }, []);
 
   // ── Setup Audio Level Meter via Web Audio API ──

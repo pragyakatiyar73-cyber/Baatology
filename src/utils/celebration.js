@@ -1,4 +1,5 @@
 import confetti from 'canvas-confetti';
+import { getBestFemaleVoice, configureFemaleUtterance } from './femaleVoiceManager';
 
 /**
  * Requirement 1: Full-Screen Fireworks/Confetti Blast
@@ -104,32 +105,14 @@ export function speakWelcomeGreeting(candidateName = 'Pragya') {
     const text = `Welcome, ${name}! Great to have you in AuraGD. Let's make you placement-ready today!`;
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.06; // warm and enthusiastic
-    utterance.volume = 1.0;
+    configureFemaleUtterance(utterance);
 
-    // Pick natural English voice if available
+    // Pick natural female English voice if available
     const setVoice = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (!voices || voices.length === 0) return;
-
-      const chosenVoice =
-        voices.find(
-          (v) =>
-            v.lang.startsWith('en') &&
-            (v.name.includes('Natural') ||
-              v.name.includes('Samantha') ||
-              v.name.includes('Google US English') ||
-              v.name.includes('Google UK English Female') ||
-              v.name.includes('Jenny') ||
-              v.name.includes('Zira') ||
-              v.name.includes('Victoria'))
-        ) ||
-        voices.find((v) => v.lang.startsWith('en')) ||
-        voices[0];
-
-      if (chosenVoice) {
-        utterance.voice = chosenVoice;
+      const femaleVoice = getBestFemaleVoice();
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+        if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
       }
     };
 

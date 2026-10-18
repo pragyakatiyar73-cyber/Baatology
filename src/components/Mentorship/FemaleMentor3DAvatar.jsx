@@ -69,10 +69,10 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
             mat.roughness = 0.05;
             mat.metalness = 0.15;
           } else if (child.name === 'Wolf3D_Hair' || mat.name === 'Wolf3D_Hair') {
-            // Original top bun hairstyle with natural strands
-            mat.roughness = 0.45;
-            mat.metalness = 0.12;
-            mat.color = new THREE.Color('#241a15'); // Natural dark brunette espresso bun
+            // Original natural hair with full texture highlights and natural strands
+            mat.roughness = 0.65;
+            mat.metalness = 0.05;
+            mat.color = new THREE.Color('#ffffff'); // Retain full original hair texture map with highlights
             mat.needsUpdate = true;
           } else if (mat.name === 'Wolf3D_Teeth') {
             mat.roughness = 0.22;
@@ -155,42 +155,40 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    // ── 2. Natural Seated Arm & Hand Posture (Hands resting flat on desk pad) ──
-    // Left Arm & Forearm reaching forward and resting flat on desk pad
+    // ── 2. Natural Seated Arm & Hand Rest Posture (Resting on Chair Armrests) ──
+    // Left Arm & Forearm resting naturally on left armrest
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-1.05); // Lower upper arm from A-pose down along ribcage
-      bones.LeftArm.rotateX(0.38);  // Reach forward toward desk surface
-      bones.LeftArm.rotateY(-0.10); // Natural alignment
+      bones.LeftArm.rotateZ(-0.35); // Lower arm naturally towards ribcage
+      bones.LeftArm.rotateX(0.18);  // Slightly forward
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(1.18); // Forearm extends forward horizontally on desk
-      bones.LeftForeArm.rotateZ(0.55); // Angle hand inward onto the desk blotter
+      bones.LeftForeArm.rotateX(0.72); // Bend forearm forward horizontally
+      bones.LeftForeArm.rotateZ(0.24); // Angle inward towards lap/armrest
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(-0.25); // Flattens the palm flat against the desk surface
-      bones.LeftHand.rotateZ(0.12);  // Keep hand straight along desk axis
+      bones.LeftHand.rotateX(-0.15); // Relaxed wrist
+      bones.LeftHand.rotateZ(0.10);
     }
 
-    // Right Arm & Forearm (Resting flat on desk, with gentle conversational micro-gestures)
-    const speakGesture = isSpeaking ? Math.sin(t * 2.8) * 0.025 : 0;
+    // Right Arm & Forearm (Symmetrical resting on right armrest with subtle live speaking gesture)
+    const speakGesture = isSpeaking ? Math.sin(t * 2.8) * 0.035 : 0;
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(1.05);
-      bones.RightArm.rotateX(0.38 + speakGesture * 0.25);
-      bones.RightArm.rotateY(0.10);
+      bones.RightArm.rotateZ(0.35);  // Lower arm naturally towards ribcage
+      bones.RightArm.rotateX(0.18 + speakGesture * 0.4);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(1.18 + speakGesture); // Subtle conversational cadence
-      bones.RightForeArm.rotateZ(-0.55);
+      bones.RightForeArm.rotateX(0.72 + speakGesture); // Natural conversational cadence
+      bones.RightForeArm.rotateZ(-0.24);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(-0.25 - speakGesture * 0.3);
-      bones.RightHand.rotateZ(-0.12);
+      bones.RightHand.rotateX(-0.15 - speakGesture * 0.5);
+      bones.RightHand.rotateZ(-0.10);
     }
 
     // Fingers remain in their natural relaxed hand rest pose
@@ -445,90 +443,6 @@ function ModernLightExecutiveChair() {
 }
 
 /**
- * ExecutiveCloseUpDesk
- * Sleek modern white conference desk placed close up with glowing cyan front edge strip
- */
-function ExecutiveCloseUpDesk() {
-  return (
-    <group position={[0, -0.05, 0.25]}>
-      {/* 1. Sleek Pure White Composite Tabletop */}
-      <RoundedBox
-        args={[1.40, 0.024, 0.28]}
-        radius={0.012}
-        smoothness={4}
-        position={[0, 0, 0]}
-        receiveShadow
-        castShadow
-      >
-        <meshStandardMaterial
-          color="#f8fafc" // Pure white architectural composite
-          roughness={0.18}
-          metalness={0.08}
-        />
-      </RoundedBox>
-
-      {/* 2. Signature Glowing Cyan LED Neon Light Strip along Front Beveled Edge */}
-      <mesh position={[0, -0.004, 0.142]}>
-        <boxGeometry args={[1.42, 0.008, 0.010]} />
-        <meshStandardMaterial
-          color="#00e5ff"
-          emissive="#00e5ff"
-          emissiveIntensity={2.8}
-          roughness={0.1}
-          metalness={0.1}
-        />
-      </mesh>
-
-      {/* 3. Subtle Cyber Navy Lower Trim */}
-      <mesh position={[0, -0.012, 0.138]}>
-        <boxGeometry args={[1.40, 0.008, 0.012]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.2} />
-      </mesh>
-
-      {/* 4. Executive Dark Charcoal Desk Blotter / Pad (Where hands rest flat) */}
-      <RoundedBox
-        args={[0.76, 0.004, 0.22]}
-        radius={0.008}
-        smoothness={4}
-        position={[0, 0.014, 0.01]}
-        receiveShadow
-      >
-        <meshStandardMaterial
-          color="#161820" // Dark Napa leather pad
-          roughness={0.50}
-          metalness={0.08}
-        />
-      </RoundedBox>
-
-      {/* Subtle Cyan Saddle Stitch Accent */}
-      <mesh position={[0, 0.017, 0.01]}>
-        <boxGeometry args={[0.74, 0.001, 0.20]} />
-        <meshStandardMaterial color="#38bdf8" metalness={0.7} roughness={0.3} wireframe />
-      </mesh>
-
-      {/* 5. Minimalist Pure White Ceramic Tech Cup with Cyan LED Accent (Left Side) */}
-      <group position={[-0.46, 0.012, 0.02]}>
-        {/* Saucer */}
-        <mesh position={[0, 0.004, 0]} receiveShadow>
-          <cylinderGeometry args={[0.040, 0.036, 0.006, 24]} />
-          <meshStandardMaterial color="#f1f5f9" roughness={0.2} metalness={0.05} />
-        </mesh>
-        {/* Cup Body */}
-        <mesh position={[0, 0.036, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.028, 0.024, 0.058, 24]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.15} metalness={0.08} />
-        </mesh>
-        {/* Subtle Cyan Rim Glow Ring */}
-        <mesh position={[0, 0.065, 0]}>
-          <ringGeometry args={[0.022, 0.028, 24]} />
-          <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={1.5} side={THREE.DoubleSide} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
-
-/**
  * 3D Loading Fallback
  */
 function ModelLoader() {
@@ -573,7 +487,7 @@ export default function FemaleMentor3DAvatar({
         <Canvas
           shadows
           camera={{
-            position: [0, 0.15, 0.96],
+            position: [0, 0.16, 1.02],
             fov: 38,
             near: 0.1,
             far: 20,
@@ -632,22 +546,19 @@ export default function FemaleMentor3DAvatar({
             />
           </Suspense>
 
-          {/* ── Sleek Close-Up White Conference Desk with Cyan LED Strip ── */}
-          <ExecutiveCloseUpDesk />
-
           {/* ── Floor / Chair Base Contact Shadows ── */}
           <ContactShadows
-            position={[0, -0.24, 0.20]}
-            opacity={0.45}
-            scale={2.4}
+            position={[0, -0.42, -0.20]}
+            opacity={0.48}
+            scale={2.2}
             blur={2.0}
             far={1.5}
             color="#000000"
           />
 
-          {/* ── Locked Camera Controls Focused at Eye Level (Approx. 3 feet / 1 meter) ── */}
+          {/* ── Locked Camera Controls Focused at Eye Level (0.8m - 1.2m Intimate Distance) ── */}
           <OrbitControls
-            target={[0, 0.12, -0.15]}
+            target={[0, 0.14, -0.15]}
             enableRotate={false}
             enableZoom={false}
             enablePan={false}
