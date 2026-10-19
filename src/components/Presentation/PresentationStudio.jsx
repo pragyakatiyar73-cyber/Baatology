@@ -760,7 +760,7 @@ export default function PresentationStudio({
                   {/* Speaking Pace (WPM) Badge */}
                   <div
                     className={`p-2 rounded-xl text-center border text-[11px] font-bold ${
-                      deliveryAnalytics.paceStatus !== 'Optimal'
+                      deliveryAnalytics.hasSpoken && deliveryAnalytics.paceStatus !== 'Optimal'
                         ? 'bg-orange-950/60 border-orange-500/40 text-orange-300'
                         : 'bg-[#0a1122] border-blue-900/40 text-emerald-300'
                     }`}
@@ -768,7 +768,7 @@ export default function PresentationStudio({
                     <span className="text-[9px] uppercase text-slate-400 block font-semibold">
                       Pace
                     </span>
-                    <span>{deliveryAnalytics.wpm} WPM</span>
+                    <span>{deliveryAnalytics.hasSpoken ? `${deliveryAnalytics.wpm} WPM` : '-- WPM'}</span>
                   </div>
 
                   {/* Content Alignment Badge */}
@@ -776,7 +776,7 @@ export default function PresentationStudio({
                     <span className="text-[9px] uppercase text-slate-400 block font-semibold">
                       Alignment
                     </span>
-                    <span>{deliveryAnalytics.alignmentScore}% Match</span>
+                    <span>{deliveryAnalytics.hasSpoken ? `${deliveryAnalytics.alignmentScore}% Match` : '--'}</span>
                   </div>
 
                   {/* Confidence Badge */}
@@ -784,9 +784,15 @@ export default function PresentationStudio({
                     <span className="text-[9px] uppercase text-slate-400 block font-semibold">
                       Confidence
                     </span>
-                    <span>{deliveryAnalytics.confidenceScore}%</span>
+                    <span>{deliveryAnalytics.hasSpoken ? `${deliveryAnalytics.confidenceScore}%` : '--'}</span>
                   </div>
                 </div>
+
+                {!deliveryAnalytics.hasSpoken && (
+                  <p className="text-[10px] text-cyan-400/80 font-medium italic text-center pt-0.5">
+                    💡 Microphone active: start speaking to calculate live WPM &amp; confidence!
+                  </p>
+                )}
               </div>
 
               {/* Live Candidate Transcript Ticker */}
@@ -810,6 +816,7 @@ export default function PresentationStudio({
           qaResults={qaResults}
           presentationDuration={finalDuration || presentationSeconds}
           slideAnalysis={slideAnalysis}
+          slides={slides}
           pptFileName={uploadedFileName}
           onClose={() => {
             setShowScoreModal(false);
