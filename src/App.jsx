@@ -761,7 +761,7 @@ export default function App() {
       {/* ══════════════════════════════════════════════════════════════
           VIEWS: DASHBOARD / HISTORY
       ══════════════════════════════════════════════════════════════ */}
-      {currentView !== 'arena' && currentView !== 'practice' && currentView !== 'mentorship' && currentView !== 'presentation_studio' && currentView !== 'gd_studio' && (
+      {currentView !== 'arena' && currentView !== 'practice' && currentView !== 'mentorship' && currentView !== 'presentation_studio' && currentView !== 'gd_studio' && currentView !== 'self_intro_studio' && (
         <div className="w-full h-screen flex overflow-hidden">
           {/* Left Navigation Sidebar */}
           <Sidebar
