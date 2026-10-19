@@ -338,6 +338,50 @@ export function useGroupDiscussionSession({
     setIsMicActive((prev) => !prev);
   }, []);
 
+  // Replace seat with friend or reset back to AI
+  const replaceSeatWithFriend = useCallback(({ targetSeatId, name, college, avatar }) => {
+    setParticipants((prev) =>
+      prev.map((p) => {
+        if (p.id === targetSeatId) {
+          return {
+            ...p,
+            name: `${name} (Friend)`,
+            college: college || 'College Friend',
+            avatar: avatar || p.avatar,
+            isRealFriend: true,
+            badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+          };
+        }
+        return p;
+      })
+    );
+  }, []);
+
+  const resetSeatsToDefaultAI = useCallback(() => {
+    setParticipants([
+      {
+        id: 'student-1',
+        name: `${userName} (You)`,
+        seat: 'Student 1',
+        role: 'Candidate / Student',
+        perspective: 'Your Own Perspective',
+        college: 'Host Seat',
+        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=300&fit=crop&crop=faces',
+        isSpeaking: false,
+        isLocalUser: true,
+        speechSeconds: 25,
+        colorTheme: 'emerald',
+        badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      },
+      ...GD_AVATARS.map((av) => ({
+        ...av,
+        isLocalUser: false,
+        isSpeaking: false,
+        speechSeconds: 30,
+      })),
+    ]);
+  }, [userName]);
+
   // Toggle mute avatar voices
   const toggleAvatarVoiceMute = useCallback(() => {
     setIsAvatarVoiceMuted((prev) => {
@@ -380,5 +424,7 @@ export function useGroupDiscussionSession({
     },
     getFullAnalysisReport,
     toggleAvatarVoiceMute,
+    replaceSeatWithFriend,
+    resetSeatsToDefaultAI,
   };
 }

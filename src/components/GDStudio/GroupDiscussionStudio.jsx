@@ -20,9 +20,14 @@ import {
   Radio,
   Globe,
   Check,
+  UserPlus,
+  Clock,
+  Bot,
 } from 'lucide-react';
 
 import GDTopicModal from './GDTopicModal';
+import GDTopicPrepModal from './GDTopicPrepModal';
+import AddStudentModal from './AddStudentModal';
 import GDReviewAndPracticeModal from './GDReviewAndPracticeModal';
 import { useGroupDiscussionSession } from '../../hooks/useGroupDiscussionSession';
 
@@ -32,6 +37,8 @@ export default function GroupDiscussionStudio({
   onBackToDashboard,
 }) {
   const [showTopicModal, setShowTopicModal] = useState(false);
+  const [showPrepModal, setShowPrepModal] = useState(false);
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [typedArgument, setTypedArgument] = useState('');
 
@@ -60,6 +67,8 @@ export default function GroupDiscussionStudio({
     getFullAnalysisReport,
     toggleAvatarVoiceMute,
     selectTopic,
+    replaceSeatWithFriend,
+    resetSeatsToDefaultAI,
   } = useGroupDiscussionSession({ userName });
 
   const min = Math.floor(timerSeconds / 60);
@@ -71,6 +80,18 @@ export default function GroupDiscussionStudio({
     if (!typedArgument.trim()) return;
     submitManualArgument(typedArgument.trim());
     setTypedArgument('');
+  };
+
+  const handleTopicSelected = (newTopic) => {
+    selectTopic(newTopic);
+    // Open 5-Minute Topic Prep & Reading guide immediately on topic selection!
+    setShowPrepModal(true);
+  };
+
+  const handleAvatarTopicClick = () => {
+    setRandomAvatarChoiceTopic();
+    // Open 5-Minute Topic Prep & Reading guide immediately!
+    setShowPrepModal(true);
   };
 
   const handleOpenReviewModal = () => {
@@ -108,19 +129,30 @@ export default function GroupDiscussionStudio({
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
             </h1>
             <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
-              Student 1 (You), Student 2 (Rohan), Student 3 (Ananya), Student 4 (Vikram)
+              Student 1 (You) • Student 2 (Rohan) • Student 3 (Ananya) • Student 4 (Vikram)
             </span>
           </div>
         </div>
 
-        {/* Center: Active Topic Pill & Topic Selection Controls */}
+        {/* Center: Topic Selection & 5-Min Prep Button */}
         <div className="flex items-center gap-2 max-w-xl truncate px-2">
-          <div className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-[#141b2d] border border-blue-500/20 text-xs">
+          {/* Active Topic Pill */}
+          <div className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-[#141b2d] border border-blue-500/20 text-xs">
             <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             <span className="font-semibold text-slate-200 truncate max-w-xs">{topic?.title}</span>
           </div>
 
-          {/* Button 1: Student Topic De (Apna Topic Do) */}
+          {/* 5-Min Reading Prep Sheet Button */}
+          <button
+            onClick={() => setShowPrepModal(true)}
+            className="px-3 py-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+            title="Open 5-Minute Topic Reading & Points Prep Guide"
+          >
+            <Clock className="w-3.5 h-3.5 text-emerald-400" />
+            <span>📖 5-Min Prep Points</span>
+          </button>
+
+          {/* Student Topic De Button */}
           <button
             onClick={() => setShowTopicModal(true)}
             className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
@@ -129,19 +161,29 @@ export default function GroupDiscussionStudio({
             <span>✍️ Student Topic</span>
           </button>
 
-          {/* Button 2: Avatar Topic De (AI Topic De) */}
+          {/* Avatar Topic De Button */}
           <button
-            onClick={setRandomAvatarChoiceTopic}
+            onClick={handleAvatarTopicClick}
             className="px-3 py-1.5 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-            title="Avatar Topic De: Let AI avatars suggest a trending topic"
+            title="Avatar Topic De: Let AI avatars suggest a trending topic and 5-min prep points"
           >
             <span>🎲 Avatar Topic</span>
           </button>
         </div>
 
-        {/* Right: Language Toggle, Sound, Timer, & "End GD & View Report" Button */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Language Toggle Pill (Hindi / Hinglish vs English) */}
+        {/* Right: Add Friend, Language Toggle, Sound, Timer & Finish Button */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Add Friend Button */}
+          <button
+            onClick={() => setShowAddStudentModal(true)}
+            className="px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+            title="Invite real friend via link or replace seat"
+          >
+            <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">+ Add Friend</span>
+          </button>
+
+          {/* Language Toggle Pill */}
           <button
             onClick={toggleLanguage}
             className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-white/10 hover:border-cyan-400/50 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
@@ -165,7 +207,7 @@ export default function GroupDiscussionStudio({
           </button>
 
           {/* Timer Badge */}
-          <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs font-mono font-bold text-slate-300 hidden sm:flex items-center gap-1.5">
+          <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs font-mono font-bold text-slate-300 hidden md:flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
             <span>{timeFormatted}</span>
           </div>
@@ -196,12 +238,18 @@ export default function GroupDiscussionStudio({
             <div className="flex items-center gap-2">
               <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
               <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
-                Roundtable Discussion (4 Seats)
+                Live Roundtable Discussion (4 Seats)
               </h2>
             </div>
-            <span className="text-[11px] text-slate-400 font-medium">
-              Click &lsquo;Ask Avatar&rsquo; or Speak into Mic
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowPrepModal(true)}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/30 cursor-pointer flex items-center gap-1"
+              >
+                <BookOpen className="w-3 h-3" />
+                <span>Read Prep Points (5 Min)</span>
+              </button>
+            </div>
           </div>
 
           {/* 2x2 Grid for the 4 Participants */}
@@ -209,6 +257,7 @@ export default function GroupDiscussionStudio({
             {participants.map((p) => {
               const isThisSpeaker = p.isSpeaking;
               const isStudent = p.isLocalUser;
+              const isFriend = p.isRealFriend;
 
               // Border glow styles based on active speaking
               let borderStyle = 'border-white/10 bg-[#141b2b]';
@@ -235,14 +284,27 @@ export default function GroupDiscussionStudio({
                   key={p.id}
                   className={`relative p-3.5 sm:p-4 rounded-3xl border transition-all duration-300 flex flex-col items-center justify-between text-center select-none ${borderStyle} ${glowEffect}`}
                 >
-                  {/* Top Badges: Seat Number & Role */}
+                  {/* Top Badges: Seat Number & Role / Friend Status */}
                   <div className="w-full flex items-center justify-between text-[10px] pb-2">
                     <span className="px-2 py-0.5 rounded-full font-extrabold bg-slate-900 border border-white/15 text-cyan-300 font-mono">
                       {p.seat || 'Seat'}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full font-bold border ${p.badgeColor}`}>
-                      {p.role}
-                    </span>
+
+                    {isStudent ? (
+                      <span className="px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        Host (You)
+                      </span>
+                    ) : isFriend ? (
+                      <span className="px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                        <Users className="w-2.5 h-2.5" />
+                        <span>Friend</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full font-bold bg-slate-900 border border-white/15 text-slate-300 flex items-center gap-1">
+                        <Bot className="w-2.5 h-2.5 text-purple-400" />
+                        <span>AI Peer</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Avatar Photo with Speaking Pulse Ring */}
@@ -283,7 +345,7 @@ export default function GroupDiscussionStudio({
                     </span>
                     {isThisSpeaker && (
                       <span className="text-[10px] text-emerald-400 font-bold animate-pulse block">
-                        ● Speaking Now
+                        ● Speaking in Simple English
                       </span>
                     )}
                   </div>
@@ -296,23 +358,34 @@ export default function GroupDiscussionStudio({
           <div className="p-3 rounded-2xl bg-[#141b2d] border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
             <div className="text-left">
               <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block">
-                Discussion Stance &amp; Turn Flow
+                Discussion Mode: Simple &amp; Easy English
               </span>
               <p className="text-xs text-slate-300 font-medium">
                 {activeSpeakerId === 'student-1'
                   ? 'Your turn to speak! Click mic or type your perspective.'
-                  : 'AI Avatar is presenting an argument. Listen with audio.'}
+                  : 'AI Avatar is speaking in simple, easy-to-understand English.'}
               </p>
             </div>
 
-            <button
-              onClick={promptNextAvatarToSpeak}
-              className="px-3.5 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/40 text-indigo-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-              title="Invite another avatar to respond or argue"
-            >
-              <span>👉 Ask Avatar to Speak</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAddStudentModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/15 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                title="Connect a real friend or reset to AI"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Friend / AI</span>
+              </button>
+
+              <button
+                onClick={promptNextAvatarToSpeak}
+                className="px-3.5 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/40 text-indigo-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                title="Invite another avatar to respond or argue"
+              >
+                <span>👉 Ask Avatar to Speak</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </section>
 
@@ -332,6 +405,7 @@ export default function GroupDiscussionStudio({
               <button
                 onClick={toggleLanguage}
                 className="text-[10px] font-bold text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded-lg border border-cyan-500/30 cursor-pointer"
+                title="Click to toggle between Hinglish and English voice capture"
               >
                 {language === 'hi-IN' ? '🇮🇳 Hinglish' : '🇬🇧 English'}
               </button>
@@ -489,12 +563,38 @@ export default function GroupDiscussionStudio({
       <GDTopicModal
         isOpen={showTopicModal}
         onClose={() => setShowTopicModal(false)}
-        onSelectTopic={selectTopic}
+        onSelectTopic={handleTopicSelected}
         currentTopic={topic}
       />
 
       {/* ══════════════════════════════════════════════════════════════
-          4. COMPREHENSIVE FEEDBACK & SENTENCE CORRECTION STUDIO
+          4. 5-MINUTE TOPIC PREPARATION & READING TIME MODAL
+             ("student ko 5min padne ke liye de jaye jisse usse topic ke
+              knowledge ho jaye and important points bhi")
+      ══════════════════════════════════════════════════════════════ */}
+      <GDTopicPrepModal
+        isOpen={showPrepModal}
+        onClose={() => setShowPrepModal(false)}
+        topic={topic}
+        onStartDiscussion={() => {
+          setShowPrepModal(false);
+          promptNextAvatarToSpeak();
+        }}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          5. ADD FRIEND OR USE AI AVATARS MODAL
+             ("student appne friend ko add kare and agar koi na ho toh avatar")
+      ══════════════════════════════════════════════════════════════ */}
+      <AddStudentModal
+        isOpen={showAddStudentModal}
+        onClose={() => setShowAddStudentModal(false)}
+        onAddStudent={replaceSeatWithFriend}
+        onResetSeatsToAI={resetSeatsToDefaultAI}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          6. COMPREHENSIVE FEEDBACK & SENTENCE CORRECTION STUDIO
              ("baad me jo bhi student ke mistake hti volcabary, grammar,
               fluency, point mistakes detect and dubara bo sentences bolwaye")
       ══════════════════════════════════════════════════════════════ */}
@@ -506,7 +606,7 @@ export default function GroupDiscussionStudio({
         userName={userName}
         onRestartGD={() => {
           setShowReviewModal(false);
-          setRandomAvatarChoiceTopic();
+          handleAvatarTopicClick();
         }}
         onBackToDashboard={onBackToDashboard}
       />

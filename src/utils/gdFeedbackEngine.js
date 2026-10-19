@@ -58,44 +58,88 @@ export const POPULAR_GD_TOPICS = [
     id: 'gd-ai-jobs',
     title: 'Will Artificial Intelligence replace software developers or augment them?',
     category: 'Technology & Career',
-    description: 'Debating AI coding agents, architectural complexity, developer productivity, and the future job landscape.',
-    keyPoints: [
-      'AI tools like GitHub Copilot and ChatGPT increase coding speed by up to 55%.',
-      'High-level architecture, business logic, and security verification still need human ingenuity.',
-      'Entry-level junior roles will face higher qualification standards.',
+    description: 'Debating AI coding tools, developer productivity, and the future of entry-level engineering jobs.',
+    simpleOverview: 'This topic discusses whether AI tools like ChatGPT and GitHub Copilot will take away programmers\' jobs or help them work faster and become more creative.',
+    pros: [
+      'High Productivity: AI helps developers write repetitive boilerplate code, test cases, and documentation in minutes.',
+      'Accessibility: Even beginners can learn to build applications faster by asking AI for code explanations.',
+      'Better Focus: Programmers can spend more time on complex business logic and system design rather than syntax bugs.',
+    ],
+    cons: [
+      'Fresher Hiring Risk: Companies may hire fewer entry-level junior developers if senior engineers do more with AI.',
+      'Weak Fundamentals: Relying on AI without understanding underlying algorithms can lead to insecure and buggy code.',
+      'Over-Dependence: If AI systems fail or hallucinate wrong answers, developers who don\'t know core basics cannot debug them.',
+    ],
+    starterLines: [
+      'In my opinion, AI will not replace good software developers, but developers who use AI will replace those who don\'t.',
+      'I believe AI is an assistant, not a full replacement, because human logic and critical thinking are still needed.',
+      'While AI helps in coding speed, my biggest concern is how fresh college graduates will get their first job experience.',
     ],
   },
   {
     id: 'gd-wfh-vs-office',
     title: 'Remote Work vs Return-to-Office: What truly drives long-term innovation?',
     category: 'Workplace & Culture',
-    description: 'Weighing employee flexibility, work-life balance, serendipitous hallway collaboration, and corporate culture.',
-    keyPoints: [
-      'Remote work saves 2-3 hours of daily commute and expands talent access globally.',
-      'In-person spontaneous interactions spark faster creative breakthroughs.',
-      'Hybrid model provides a balanced middle ground for team bonding and deep focus.',
+    description: 'Weighing employee flexibility, work-life balance, spontaneous hallway collaboration, and corporate culture.',
+    simpleOverview: 'This topic evaluates whether working from home is better for productivity and life, or if coming to the office in person is needed for team bonding and learning.',
+    pros: [
+      'Zero Commute: Saves 2 to 3 hours of tiring daily travel, giving employees more time for health, family, and rest.',
+      'Global Opportunities: Talented engineers from Tier-2 and Tier-3 cities can work for top international companies without relocating.',
+      'High Focus: Deep coding and solo tasks often happen faster without noisy office interruptions.',
+    ],
+    cons: [
+      'Less Mentorship for Freshers: New college graduates learn much faster by sitting next to seniors and watching them solve problems.',
+      'Lack of Spontaneous Ideas: Creative brainstorms and accidental hallway chats rarely happen over scheduled video calls.',
+      'Burnout & Isolation: When working from the bedroom, the boundary between work and personal life often gets blurred.',
+    ],
+    starterLines: [
+      'I would like to support the hybrid model, as it gives the flexibility of remote work alongside in-person collaboration.',
+      'From a student perspective, office interaction is crucial in the first two years of a career to build a strong network.',
+      'Remote work has proven that productivity does not drop, provided teams have clear goals and transparent communication.',
     ],
   },
   {
     id: 'gd-ev-transition',
     title: 'Electric Vehicles: Is India ready for a 100% transition by 2035?',
     category: 'Economy & Sustainability',
-    description: 'Examining charging infrastructure, battery supply chains, grid load, and consumer affordability.',
-    keyPoints: [
-      'Drastic reduction in urban air pollution and crude oil import reliance.',
-      'Charging infrastructure outside Tier-1 cities remains severely underdeveloped.',
-      'Initial purchase cost of EV battery replacement remains a concern for budget buyers.',
+    description: 'Examining charging infrastructure, battery costs, power grid capacity, and consumer affordability.',
+    simpleOverview: 'This topic looks at whether India can replace all petrol and diesel cars/bikes with electric vehicles by 2035, considering charging points, battery prices, and power supply.',
+    pros: [
+      'Clean Air & Health: Reduces severe air pollution in major Indian cities and cuts oil import bills by billions of dollars.',
+      'Lower Running Cost: Running an EV costs less than ₹1 per kilometer compared to ₹7-8 for petrol vehicles.',
+      'Local Manufacturing Boost: Growing EV battery and motor manufacturing under \'Make in India\' creates new engineering jobs.',
+    ],
+    cons: [
+      'Charging Infrastructure Gap: Outside Tier-1 metro cities and highways, public fast-charging stations are still very rare.',
+      'High Initial Purchase Price: EV battery replacements after 5-7 years are expensive, making budget consumers hesitant.',
+      'Grid Load & Coal Power: If our electricity still comes from burning coal, EVs are simply shifting pollution from tailpipes to power plants.',
+    ],
+    starterLines: [
+      'In my view, while two-wheelers and city buses can transition fast, a 100% switch for commercial trucks and rural areas will take longer.',
+      'The biggest hurdle today is not vehicle technology, but building charging stations across highways and smaller towns.',
+      'I believe government subsidies and battery-swapping stations will be the game changer for EV adoption in India.',
     ],
   },
   {
     id: 'gd-social-media',
-    title: 'Social Media Algorithms: Community building or mental health crisis?',
+    title: 'Social Media: Connecting people or creating digital isolation?',
     category: 'Society & Psychology',
-    description: 'Analyzing global connectivity, polarization, attention spans, and algorithmic dopamine loops among youth.',
-    keyPoints: [
-      'Empowers independent creators, democratic discourse, and global professional networking.',
-      'Surge in teenage anxiety, shortening attention spans, and echo chamber confirmation bias.',
-      'Need for ethical algorithm regulation and digital wellbeing education.',
+    description: 'Analyzing global connectivity, polarization, attention spans, and genuine real-world empathy among youth.',
+    simpleOverview: 'This topic debates whether apps like Instagram, LinkedIn, and YouTube bring people closer together or make teenagers feel lonely, distracted, and anxious.',
+    pros: [
+      'Instant Global Reach: Connects students with global mentors, study resources, campus opportunities, and job openings.',
+      'Creator Economy: Millions of young creators, educators, and small businesses earn their livelihood through social media.',
+      'Community Building: People with rare hobbies or specialized tech interests can easily find supportive peer communities.',
+    ],
+    cons: [
+      'Addictive Algorithms: Endless scrolling feeds reduce human attention spans and hurt students\' focus on studies and exams.',
+      'Comparison & Anxiety: Constantly watching others\' highlight reels leads to FOMO, low self-esteem, and sleep deprivation.',
+      'Shallow Relationships: Having hundreds of online followers does not replace real face-to-face emotional support.',
+    ],
+    starterLines: [
+      'In my opinion, social media is a powerful tool; whether it connects or isolates depends on how consciously we use it.',
+      'I believe social media has made global networking effortless, but excessive passive scrolling hurts mental health.',
+      'To build a healthy relationship with technology, digital wellness and time boundaries must be practiced by students.',
     ],
   },
   {
@@ -103,13 +147,65 @@ export const POPULAR_GD_TOPICS = [
     title: 'Digital Payments & UPI: Blessing for the common man or cybersecurity hazard?',
     category: 'Fintech & Banking',
     description: 'Evaluating financial inclusion, ease of micro-transactions, digital divide, and cyber financial fraud.',
-    keyPoints: [
-      'India processes over 13 billion UPI transactions monthly, empowering street vendors to large retailers.',
-      'Zero MDR fee challenges and transaction failure rates during server downtimes.',
-      'Rising phishing scams and digital financial literacy gap among rural populations.',
+    simpleOverview: 'This topic explores how UPI and phone payments have made daily shopping simple in India, but also highlights rising cyber scams and server failure risks.',
+    pros: [
+      'Unmatched Convenience: Even a ₹5 tea or vegetable purchase can be paid instantly with a QR code scan without loose change.',
+      'Financial Inclusion: Street vendors and small shopkeepers now have digital credit histories, making bank loans accessible.',
+      'Transparency: Reduces black money and cash leakages while increasing direct benefit transfers to citizens.',
+    ],
+    cons: [
+      'Cyber Fraud & Phishing: Innocent and rural citizens often fall victim to fake payment links, QR code scams, and OTP fraud.',
+      'Server Failures: When bank servers go down during peak shopping hours, transactions get stuck and cause distress.',
+      'Privacy Concerns: Every single purchase is logged and tracked, raising questions about data security and financial profiling.',
+    ],
+    starterLines: [
+      'I strongly believe UPI is one of India\'s greatest technological innovations, making daily life hassle-free for everyone.',
+      'While digital convenience is unmatched, banks and police must step up consumer awareness against cyber fraud.',
+      'In my view, we must keep cash and digital options both active so no citizen gets stranded during server downtime.',
     ],
   },
 ];
+
+/**
+ * Returns complete 5-Minute Topic Prep Guide for any topic (Popular or Custom)
+ */
+export function getTopicPrepGuide(topicObj = {}) {
+  const title = topicObj.title || 'General Discussion Topic';
+  const found = POPULAR_GD_TOPICS.find((t) => t.id === topicObj.id || t.title === title);
+
+  if (found) {
+    return {
+      title: found.title,
+      category: found.category,
+      simpleOverview: found.simpleOverview,
+      pros: found.pros,
+      cons: found.cons,
+      starterLines: found.starterLines,
+    };
+  }
+
+  // Generates intelligent, simple points for custom student topics
+  return {
+    title: title,
+    category: topicObj.category || 'Custom Discussion Topic',
+    simpleOverview: topicObj.description || `This discussion focuses on analyzing the opportunities, practical challenges, and real-world impact of ${title}.`,
+    pros: [
+      `Opportunity & Growth: Implementing progressive ideas on ${title} can improve speed, efficiency, and positive outcomes.`,
+      `Modern Relevance: Addressing ${title} helps students and organizations stay aligned with current industry standards.`,
+      `Practical Benefits: Encourages constructive teamwork and opens up fresh perspectives for problem solving.`,
+    ],
+    cons: [
+      `Implementation Challenges: Budget constraints, infrastructure readiness, and setup time can slow down progress.`,
+      `Risk of Imbalance: Moving too fast without proper guidelines can lead to unintended complications.`,
+      `Need for Training: People require proper awareness, education, and support to adapt comfortably.`,
+    ],
+    starterLines: [
+      `I would like to initiate by stating that ${title} is a very relevant topic in today's context with both advantages and challenges.`,
+      `In my opinion, the strongest point in favor of this is the potential for long-term efficiency and growth.`,
+      `While I see the benefits, I also believe we must address practical bottlenecks before drawing conclusions.`,
+    ],
+  };
+}
 
 /**
  * Returns a random popular GD topic (Avatar topic de)
@@ -120,38 +216,40 @@ export function getRandomAvatarTopic() {
 }
 
 /**
- * Generates an intelligent argument for an avatar responding to the discussion
+ * Generates an intelligent argument in SIMPLE, STUDENT-FRIENDLY ENGLISH
  */
 export function generateAvatarArgument(avatarId, topicTitle, studentSpeech = '', studentName = 'Pragya') {
   const cleanedSpeech = (studentSpeech || '').trim();
   const lower = cleanedSpeech.toLowerCase();
 
-  // Avatar-specific personalized arguments
+  // 1. Rohan Sharma (Student 2 - Tech Optimist, simple friendly English)
   if (avatarId === 'rohan') {
     if (lower.includes('agree') || lower.includes('yes') || lower.includes('good') || lower.includes('better')) {
-      return `I completely align with ${studentName}'s perspective on ${topicTitle}. If we examine technological precedent, early adopters always reap massive competitive advantages. By scaling this rapidly, we unlock unmatched efficiency and innovation for all stakeholders.`;
+      return `I completely agree with ${studentName}! Technology helps us work so much faster and makes things simple. For example, modern tools help developers and students finish projects in hours instead of weeks. If we adopt this early, it gives us a huge advantage in our careers. What do you think, team?`;
     }
     if (lower.includes('risk') || lower.includes('problem') || lower.includes('bad') || lower.includes('cost')) {
-      return `While I respect the cautionary points raised by ${studentName}, history shows that every breakthrough faces early resistance. The key is not to halt progress, but to innovate our way through the bottlenecks. On ${topicTitle}, speed and iteration will overcome these initial friction points.`;
+      return `That is a fair concern raised by ${studentName}, but every new technology has some initial challenges. Instead of stopping progress, we should learn how to manage these risks. With time and better tools, these problems can definitely be solved.`;
     }
-    return `Adding to the conversation on ${topicTitle}, we cannot ignore how rapidly global benchmarks are evolving. From an innovation standpoint, adopting modern frameworks gives teams a 10x multiplier in output and quality.`;
+    return `Adding to what ${studentName} just said about ${topicTitle}, I feel innovation is always the way forward. In college and jobs, using modern tools boosts our productivity by at least two times. We should embrace it with an open mindset.`;
   }
 
+  // 2. Ananya Roy (Student 3 - Balanced Analyst, clear thoughtful English)
   if (avatarId === 'ananya') {
     if (cleanedSpeech.length > 0) {
-      return `That is a very thoughtful argument by ${studentName}. However, to make this sustainable, we must look at empirical data and human impact. On ${topicTitle}, technological acceleration must be accompanied by ethical guardrails and continuous user feedback, otherwise we risk widespread user churn.`;
+      return `That is a really good point by ${studentName}. But along with speed, we also need to think about quality and human empathy. If we rely too much on technology, students might miss out on understanding basic core concepts. So I feel a balanced, step-by-step approach is the smartest way.`;
     }
-    return `Looking at ${topicTitle} through an analytical lens, empirical studies indicate that a phased hybrid strategy yields 40% better adoption than abrupt extremes. We should focus on measurable KPIs and inclusivity before drawing hard conclusions.`;
+    return `Looking at ${topicTitle} from a practical angle, we cannot look at only one side. Recent studies show that a hybrid method—combining human judgment with smart tools—always gives the most reliable results. We should look at both pros and cons before deciding.`;
   }
 
+  // 3. Vikram Malhotra (Student 4 - Devil's Advocate, realistic challenging English)
   if (avatarId === 'vikram') {
     if (cleanedSpeech.length > 0) {
-      return `I would like to play Devil's Advocate here. While ${studentName} and Rohan make optimistic claims, what happens to ground realities and economic costs? On ${topicTitle}, if infrastructure readiness and cybersecurity fail, who takes accountability for the downside?`;
+      return `I want to bring in a ground reality check here. What ${studentName} and Rohan are saying sounds good in theory, but what about the costs and internet infrastructure in small towns? Not everyone has expensive devices or high-speed connectivity. Who takes care of that gap?`;
     }
-    return `Let's pause and challenge the baseline assumption regarding ${topicTitle}. Are we solving the root problem or merely treating superficial symptoms? Until we address capital expenditure and regulatory compliance, wide-scale adoption will face severe hurdles.`;
+    return `Let's pause and question the basic problem on ${topicTitle}. If automated tools do all the entry-level work, how will fresh college graduates get their first internship or job experience? Companies should train beginners rather than just replacing them.`;
   }
 
-  return `Building upon what was just highlighted about ${topicTitle}, balancing execution feasibility with strategic vision is essential for a productive group outcome.`;
+  return `Building upon what ${studentName} mentioned about ${topicTitle}, finding a practical balance between speed and ground reality is the key to a good group discussion.`;
 }
 
 /**
