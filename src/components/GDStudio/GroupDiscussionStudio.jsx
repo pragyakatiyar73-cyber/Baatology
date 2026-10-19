@@ -18,6 +18,8 @@ import {
   ChevronRight,
   Flame,
   Radio,
+  Globe,
+  Check,
 } from 'lucide-react';
 
 import GDTopicModal from './GDTopicModal';
@@ -43,9 +45,13 @@ export default function GroupDiscussionStudio({
     isMicActive,
     audioLevel,
     liveCandidateTranscript,
-    fillersDetected,
     isAvatarVoiceMuted,
     studentContributions,
+    language,
+    toggleLanguage,
+    permissionDenied,
+    retryListening,
+    commitSpeech,
     toggleMic,
     setCustomStudentTopic,
     setRandomAvatarChoiceTopic,
@@ -98,11 +104,11 @@ export default function GroupDiscussionStudio({
 
           <div>
             <h1 className="text-xs sm:text-sm font-black text-white tracking-tight flex items-center gap-2">
-              <span>GD Round (3 Avatars + You)</span>
+              <span>GD Studio (4 Students Roundtable)</span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
             </h1>
             <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
-              Rohan, Ananya, Vikram &amp; {userName}
+              Student 1 (You), Student 2 (Rohan), Student 3 (Ananya), Student 4 (Vikram)
             </span>
           </div>
         </div>
@@ -133,8 +139,18 @@ export default function GroupDiscussionStudio({
           </button>
         </div>
 
-        {/* Right: Sound Toggle, Timer, & "End GD & View Report" Button */}
+        {/* Right: Language Toggle, Sound, Timer, & "End GD & View Report" Button */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Language Toggle Pill (Hindi / Hinglish vs English) */}
+          <button
+            onClick={toggleLanguage}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-white/10 hover:border-cyan-400/50 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
+            title="Toggle Speech Recognition Language"
+          >
+            <Globe className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{language === 'hi-IN' ? '🇮🇳 Hinglish' : '🇬🇧 English'}</span>
+          </button>
+
           {/* Sound Toggle */}
           <button
             onClick={toggleAvatarVoiceMute}
@@ -180,7 +196,7 @@ export default function GroupDiscussionStudio({
             <div className="flex items-center gap-2">
               <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
               <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
-                Live Roundtable Discussion (4 Seats)
+                Roundtable Discussion (4 Seats)
               </h2>
             </div>
             <span className="text-[11px] text-slate-400 font-medium">
@@ -219,17 +235,14 @@ export default function GroupDiscussionStudio({
                   key={p.id}
                   className={`relative p-3.5 sm:p-4 rounded-3xl border transition-all duration-300 flex flex-col items-center justify-between text-center select-none ${borderStyle} ${glowEffect}`}
                 >
-                  {/* Top Badge: Role / Perspective */}
+                  {/* Top Badges: Seat Number & Role */}
                   <div className="w-full flex items-center justify-between text-[10px] pb-2">
+                    <span className="px-2 py-0.5 rounded-full font-extrabold bg-slate-900 border border-white/15 text-cyan-300 font-mono">
+                      {p.seat || 'Seat'}
+                    </span>
                     <span className={`px-2 py-0.5 rounded-full font-bold border ${p.badgeColor}`}>
                       {p.role}
                     </span>
-                    {isThisSpeaker && (
-                      <span className="flex items-center gap-1 font-bold text-emerald-400 animate-pulse">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span>Speaking</span>
-                      </span>
-                    )}
                   </div>
 
                   {/* Avatar Photo with Speaking Pulse Ring */}
@@ -251,21 +264,28 @@ export default function GroupDiscussionStudio({
                       }`}
                     >
                       {isStudent ? (
-                        isMicActive ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3 text-rose-400" />
+                        isMicActive ? <Mic className="w-3 h-3 text-emerald-300" /> : <MicOff className="w-3 h-3 text-rose-400" />
                       ) : (
                         <Volume2 className="w-3 h-3" />
                       )}
                     </div>
                   </div>
 
-                  {/* Participant Name & Perspective */}
+                  {/* Participant Name & College Info */}
                   <div className="space-y-0.5">
-                    <h3 className="text-xs sm:text-sm font-extrabold text-white tracking-wide">
-                      {p.name}
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-medium truncate max-w-[140px] sm:max-w-[180px]">
-                      {p.perspective}
-                    </p>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <h3 className="text-xs sm:text-sm font-extrabold text-white tracking-wide">
+                        {p.name}
+                      </h3>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-semibold block">
+                      {p.college || p.perspective}
+                    </span>
+                    {isThisSpeaker && (
+                      <span className="text-[10px] text-emerald-400 font-bold animate-pulse block">
+                        ● Speaking Now
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -308,9 +328,17 @@ export default function GroupDiscussionStudio({
                 Live Discussion Feed ({transcripts.length})
               </h2>
             </div>
-            <span className="text-[11px] text-slate-400">
-              {studentContributions.length} points by you
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleLanguage}
+                className="text-[10px] font-bold text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded-lg border border-cyan-500/30 cursor-pointer"
+              >
+                {language === 'hi-IN' ? '🇮🇳 Hinglish' : '🇬🇧 English'}
+              </button>
+              <span className="text-[11px] text-slate-400">
+                {studentContributions.length} points by you
+              </span>
+            </div>
           </div>
 
           {/* Scrollable Conversation Stream */}
@@ -335,7 +363,7 @@ export default function GroupDiscussionStudio({
                     <span className="font-extrabold flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-current" />
                       <span>{item.speakerName}</span>
-                      {item.role && <span className="text-slate-400 font-normal">({item.role})</span>}
+                      {item.seat && <span className="text-slate-400 font-semibold font-mono">[{item.seat}]</span>}
                     </span>
                     <span className="text-slate-400 font-mono">{item.timestamp}</span>
                   </div>
@@ -348,13 +376,39 @@ export default function GroupDiscussionStudio({
             })}
           </div>
 
+          {/* Permission Denied Alert Bar */}
+          {permissionDenied && (
+            <div className="p-3 rounded-2xl bg-rose-950/80 border border-rose-500/60 text-rose-200 text-xs flex items-center justify-between gap-2 shrink-0 animate-bounce">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Browser mic blocked! Please grant microphone access.</span>
+              </div>
+              <button
+                onClick={retryListening}
+                className="px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] cursor-pointer"
+              >
+                Allow Mic
+              </button>
+            </div>
+          )}
+
           {/* Live Student Speech Preview Bar */}
           {liveCandidateTranscript && (
-            <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-400/50 text-emerald-300 text-xs flex items-center gap-2 animate-pulse shrink-0">
-              <Mic className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="truncate italic font-medium">
-                Listening: &ldquo;{liveCandidateTranscript}&rdquo;
-              </span>
+            <div className="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-400/60 text-emerald-300 text-xs flex items-center justify-between gap-2 animate-pulse shrink-0 shadow-md shadow-emerald-500/20">
+              <div className="flex items-center gap-2 truncate">
+                <Mic className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="truncate italic font-medium">
+                  Hearing: &ldquo;{liveCandidateTranscript}&rdquo;
+                </span>
+              </div>
+              <button
+                onClick={commitSpeech}
+                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shrink-0 cursor-pointer flex items-center gap-1"
+                title="Send current speech immediately"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Done</span>
+              </button>
             </div>
           )}
 
@@ -403,6 +457,9 @@ export default function GroupDiscussionStudio({
                   <>
                     <Mic className="w-4 h-4 text-emerald-300" />
                     <span>{audioLevel > 14 ? 'Speaking Now...' : 'Mic Active (Speak Your Point)'}</span>
+                    {audioLevel > 5 && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping ml-1" />
+                    )}
                   </>
                 ) : (
                   <>
