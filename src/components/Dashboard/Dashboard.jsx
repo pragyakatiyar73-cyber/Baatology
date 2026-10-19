@@ -17,6 +17,7 @@ import {
 import { MODES } from '../../utils/aiResponses';
 import { getPracticeHistory } from '../../utils/progressHistory';
 import robotMascotImg from '../../assets/robot_mascot_transparent.png';
+import CommunicationProgressBarChart from './CommunicationProgressBarChart';
 
 
 export default function Dashboard({
@@ -315,54 +316,59 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* ── Feature 10 & 9: Date-Wise Progress Tracking (Full Width) ── */}
-        <div className="mt-4 p-6 rounded-3xl bg-white border border-[#e2e8f0] shadow-sm space-y-5 w-full">
-          {/* Celebratory Banner (Feature 9) */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#eff6ff] via-[#f5f3ff] to-[#ecfdf5] border border-[#e0e7ff] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl p-2 rounded-xl bg-white border border-indigo-100 shadow-xs">
-                🎉
-              </span>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#4f46e5] bg-[#eff0fe] px-2.5 py-0.5 rounded-full border border-indigo-200">
-                  Today's Win &amp; Positive Reinforcement
+        {/* ── Feature 10: Progress & Analytics Section ── */}
+        <div className="mt-4 space-y-6 w-full">
+          {/* Communication Progress Bar Chart (Matches Image 2) */}
+          <CommunicationProgressBarChart />
+
+          {/* Date-Wise Progress Tracking Table (Matches Image 1) */}
+          <div className="p-6 rounded-3xl bg-white border border-[#e2e8f0] shadow-sm space-y-5 w-full">
+            {/* Celebratory Banner (Feature 9) */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#eff6ff] via-[#f5f3ff] to-[#ecfdf5] border border-[#e0e7ff] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl p-2 rounded-xl bg-white border border-indigo-100 shadow-xs">
+                  🎉
                 </span>
-                <p className="text-xs sm:text-sm text-[#1e1b4b] font-medium leading-relaxed mt-1">
-                  {celebratoryText}
-                </p>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#4f46e5] bg-[#eff0fe] px-2.5 py-0.5 rounded-full border border-indigo-200">
+                    Today's Win &amp; Positive Reinforcement
+                  </span>
+                  <p className="text-xs sm:text-sm text-[#1e1b4b] font-medium leading-relaxed mt-1">
+                    {celebratoryText}
+                  </p>
+                </div>
               </div>
+
+              {onViewScorecard && (
+                <button
+                  onClick={onViewScorecard}
+                  className="px-4 py-1.5 rounded-xl bg-[#5b51e8] hover:bg-[#4a3ecc] text-white font-bold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
+                >
+                  View Full Scorecard
+                </button>
+              )}
             </div>
 
-            {onViewScorecard && (
+            {/* Progress Section Header with "+31% Growth 🔥" Badge */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h3 className="text-base font-bold text-[#1e1b4b] flex items-center gap-2">
+                  <span className="text-indigo-600">📈</span>
+                  <span>Date-Wise Progress &amp; Consistency Tracking</span>
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-300 shadow-xs flex items-center gap-1">
+                  +31% Growth 🔥
+                </span>
+              </div>
+
               <button
-                onClick={onViewScorecard}
-                className="px-4 py-1.5 rounded-xl bg-[#5b51e8] hover:bg-[#4a3ecc] text-white font-bold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
+                onClick={() => onNavigate('history')}
+                className="text-xs font-semibold text-[#5b51e8] hover:text-[#4338ca] transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
               >
-                View Full Scorecard
+                <span>View Full Journey Analytics</span>
+                <span>→</span>
               </button>
-            )}
-          </div>
-
-          {/* Progress Section Header with "+31% Growth 🔥" Badge */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h3 className="text-base font-bold text-[#1e1b4b] flex items-center gap-2">
-                <span>📈</span>
-                <span>Date-Wise Progress &amp; Consistency Tracking</span>
-              </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-300 shadow-xs flex items-center gap-1">
-                +31% Growth 🔥
-              </span>
             </div>
-
-            <button
-              onClick={() => onNavigate('history')}
-              className="text-xs font-semibold text-[#5b51e8] hover:text-[#4338ca] transition-colors flex items-center gap-1 shrink-0"
-            >
-              <span>View Full Journey Analytics</span>
-              <span>→</span>
-            </button>
-          </div>
 
           {/* Clean 6-Column Full-Width Light Table */}
           <div className="w-full overflow-hidden rounded-2xl border border-[#e2e8f0]">
@@ -462,7 +468,8 @@ export default function Dashboard({
             <span>Empirical breakdown of speech fluency, gaze stability, and hesitation reductions across sessions.</span>
           </p>
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    </main>
+  </div>
+);
 }
