@@ -186,3 +186,51 @@ export function fireGDFinishCelebration(candidateName = 'Pragya', onComplete) {
   }, 3500);
 }
 
+/**
+ * Requirement: Presentation & Q&A Completion Celebration
+ * - Multi-angle fireworks blast across viewport
+ * - Speaks personalized warm congratulations aloud
+ * - Automatically transitions to presentation feedback report
+ */
+export function firePresentationCelebration(candidateName = 'Pragya', onComplete) {
+  fireLoginCelebration();
+
+  setTimeout(() => {
+    confetti({
+      particleCount: 85,
+      spread: 110,
+      origin: { y: 0.6 },
+      zIndex: 99999,
+    });
+  }, 1200);
+
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const name = candidateName.trim() || 'Pragya';
+      const text = `Congratulations ${name}! You have successfully presented your project and answered the technical questions with great confidence! Opening your presentation feedback and sentence practice report now.`;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      configureFemaleUtterance(utterance);
+
+      const femaleVoice = getBestFemaleVoice();
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+        if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
+      }
+
+      utterance.onend = () => onComplete?.();
+      utterance.onerror = () => onComplete?.();
+
+      window.speechSynthesis.speak(utterance);
+      return;
+    } catch (e) {
+      console.warn('[Presentation Celebration] Speech failed:', e);
+    }
+  }
+
+  setTimeout(() => {
+    onComplete?.();
+  }, 3200);
+}
+

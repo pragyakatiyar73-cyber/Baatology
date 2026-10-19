@@ -174,9 +174,8 @@ export default function Dashboard({
                   </div>
 
                   {/* Card 3: Project Presentation */}
-                  {/* Card 3: Project Presentation */}
                   <div
-                    onClick={() => onStartArena(MODES.PRESENTATION)}
+                    onClick={() => onNavigate('presentation_studio')}
                     className="bg-white rounded-[26px] p-6 border-2 border-[#d1fae5] shadow-xs hover:shadow-xl hover:border-[#10b981] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
                   >
                     <div className="w-14 h-14 rounded-full bg-[#10b981] flex items-center justify-center text-white shadow-md shadow-emerald-200 group-hover:scale-105 transition-transform">
@@ -186,12 +185,12 @@ export default function Dashboard({
                       Presentation
                     </h3>
                     <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
-                      Deliver your engineering project pitch with real-time STAR framework coaching & instant AI feedback.
+                      Submit your project PPT, deliver slide-by-slide presentation, answer AI questions & get detailed feedback.
                     </p>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onStartArena(MODES.PRESENTATION);
+                        onNavigate('presentation_studio');
                       }}
                       className="mt-3 w-9 h-9 rounded-full bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#059669] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
                       title="Start Presentation Practice"
@@ -227,7 +226,7 @@ export default function Dashboard({
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => onStartArena(MODES.PRESENTATION)}
+                      onClick={() => onNavigate('presentation_studio')}
                       className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
                     >
                       <FileText className="w-3.5 h-3.5" />

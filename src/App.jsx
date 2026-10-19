@@ -445,6 +445,17 @@ export default function App() {
 
   // ── Enter Arena View ("kebal bo and me dheku")
   const handleStartArena = useCallback((modeId) => {
+    if (modeId === MODES.PRESENTATION) {
+      stopTTS();
+      setCurrentView('presentation_studio');
+      return;
+    }
+    if (modeId === MODES.GD) {
+      stopTTS();
+      setCurrentView('gd_studio');
+      return;
+    }
+
     unblockSpeechAutoplay();
     currentViewRef.current = 'arena';
     setCurrentMode(modeId);

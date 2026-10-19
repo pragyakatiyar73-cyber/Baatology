@@ -43,11 +43,11 @@ export default function Sidebar({
       isActive: false,
     },
     {
-      id: MODES.PRESENTATION,
+      id: 'presentation_studio',
       label: 'Presentation',
       icon: FileText,
-      action: () => onStartArena(MODES.PRESENTATION),
-      isActive: false,
+      action: () => onNavigate('presentation_studio'),
+      isActive: currentView === 'presentation_studio',
     },
     {
       id: MODES.CASUAL,
