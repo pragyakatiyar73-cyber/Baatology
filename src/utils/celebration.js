@@ -126,3 +126,63 @@ export function speakWelcomeGreeting(candidateName = 'Pragya') {
     console.error('[AuraGD Celebration] Voice synthesis error:', err);
   }
 }
+
+/**
+ * Requirement: GD Completion Celebration with Fireworks and AI Congratulations
+ * - Fires vibrant multi-angle fireworks and confetti across viewport
+ * - Speaks personalized warm congratulations aloud
+ * - Automatically transitions to the feedback report
+ */
+export function fireGDFinishCelebration(candidateName = 'Pragya', onComplete) {
+  // 1. Blast fireworks
+  fireLoginCelebration();
+
+  // Secondary delayed fireworks burst
+  setTimeout(() => {
+    confetti({
+      particleCount: 80,
+      spread: 100,
+      origin: { y: 0.6 },
+      zIndex: 99999,
+    });
+  }, 1200);
+
+  // 2. Speak AI congratulations
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const name = candidateName.trim() || 'Pragya';
+      const text = `Congratulations ${name}! You have successfully completed your 15-minute Group Discussion round with great confidence and active participation! Let's review your speech mistakes and sentence practice now.`;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      configureFemaleUtterance(utterance);
+
+      const setVoice = () => {
+        const femaleVoice = getBestFemaleVoice();
+        if (femaleVoice) {
+          utterance.voice = femaleVoice;
+          if (femaleVoice.lang) utterance.lang = femaleVoice.lang;
+        }
+      };
+
+      setVoice();
+      utterance.onend = () => {
+        onComplete?.();
+      };
+      utterance.onerror = () => {
+        onComplete?.();
+      };
+
+      window.speechSynthesis.speak(utterance);
+      return;
+    } catch (e) {
+      console.warn('[GD Celebration] Speech failed:', e);
+    }
+  }
+
+  // Fallback if speech not supported or finishes immediately
+  setTimeout(() => {
+    onComplete?.();
+  }, 3500);
+}
+

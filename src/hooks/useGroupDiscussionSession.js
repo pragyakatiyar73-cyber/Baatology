@@ -16,15 +16,15 @@ export function useGroupDiscussionSession({
 } = {}) {
   const [topic, setTopic] = useState(initialTopic);
   const [sessionStatus, setSessionStatus] = useState('running'); // 'idle' | 'running' | 'paused'
-  const [timerSeconds, setTimerSeconds] = useState(600); // 10:00 mins
+  const [timerSeconds, setTimerSeconds] = useState(900); // 15:00 minutes as requested
   const [activeSpeakerId, setActiveSpeakerId] = useState('student-1');
   const [isAvatarVoiceMuted, setIsAvatarVoiceMuted] = useState(false);
   const [isMicActive, setIsMicActive] = useState(true);
   const [liveCandidateTranscript, setLiveCandidateTranscript] = useState('');
   const [studentContributions, setStudentContributions] = useState([]);
 
-  // 4 Core Participants: 1 Student (Host) + 3 AI Avatars (Rohan, Ananya, Vikram)
-  // All 4 have distinct, realistic Indian college student personas and photos
+  // 5 Core Participants: 1 Student (Host) + 4 AI Peer Students (Rohan, Ananya, Vikram, Sneha)
+  // All 5 have distinct, realistic Indian college student personas and photos
   const [participants, setParticipants] = useState(() => [
     {
       id: 'student-1',
@@ -76,7 +76,7 @@ export function useGroupDiscussionSession({
     return () => clearInterval(timerIntervalRef.current);
   }, [sessionStatus]);
 
-  const resetTimer = useCallback(() => setTimerSeconds(600), []);
+  const resetTimer = useCallback(() => setTimerSeconds(900), []);
   const addMinutes = useCallback((mins = 2) => setTimerSeconds((prev) => prev + mins * 60), []);
 
   // ── 2. Avatar Speech Synthesis with Distinct Voices ──
@@ -149,7 +149,7 @@ export function useGroupDiscussionSession({
   // ── 3. Trigger an Avatar to Respond to Student's Speech ──
   const triggerAvatarResponse = useCallback(
     (lastStudentSpeech) => {
-      const avatarKeys = ['ananya', 'vikram', 'rohan'];
+      const avatarKeys = ['ananya', 'vikram', 'rohan', 'sneha'];
       const chosenAvatarId = avatarKeys[Math.floor(Math.random() * avatarKeys.length)];
       const avatarMeta = GD_AVATARS.find((a) => a.id === chosenAvatarId) || GD_AVATARS[0];
 
@@ -285,7 +285,7 @@ export function useGroupDiscussionSession({
         ],
       };
       setTopic(custom);
-      setTimerSeconds(600);
+      setTimerSeconds(900);
       setTranscripts([
         {
           id: Date.now(),
@@ -309,7 +309,7 @@ export function useGroupDiscussionSession({
   const setRandomAvatarChoiceTopic = useCallback(() => {
     const randomTopic = getRandomAvatarTopic();
     setTopic(randomTopic);
-    setTimerSeconds(600);
+    setTimerSeconds(900);
     setTranscripts([
       {
         id: Date.now(),
@@ -420,7 +420,7 @@ export function useGroupDiscussionSession({
     setRandomAvatarChoiceTopic,
     selectTopic: (t) => {
       setTopic(t);
-      setTimerSeconds(600);
+      setTimerSeconds(900);
     },
     getFullAnalysisReport,
     toggleAvatarVoiceMute,

@@ -51,6 +51,20 @@ export const GD_AVATARS = [
     colorTheme: 'amber',
     badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   },
+  {
+    id: 'sneha',
+    name: 'Sneha Patel',
+    seat: 'Student 5',
+    role: 'Solution Strategist',
+    perspective: 'Consensus & Practical Execution',
+    college: 'DTU Delhi',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces',
+    voicePitch: 1.12,
+    voiceRate: 1.0,
+    voiceGender: 'female',
+    colorTheme: 'teal',
+    badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+  },
 ];
 
 export const POPULAR_GD_TOPICS = [
@@ -247,6 +261,14 @@ export function generateAvatarArgument(avatarId, topicTitle, studentSpeech = '',
       return `I want to bring in a ground reality check here. What ${studentName} and Rohan are saying sounds good in theory, but what about the costs and internet infrastructure in small towns? Not everyone has expensive devices or high-speed connectivity. Who takes care of that gap?`;
     }
     return `Let's pause and question the basic problem on ${topicTitle}. If automated tools do all the entry-level work, how will fresh college graduates get their first internship or job experience? Companies should train beginners rather than just replacing them.`;
+  }
+
+  // 4. Sneha Patel (Student 5 - Solution Strategist, practical consensus English)
+  if (avatarId === 'sneha') {
+    if (cleanedSpeech.length > 0) {
+      return `I really appreciate the points made by ${studentName} and Vikram. To bridge the gap, my solution is a structured phased rollout. We should provide college level subsidized labs and mentorship first, so every student is well-equipped before full industry transformation occurs.`;
+    }
+    return `To build a realistic consensus on ${topicTitle}, we must focus on actionable solutions. Instead of debating extremes, having clear industry guidelines and academic training will ensure smooth adoption for everyone.`;
   }
 
   return `Building upon what ${studentName} mentioned about ${topicTitle}, finding a practical balance between speed and ground reality is the key to a good group discussion.`;
