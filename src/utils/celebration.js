@@ -186,13 +186,20 @@ export function fireGDFinishCelebration(candidateName = 'Pragya', onComplete) {
   }, 3500);
 }
 
+import { playApplauseSound } from './applauseAudio';
+
 /**
  * Requirement: Presentation & Q&A Completion Celebration
+ * - Real clapping / applause sound effect ("claping ke aawaz aaye")
  * - Multi-angle fireworks blast across viewport
  * - Speaks personalized warm congratulations aloud
  * - Automatically transitions to presentation feedback report
  */
 export function firePresentationCelebration(candidateName = 'Pragya', onComplete) {
+  // 1. Play authentic crowd applause & clapping sound
+  playApplauseSound(3.8);
+
+  // 2. Blast fireworks & confetti
   fireLoginCelebration();
 
   setTimeout(() => {

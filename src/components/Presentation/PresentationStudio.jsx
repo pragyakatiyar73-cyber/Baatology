@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Tv,
   Monitor,
@@ -24,18 +24,13 @@ import {
   HelpCircle,
   PlusCircle,
   FolderOpen,
+  Laptop,
 } from 'lucide-react';
 
-import {
-  INITIAL_EXECUTIVE_SLIDES,
-  POPULAR_PROJECT_TEMPLATES,
-  generateSlidesFromProjectDetails,
-  getProjectQuestions,
-  processPresentationFile,
-} from '../../utils/presentationSlideDeck';
+import { parsePPTXFile } from '../../utils/pptxParser';
+import { getProjectQuestions } from '../../utils/presentationSlideDeck';
 import { usePresentationVoiceController } from '../../hooks/usePresentationVoiceController';
 import PresentationScoreModal from './PresentationScoreModal';
-import SubmitProjectModal from './SubmitProjectModal';
 import PresentationQAPanel from './PresentationQAPanel';
 import { firePresentationCelebration } from '../../utils/celebration';
 
@@ -46,23 +41,78 @@ export default function PresentationStudio({
   // Session Phase: 'presentation' | 'qa_round'
   const [sessionPhase, setSessionPhase] = useState('presentation');
 
-  // Project state
-  const [currentProject, setCurrentProject] = useState(POPULAR_PROJECT_TEMPLATES[0]);
-  const [slides, setSlides] = useState(() => generateSlidesFromProjectDetails(POPULAR_PROJECT_TEMPLATES[0]));
+  // Slide & PPT state
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [slides, setSlides] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [slideAnalysis, setSlideAnalysis] = useState(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  // Live Presentation Timer State ("timing start ho student pata kar paye ussne kitne time me complete ki hai")
+  const [presentationSeconds, setPresentationSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [finalDuration, setFinalDuration] = useState(0);
 
   // Modals & UI States
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [scorecardData, setScorecardData] = useState(null);
   const [qaResults, setQaResults] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
 
+  const fileInputRef = useRef(null);
   const presentationContainerRef = useRef(null);
-  const currentSlide = slides[currentSlideIndex] || slides[0];
+  const timerIntervalRef = useRef(null);
 
-  // ── Slide Navigation Handlers ──
+  const currentSlide = slides[currentSlideIndex] || slides[0] || null;
+
+  // ── 1. Live Presentation Timer ──
+  useEffect(() => {
+    if (isTimerRunning) {
+      timerIntervalRef.current = setInterval(() => {
+        setPresentationSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(timerIntervalRef.current);
+    }
+    return () => clearInterval(timerIntervalRef.current);
+  }, [isTimerRunning]);
+
+  const timerMin = Math.floor(presentationSeconds / 60);
+  const timerSec = presentationSeconds % 60;
+  const formattedTimer = `${String(timerMin).padStart(2, '0')}:${String(timerSec).padStart(2, '0')}`;
+
+  // ── 2. Direct File Upload from Laptop ("me chati hu ppt agar laptop me ho to direct open kar do") ──
+  const handleFileSelected = async (file) => {
+    if (!file) return;
+
+    setIsProcessingFile(true);
+    setUploadedFileName(file.name);
+
+    try {
+      const result = await parsePPTXFile(file);
+      if (result.success && result.slides?.length > 0) {
+        setSlides(result.slides);
+        setSlideAnalysis(result.slideAnalysis);
+        setCurrentSlideIndex(0);
+        setSessionPhase('presentation');
+
+        // Start presentation timing immediately upon loading PPT
+        setPresentationSeconds(0);
+        setIsTimerRunning(true);
+      } else {
+        alert('Could not extract slides from this file. Please ensure it is a valid .pptx or .pdf file.');
+      }
+    } catch (err) {
+      console.error('PPT processing error:', err);
+      alert('Error parsing PowerPoint file: ' + err.message);
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
+
+  // ── 3. Slide Navigation Handlers ──
   const handleNextSlide = useCallback(() => {
     setCurrentSlideIndex((prev) => (prev < slides.length - 1 ? prev + 1 : prev));
   }, [slides.length]);
@@ -79,7 +129,7 @@ export default function PresentationStudio({
     [slides.length]
   );
 
-  // ── Voice Controller Hook for Slide Presentation ──
+  // ── 4. Voice Controller Hook for Slide Presentation ──
   const {
     isListening,
     liveTranscript,
@@ -91,41 +141,37 @@ export default function PresentationStudio({
   } = usePresentationVoiceController({
     currentSlide,
     currentSlideIndex,
-    totalSlides: slides.length,
+    totalSlides: Math.max(1, slides.length),
     onNextSlide: handleNextSlide,
     onPrevSlide: handlePrevSlide,
     onGoToSlide: handleGoToSlide,
-    autoStart: sessionPhase === 'presentation',
+    autoStart: sessionPhase === 'presentation' && slides.length > 0,
   });
 
-  // ── Handle Project / PPT Loaded from Modal ──
-  const handleProjectLoaded = ({ projectData, slides: loadedSlides, projectName }) => {
-    setCurrentProject(projectData);
-    setSlides(loadedSlides);
-    setCurrentSlideIndex(0);
-    setSessionPhase('presentation');
-  };
-
-  // ── Transition to Q&A Round ──
+  // ── 5. Transition to Q&A Round ──
   const handleStartQARound = () => {
+    // Stop live timer and record duration
+    setIsTimerRunning(false);
+    setFinalDuration(presentationSeconds);
     setSessionPhase('qa_round');
   };
 
-  // ── Handle Q&A Completion ──
+  // ── 6. Handle Q&A Completion ("after ppt claping ke abbaj ayye and feedback and mistakes show ho") ──
   const handleQACompleted = async (results) => {
     setQaResults(results);
 
     // Compute presentation scorecard
     const scorecard = await generateScorecard();
+    scorecard.sessionDuration = finalDuration || presentationSeconds;
     setScorecardData(scorecard);
 
-    // Trigger fireworks and AI congratulations
+    // Trigger authentic applause / clapping sound + fireworks + AI congratulations!
     firePresentationCelebration(userName, () => {
       setShowScoreModal(true);
     });
   };
 
-  // ── Toggle Fullscreen ──
+  // ── 7. Toggle Fullscreen ──
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
       presentationContainerRef.current?.requestFullscreen?.();
@@ -136,23 +182,37 @@ export default function PresentationStudio({
     }
   };
 
-  // ── Restart Presentation ──
+  // ── 8. Restart Presentation ──
   const handleRestart = () => {
     setShowScoreModal(false);
     setCurrentSlideIndex(0);
+    setPresentationSeconds(0);
+    setIsTimerRunning(true);
     setSessionPhase('presentation');
   };
 
-  // Questions for Q&A round
-  const qaQuestions = getProjectQuestions(currentProject);
+  // Questions tailored to the uploaded PPT
+  const qaQuestions = getProjectQuestions({
+    title: uploadedFileName.replace(/\.[^/.]+$/, '') || 'your PowerPoint presentation',
+    techStack: 'your presentation slides',
+  });
 
   return (
     <div
       ref={presentationContainerRef}
       className="relative w-full h-screen bg-[#0b1329] text-white flex flex-col justify-between overflow-hidden select-none p-3 sm:p-5"
     >
+      {/* Hidden file input that directly opens the laptop's OS file picker */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pptx,.ppt,.pdf"
+        onChange={(e) => handleFileSelected(e.target.files?.[0])}
+        className="hidden"
+      />
+
       {/* ══════════════════════════════════════════════════════════════
-          1. TOP HEADER (Title, Project Name, Submit PPT, Action Button)
+          1. TOP HEADER (Title, PPT Name, Live Timer, Direct Upload)
       ══════════════════════════════════════════════════════════════ */}
       <header className="w-full flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-blue-900/30 shrink-0">
         {/* Left: Return, Logo & Title */}
@@ -177,31 +237,51 @@ export default function PresentationStudio({
               <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight leading-tight">
                 AI Smart Presentation Studio
               </h1>
-              <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-blue-950/80 border border-blue-800/50 text-[10px] font-bold text-cyan-300">
-                {sessionPhase === 'presentation' ? '● Slide Presentation' : '● Technical Q&A Round'}
-              </span>
+              {slides.length > 0 && (
+                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-blue-950/80 border border-blue-800/50 text-[10px] font-bold text-cyan-300">
+                  {sessionPhase === 'presentation' ? '● Slide Presentation' : '● Technical Q&A Round'}
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-slate-400 font-medium truncate max-w-sm sm:max-w-md">
-              Project: <span className="text-cyan-300 font-bold">{currentProject?.title || 'Engineering Project'}</span>
+              {uploadedFileName ? (
+                <>PPT: <span className="text-cyan-300 font-bold">{uploadedFileName}</span> ({slides.length} slides)</>
+              ) : (
+                'Upload your PowerPoint (.pptx) or PDF (.pdf) directly from your laptop to begin'
+              )}
             </p>
           </div>
         </div>
 
-        {/* Right: Submit/Change PPT & Primary Action Button */}
+        {/* Right: Live Presentation Timer & Direct Laptop Upload Button */}
         <div className="flex items-center gap-2.5">
-          {/* Submit / Change Project PPT Button */}
+          {/* Live Timer Pill ("timing start ho student pata kar paye") */}
+          {slides.length > 0 && (
+            <div
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border font-mono text-xs font-bold transition-all ${
+                isTimerRunning
+                  ? 'bg-blue-950/90 border-cyan-400/50 text-cyan-300 shadow-lg shadow-cyan-500/10'
+                  : 'bg-slate-900/80 border-slate-700 text-slate-400'
+              }`}
+              title="Presentation Speaking Duration"
+            >
+              <Clock className={`w-3.5 h-3.5 ${isTimerRunning ? 'text-cyan-400 animate-spin' : 'text-slate-400'}`} />
+              <span>⏱️ {formattedTimer}</span>
+            </div>
+          )}
+
+          {/* Direct Laptop PPT Upload Button ("direct open kar do laptop me ho to") */}
           <button
-            onClick={() => setShowSubmitModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-dashed border-[#2563eb] hover:border-blue-400 bg-[#0d1b38]/70 hover:bg-[#122247] text-[#38bdf8] text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
-            title="Upload PowerPoint / PDF or enter your project details"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-dashed border-[#2563eb] hover:border-cyan-400 bg-[#0d1b38]/80 hover:bg-[#122247] text-[#38bdf8] hover:text-white text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
+            title="Directly select PowerPoint (.pptx) or PDF (.pdf) file from your laptop"
           >
-            <Upload className="w-3.5 h-3.5 text-[#38bdf8]" />
-            <span className="hidden sm:inline">Submit / Change PPT</span>
-            <span className="sm:hidden">Change PPT</span>
+            <Laptop className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{uploadedFileName ? 'Change PPT' : 'Select PPT from Laptop'}</span>
           </button>
 
           {/* Action Button: Finish Presentation & Start Q&A */}
-          {sessionPhase === 'presentation' ? (
+          {slides.length > 0 && sessionPhase === 'presentation' && (
             <button
               onClick={handleStartQARound}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs tracking-wide uppercase shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
@@ -210,7 +290,9 @@ export default function PresentationStudio({
               <HelpCircle className="w-4 h-4 text-emerald-200" />
               <span>Finish &amp; Start Q&amp;A ➔</span>
             </button>
-          ) : (
+          )}
+
+          {slides.length > 0 && sessionPhase === 'qa_round' && (
             <button
               onClick={() => setSessionPhase('presentation')}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
@@ -222,18 +304,90 @@ export default function PresentationStudio({
       </header>
 
       {/* ══════════════════════════════════════════════════════════════
-          2. MAIN CONTENT AREA (Presentation Stage OR Q&A Stage)
+          2. MAIN CONTENT AREA:
+             A) If No Slides Loaded: Direct Laptop Upload Zone
+             B) If Slides Loaded: 16:9 Screen Board & Real-Time Telemetry
+             C) If Q&A Phase: AI Technical Q&A Panel
       ══════════════════════════════════════════════════════════════ */}
-      {sessionPhase === 'qa_round' ? (
+      {slides.length === 0 ? (
+        /* ── DIRECT LAPTOP UPLOAD INITIAL VIEW (No dummy slides, direct laptop open) ── */
+        <main className="flex-1 w-full flex items-center justify-center p-4">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              handleFileSelected(e.dataTransfer.files?.[0]);
+            }}
+            onClick={() => fileInputRef.current?.click()}
+            className={`w-full max-w-2xl p-8 sm:p-14 rounded-3xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center space-y-4 shadow-2xl ${
+              dragOver
+                ? 'border-cyan-400 bg-cyan-950/30 shadow-cyan-500/20 scale-[1.01]'
+                : 'border-blue-700/60 bg-[#0d172e]/90 hover:bg-[#111e3b] hover:border-cyan-400'
+            }`}
+          >
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-xl shadow-blue-500/30 animate-pulse">
+              <Laptop className="w-10 h-10" />
+            </div>
+
+            <div className="space-y-1.5 max-w-md">
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Upload Your PPT Directly from Laptop
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Click below to select your <span className="text-cyan-300 font-bold">.pptx</span>, <span className="text-cyan-300 font-bold">.ppt</span>, or <span className="text-cyan-300 font-bold">.pdf</span> slide deck directly from your computer files.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-extrabold text-sm shadow-xl shadow-blue-500/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <FolderOpen className="w-4 h-4" />
+                <span>Browse PPT File from Laptop</span>
+              </button>
+            </div>
+
+            <div className="pt-3 flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold text-slate-400">
+              <span className="px-3 py-1 rounded-xl bg-blue-950/60 border border-blue-800/40">
+                📄 Direct Native Slide Extraction
+              </span>
+              <span className="px-3 py-1 rounded-xl bg-blue-950/60 border border-blue-800/40">
+                🎙️ Real-time Voice Navigation
+              </span>
+              <span className="px-3 py-1 rounded-xl bg-blue-950/60 border border-blue-800/40">
+                ⏱️ Auto Presentation Timer
+              </span>
+              <span className="px-3 py-1 rounded-xl bg-blue-950/60 border border-blue-800/40">
+                📊 Slide Mistake Detection
+              </span>
+            </div>
+
+            {isProcessingFile && (
+              <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold animate-pulse pt-2">
+                <div className="w-4 h-4 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+                <span>Extracting slides from your presentation file...</span>
+              </div>
+            )}
+          </div>
+        </main>
+      ) : sessionPhase === 'qa_round' ? (
+        /* ── Q&A ROUND STAGE ── */
         <main className="flex-1 w-full py-3 overflow-hidden flex items-center justify-center">
           <PresentationQAPanel
-            projectData={currentProject}
+            projectData={{ title: uploadedFileName.replace(/\.[^/.]+$/, '') || 'Your Project Presentation' }}
             questions={qaQuestions}
             userName={userName}
             onQACompleted={handleQACompleted}
           />
         </main>
       ) : (
+        /* ── SLIDE PRESENTATION STAGE WITH FIXED 16:9 CANVAS ── */
         <main className="flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 py-3 overflow-hidden items-stretch">
           {/* ── LEFT AREA (8 cols): Digital Screen Board ── */}
           <div className="lg:col-span-8 flex flex-col justify-between rounded-3xl bg-[#0f1b35]/80 border border-blue-900/30 p-4 sm:p-5 shadow-2xl relative overflow-hidden">
@@ -243,12 +397,19 @@ export default function PresentationStudio({
                 <Monitor className="w-4 h-4 text-cyan-400" />
                 <span className="text-white">Digital Screen Board</span>
                 <span className="text-slate-500">•</span>
-                <span className="text-slate-400">{currentSlide.category}</span>
+                <span className="text-slate-400">{currentSlide?.category}</span>
               </div>
 
-              {/* Slide Indicator Badge */}
-              <div className="px-3 py-1 rounded-full bg-[#0a1226]/90 border border-blue-800/40 text-blue-300 font-mono text-xs font-bold shadow-inner">
-                Slide {currentSlideIndex + 1} / {slides.length}
+              <div className="flex items-center gap-2">
+                {/* Live timer display on board */}
+                <div className="px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold">
+                  ⏱️ {formattedTimer}
+                </div>
+
+                {/* Slide Indicator Badge */}
+                <div className="px-3 py-1 rounded-full bg-[#0a1226]/90 border border-blue-800/40 text-blue-300 font-mono text-xs font-bold shadow-inner">
+                  Slide {currentSlideIndex + 1} / {slides.length}
+                </div>
               </div>
             </div>
 
@@ -258,23 +419,23 @@ export default function PresentationStudio({
               <div className="border-b border-slate-200 pb-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                    {currentSlide.category || 'Executive Analysis'}
+                    {currentSlide?.category || 'Executive Analysis'}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono font-semibold">
-                    16:9 Fixed Board
+                    {uploadedFileName || '16:9 HD Board'}
                   </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black text-[#0f172a] mt-1.5 leading-tight">
-                  {currentSlide.title}
+                <h2 className="text-xl sm:text-2xl font-black text-[#0f172a] mt-1.5 leading-tight text-left">
+                  {currentSlide?.title}
                 </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {currentSlide.subtitle}
+                <p className="text-xs text-slate-500 font-medium mt-0.5 text-left">
+                  {currentSlide?.subtitle}
                 </p>
               </div>
 
               {/* Bullet Points */}
-              <div className="space-y-2.5 flex-1 py-3 text-left">
-                {currentSlide.bullets?.map((bullet, idx) => (
+              <div className="space-y-2.5 flex-1 py-3 text-left overflow-y-auto max-h-[50vh]">
+                {currentSlide?.bullets?.map((bullet, idx) => (
                   <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
                     <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
                       {idx + 1}
@@ -285,7 +446,7 @@ export default function PresentationStudio({
               </div>
 
               {/* Metrics Cards Footer */}
-              {currentSlide.metrics && (
+              {currentSlide?.metrics && (
                 <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-slate-100">
                   {Object.entries(currentSlide.metrics).map(([key, val], idx) => (
                     <div key={idx} className="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-left">
@@ -307,14 +468,14 @@ export default function PresentationStudio({
                 <button
                   key={idx}
                   onClick={() => setCurrentSlideIndex(idx)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shrink-0 truncate max-w-[120px] ${
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shrink-0 truncate max-w-[130px] ${
                     currentSlideIndex === idx
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'bg-[#121c36] hover:bg-[#1a284c] text-slate-400 hover:text-slate-200'
                   }`}
                   title={s.title}
                 >
-                  {idx + 1}. {s.title.slice(0, 10)}..
+                  {idx + 1}. {s.title.slice(0, 12)}..
                 </button>
               ))}
             </div>
@@ -511,21 +672,15 @@ export default function PresentationStudio({
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          3. SUBMIT / UPLOAD PROJECT MODAL
-      ══════════════════════════════════════════════════════════════ */}
-      <SubmitProjectModal
-        isOpen={showSubmitModal}
-        onClose={() => setShowSubmitModal(false)}
-        onProjectLoaded={handleProjectLoaded}
-      />
-
-      {/* ══════════════════════════════════════════════════════════════
-          4. POST-PRESENTATION SCORECARD & MISTAKE REPORT MODAL
+          3. POST-PRESENTATION SCORECARD & MISTAKE REPORT MODAL
       ══════════════════════════════════════════════════════════════ */}
       {showScoreModal && (
         <PresentationScoreModal
           scorecard={scorecardData}
           qaResults={qaResults}
+          presentationDuration={finalDuration || presentationSeconds}
+          slideAnalysis={slideAnalysis}
+          pptFileName={uploadedFileName}
           onClose={() => {
             setShowScoreModal(false);
             if (onBackToDashboard) onBackToDashboard();
