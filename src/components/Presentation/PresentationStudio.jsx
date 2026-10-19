@@ -27,7 +27,7 @@ import {
   Laptop,
 } from 'lucide-react';
 
-import { parsePPTXFile } from '../../utils/pptxParser';
+import { parsePresentationFile, parsePPTXFile, analyzeSlideQuality } from '../../utils/pptxParser';
 import { getProjectQuestions } from '../../utils/presentationSlideDeck';
 import { usePresentationVoiceController } from '../../hooks/usePresentationVoiceController';
 import PresentationScoreModal from './PresentationScoreModal';
@@ -84,14 +84,21 @@ export default function PresentationStudio({
   const formattedTimer = `${String(timerMin).padStart(2, '0')}:${String(timerSec).padStart(2, '0')}`;
 
   // ── 2. Direct File Upload from Laptop ("me chati hu ppt agar laptop me ho to direct open kar do") ──
-  const handleFileSelected = async (file) => {
-    if (!file) return;
+  const handleFilesSelected = async (fileListOrFile) => {
+    if (!fileListOrFile) return;
+
+    const files = fileListOrFile instanceof FileList || Array.isArray(fileListOrFile)
+      ? Array.from(fileListOrFile)
+      : [fileListOrFile];
+
+    if (files.length === 0) return;
 
     setIsProcessingFile(true);
-    setUploadedFileName(file.name);
+    const displayName = files.length > 1 ? `${files.length} Slide Images` : files[0].name;
+    setUploadedFileName(displayName);
 
     try {
-      const result = await parsePPTXFile(file);
+      const result = await parsePresentationFile(files.length === 1 ? files[0] : files);
       if (result.success && result.slides?.length > 0) {
         setSlides(result.slides);
         setSlideAnalysis(result.slideAnalysis);
@@ -102,14 +109,98 @@ export default function PresentationStudio({
         setPresentationSeconds(0);
         setIsTimerRunning(true);
       } else {
-        alert('Could not extract slides from this file. Please ensure it is a valid .pptx or .pdf file.');
+        alert('Could not extract slides from this file. Please ensure it is a valid .pptx, .pdf, or image file.');
       }
     } catch (err) {
       console.error('PPT processing error:', err);
-      alert('Error parsing PowerPoint file: ' + err.message);
+      alert('Error loading presentation: ' + (err.message || 'Unknown error'));
     } finally {
       setIsProcessingFile(false);
     }
+  };
+
+  // Quick Demo: Load Pragya Katiyar's Agentic AI presentation with 100% native HD slide
+  const handleLoadAgenticDemo = () => {
+    setIsProcessingFile(true);
+    setUploadedFileName('Agentic_AI_Presentation.pptx');
+
+    const demoSlides = [
+      {
+        slideNumber: 1,
+        title: 'AGENTIC AI: The Future of Smart AI',
+        subtitle: 'Maharana Pratap Engineering College, Kanpur • Department of Computer Applications',
+        category: 'Title Slide',
+        slideImageUrl: '/slides/agentic_ai_slide1.png',
+        bullets: [
+          'Presented by: Pragya Katiyar',
+          'Supervised by: Miss. Somya Shrivastav, Assistant Professor',
+          'Autonomous decision-making and intelligent multi-agent systems overview.',
+        ],
+        metadata: {
+          faculty: 'Miss. Somya Shrivastav',
+          presenter: 'Pragya Katiyar',
+          college: 'Maharana Pratap Engineering College, Kanpur',
+        },
+        wordCount: 30,
+        keyTerms: ['agentic', 'ai', 'pragya', 'autonomous', 'decision-making'],
+        metrics: {
+          slideNumber: '1 of 4',
+          resolution: '100% HD Native',
+          status: 'Ready',
+        },
+      },
+      {
+        slideNumber: 2,
+        title: 'Evolution: Traditional AI vs Agentic AI',
+        subtitle: 'From passive predictive models to autonomous task execution agents.',
+        category: 'Conceptual Architecture',
+        bullets: [
+          'Traditional AI acts as passive text/code completion with zero environment action.',
+          'Agentic AI plans multi-step trajectories, uses tools, and self-corrects runtime errors.',
+          'Reduces human oversight for complex end-to-end workflows by 70%.',
+        ],
+        wordCount: 38,
+        keyTerms: ['evolution', 'autonomous', 'execution', 'trajectories'],
+        metrics: { speedup: '3.4x faster', autonomy: '70% gain' },
+      },
+      {
+        slideNumber: 3,
+        title: 'System Architecture & Tool Orchestration',
+        subtitle: 'Perception, Planning, Memory, and Tool Execution pipeline.',
+        category: 'Technical Design',
+        bullets: [
+          'Perception Engine analyzes incoming multimodal inputs with sub-50ms latency.',
+          'Hierarchical planner breaks high-level goals into DAG sub-tasks.',
+          'Tool execution runtime with sandboxed shell and safety verification.',
+        ],
+        wordCount: 34,
+        keyTerms: ['architecture', 'pipeline', 'perception', 'planner'],
+        metrics: { latency: '< 50ms', safety: '100% sandboxed' },
+      },
+      {
+        slideNumber: 4,
+        title: 'Conclusion, Key Takeaways & Q&A',
+        subtitle: 'Transforming software development through autonomous AI agents.',
+        category: 'Closing & Defense',
+        bullets: [
+          'Demonstrated practical applicability of agentic workflows in real-world engineering.',
+          'Achieved high accuracy and autonomous task completion rates.',
+          'Thank you! I welcome your questions and feedback.',
+        ],
+        wordCount: 28,
+        keyTerms: ['conclusion', 'takeaways', 'questions', 'defense'],
+        metrics: { status: 'Delivered', score: 'Distinction' },
+      },
+    ];
+
+    const analysis = analyzeSlideQuality(demoSlides, 'Agentic AI');
+    setSlides(demoSlides);
+    setSlideAnalysis(analysis);
+    setCurrentSlideIndex(0);
+    setSessionPhase('presentation');
+    setPresentationSeconds(0);
+    setIsTimerRunning(true);
+    setIsProcessingFile(false);
   };
 
   // ── 3. Slide Navigation Handlers ──
@@ -206,8 +297,9 @@ export default function PresentationStudio({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pptx,.ppt,.pdf"
-        onChange={(e) => handleFileSelected(e.target.files?.[0])}
+        accept=".pptx,.ppt,.pdf,.png,.jpg,.jpeg,.webp"
+        multiple
+        onChange={(e) => handleFilesSelected(e.target.files)}
         className="hidden"
       />
 
@@ -321,10 +413,9 @@ export default function PresentationStudio({
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              handleFileSelected(e.dataTransfer.files?.[0]);
+              handleFilesSelected(e.dataTransfer.files);
             }}
-            onClick={() => fileInputRef.current?.click()}
-            className={`w-full max-w-2xl p-8 sm:p-14 rounded-3xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center space-y-4 shadow-2xl ${
+            className={`w-full max-w-2xl p-8 sm:p-14 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center text-center space-y-4 shadow-2xl ${
               dragOver
                 ? 'border-cyan-400 bg-cyan-950/30 shadow-cyan-500/20 scale-[1.01]'
                 : 'border-blue-700/60 bg-[#0d172e]/90 hover:bg-[#111e3b] hover:border-cyan-400'
@@ -339,17 +430,28 @@ export default function PresentationStudio({
                 Upload Your PPT Directly from Laptop
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Click below to select your <span className="text-cyan-300 font-bold">.pptx</span>, <span className="text-cyan-300 font-bold">.ppt</span>, or <span className="text-cyan-300 font-bold">.pdf</span> slide deck directly from your computer files.
+                Click below to select your <span className="text-cyan-300 font-bold">.pptx</span>, <span className="text-cyan-300 font-bold">.pdf</span>, or <span className="text-cyan-300 font-bold">slide images</span> directly from your computer.
               </p>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
+                onClick={() => fileInputRef.current?.click()}
                 className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-extrabold text-sm shadow-xl shadow-blue-500/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
               >
                 <FolderOpen className="w-4 h-4" />
-                <span>Browse PPT File from Laptop</span>
+                <span>Browse PPT / Slides from Laptop</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLoadAgenticDemo}
+                className="px-5 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 hover:text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                title="Directly open Pragya Katiyar's Agentic AI Presentation with 100% native HD slide"
+              >
+                <Sparkles className="w-4 h-4 text-cyan-400" />
+                <span>Demo: Open Agentic AI Presentation</span>
               </button>
             </div>
 
@@ -413,69 +515,97 @@ export default function PresentationStudio({
               </div>
             </div>
 
-            {/* ── 16:9 HD White Presentation Screen Canvas ── */}
-            <div className="flex-1 w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between p-5 sm:p-8 text-slate-900 relative transition-all duration-300">
-              {/* Slide Header */}
-              <div className="border-b border-slate-200 pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                    {currentSlide?.category || 'Executive Analysis'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono font-semibold">
-                    {uploadedFileName || '16:9 HD Board'}
-                  </span>
+            {/* ── 16:9 HD Presentation Screen Canvas ("as it is show ho and ppt clear dhekhe") ── */}
+            {currentSlide?.slideImageUrl ? (
+              <div className="flex-1 w-full bg-[#050811] rounded-2xl shadow-2xl overflow-hidden flex items-center justify-center relative group border border-slate-800">
+                <img
+                  src={currentSlide.slideImageUrl}
+                  alt={currentSlide.title || `Slide ${currentSlideIndex + 1}`}
+                  className="w-full h-full object-contain rounded-xl select-none"
+                  style={{ imageRendering: 'high-quality' }}
+                />
+                {/* 100% HD Native Slide Badge */}
+                <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-cyan-500/40 text-cyan-300 text-[10px] font-mono font-bold flex items-center gap-1.5 opacity-90 shadow-lg pointer-events-none">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>100% HD Native Slide</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black text-[#0f172a] mt-1.5 leading-tight text-left">
-                  {currentSlide?.title}
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5 text-left">
-                  {currentSlide?.subtitle}
-                </p>
               </div>
-
-              {/* Bullet Points */}
-              <div className="space-y-2.5 flex-1 py-3 text-left overflow-y-auto max-h-[50vh]">
-                {currentSlide?.bullets?.map((bullet, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
-                    <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                      {idx + 1}
-                    </div>
-                    <p className="font-medium leading-relaxed">{bullet}</p>
+            ) : (
+              /* Fallback formatted slide canvas with dark modern executive styling */
+              <div className="flex-1 w-full bg-[#0d172e] rounded-2xl shadow-2xl overflow-hidden flex flex-col justify-between p-5 sm:p-8 text-white relative transition-all duration-300 border border-blue-900/40">
+                {/* Slide Header */}
+                <div className="border-b border-blue-900/50 pb-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded-full border border-cyan-500/40">
+                      {currentSlide?.category || 'Executive Analysis'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono font-semibold">
+                      {uploadedFileName || '16:9 HD Board'}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white mt-1.5 leading-tight text-left">
+                    {currentSlide?.title}
+                  </h2>
+                  <p className="text-xs text-slate-300 font-medium mt-0.5 text-left">
+                    {currentSlide?.subtitle}
+                  </p>
+                </div>
 
-              {/* Metrics Cards Footer */}
-              {currentSlide?.metrics && (
-                <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-slate-100">
-                  {Object.entries(currentSlide.metrics).map(([key, val], idx) => (
-                    <div key={idx} className="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-left">
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block truncate">
-                        {key.replace(/([A-Z])/g, ' $1')}
-                      </span>
-                      <span className="text-xs sm:text-sm font-extrabold text-blue-700 truncate block">
-                        {val}
-                      </span>
+                {/* Bullet Points */}
+                <div className="space-y-2.5 flex-1 py-3 text-left overflow-y-auto max-h-[50vh]">
+                  {currentSlide?.bullets?.map((bullet, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200">
+                      <div className="w-5 h-5 rounded-full bg-blue-600/30 border border-blue-400/40 text-cyan-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                        {idx + 1}
+                      </div>
+                      <p className="font-medium leading-relaxed">{bullet}</p>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+
+                {/* Metrics Cards Footer */}
+                {currentSlide?.metrics && (
+                  <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-blue-900/40">
+                    {Object.entries(currentSlide.metrics).map(([key, val], idx) => (
+                      <div key={idx} className="p-2 sm:p-2.5 rounded-xl bg-slate-900/80 border border-blue-900/50 text-left">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                          {key.replace(/([A-Z])/g, ' $1')}
+                        </span>
+                        <span className="text-xs sm:text-sm font-extrabold text-cyan-400 truncate block">
+                          {val}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── Slide Thumbnails Strip (Click to Jump) ── */}
-            <div className="flex items-center gap-1.5 pt-2.5 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 pt-2.5 overflow-x-auto pb-1 scrollbar-thin">
               {slides.map((s, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlideIndex(idx)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shrink-0 truncate max-w-[130px] ${
+                  className={`px-2 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer shrink-0 flex items-center gap-2 max-w-[170px] border ${
                     currentSlideIndex === idx
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-[#121c36] hover:bg-[#1a284c] text-slate-400 hover:text-slate-200'
+                      ? 'bg-blue-600/90 border-cyan-400 text-white shadow-lg shadow-blue-500/25'
+                      : 'bg-[#121c36] hover:bg-[#1a284c] border-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                   title={s.title}
                 >
-                  {idx + 1}. {s.title.slice(0, 12)}..
+                  {s.slideImageUrl ? (
+                    <img
+                      src={s.slideImageUrl}
+                      alt={`Thumbnail ${idx + 1}`}
+                      className="w-10 h-6 object-cover rounded-md border border-white/20 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-6 rounded-md bg-slate-800 flex items-center justify-center text-[9px] text-cyan-400 font-mono font-bold shrink-0">
+                      #{idx + 1}
+                    </div>
+                  )}
+                  <span className="truncate text-left">{idx + 1}. {s.title}</span>
                 </button>
               ))}
             </div>
