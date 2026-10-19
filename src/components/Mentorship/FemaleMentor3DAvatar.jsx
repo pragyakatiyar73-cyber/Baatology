@@ -59,11 +59,10 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
             mat.color = new THREE.Color('#ffffff');
             mat.needsUpdate = true;
           } else if (mat.name === 'Wolf3D_Body' || child.name === 'Wolf3D_Body') {
-            // White futuristic cybernetic robotic AI gloves
-            mat.map = null; // Detach skin map so arms/hands are pure ceramic white gloves
-            mat.roughness = 0.26;
-            mat.metalness = 0.25;
-            mat.color = new THREE.Color('#f0f4f9'); // Pure white futuristic ceramic/cyber glove finish
+            // Natural realistic human skin for arms, wrists, and hands (no plastic/ceramic gloves)
+            mat.roughness = 0.58;
+            mat.metalness = 0.0;
+            mat.color = new THREE.Color('#ffffff'); // Retain original natural skin texture
             mat.needsUpdate = true;
           } else if (mat.name === 'Wolf3D_Eye' || mat.name === 'EyeLeft' || mat.name === 'EyeRight') {
             mat.roughness = 0.05;
@@ -122,10 +121,12 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       'LeftHandMiddle1', 'LeftHandMiddle2', 'LeftHandMiddle3',
       'LeftHandRing1', 'LeftHandRing2', 'LeftHandRing3',
       'LeftHandPinky1', 'LeftHandPinky2', 'LeftHandPinky3',
+      'LeftHandThumb1', 'LeftHandThumb2', 'LeftHandThumb3',
       'RightHandIndex1', 'RightHandIndex2', 'RightHandIndex3',
       'RightHandMiddle1', 'RightHandMiddle2', 'RightHandMiddle3',
       'RightHandRing1', 'RightHandRing2', 'RightHandRing3',
-      'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3'
+      'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3',
+      'RightHandThumb1', 'RightHandThumb2', 'RightHandThumb3'
     ];
     names.forEach((name) => {
       if (rig.bones[name]) {
@@ -142,7 +143,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     const t = state.clock.getElapsedTime();
     const { bones, meshes } = rig;
 
-    // ── 1. Subtle Torso Breathing (Hands stay 100% still and anchored) ──
+    // ── 1. Subtle Torso Breathing (Hands stay anchored and natural) ──
     const breatheCycle = Math.sin(t * 1.6);
     const chestRise = breatheCycle * 0.008;
 
@@ -155,47 +156,62 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    // ── 2. Natural Seated Arm & Hand Rest Posture (Resting naturally down along sides / lap) ──
-    const speakGesture = isSpeaking ? Math.sin(t * 2.5) * 0.015 : 0;
+    // ── 2. Natural Seated Human Arm & Hand Rest Posture (Resting naturally on lap / chair) ──
+    const speakPulse = isSpeaking ? Math.sin(t * 2.8) * 0.035 : 0;
+    const breatheGentle = Math.sin(t * 1.6) * 0.006;
 
-    // Left Arm & Forearm: Resting naturally along torso
+    // Left Arm & Forearm: Hanging down along ribcage and resting forward in lap
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
+      bones.LeftArm.rotateZ(-0.45);
+      bones.LeftArm.rotateX(0.20 + breatheGentle);
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
+      bones.LeftForeArm.rotateX(1.50);
+      bones.LeftForeArm.rotateZ(0.65);
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
+      bones.LeftHand.rotateX(-0.15);
+      bones.LeftHand.rotateZ(0.10);
     }
 
-    // Right Arm & Forearm: Symmetrical resting posture with subtle speaking micro-movement
+    // Right Arm & Forearm: Symmetrical seated rest with subtle live speaking micro-gesture
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateX(speakGesture * 0.1);
+      bones.RightArm.rotateZ(0.45);
+      bones.RightArm.rotateX(0.20 + speakPulse * 0.25 + breatheGentle);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(speakGesture * 0.15);
+      bones.RightForeArm.rotateX(1.50 + speakPulse * 0.35);
+      bones.RightForeArm.rotateZ(-0.65);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
+      bones.RightHand.rotateX(-0.15 - speakPulse * 0.2);
+      bones.RightHand.rotateZ(-0.10);
     }
 
-    // Fingers remain in their natural relaxed hand rest pose
-    const fingerNames = [
-      'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandIndex3',
-      'LeftHandMiddle1', 'LeftHandMiddle2', 'LeftHandMiddle3',
-      'LeftHandRing1', 'LeftHandRing2', 'LeftHandRing3',
-      'LeftHandPinky1', 'LeftHandPinky2', 'LeftHandPinky3',
-      'RightHandIndex1', 'RightHandIndex2', 'RightHandIndex3',
-      'RightHandMiddle1', 'RightHandMiddle2', 'RightHandMiddle3',
-      'RightHandRing1', 'RightHandRing2', 'RightHandRing3',
-      'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3'
+    // Relaxed natural finger resting pose (gently curved like human hands at rest)
+    const fingerCurls = [
+      { name: 'LeftHandIndex1', rx: 0.18 }, { name: 'LeftHandIndex2', rx: 0.24 }, { name: 'LeftHandIndex3', rx: 0.16 },
+      { name: 'LeftHandMiddle1', rx: 0.20 }, { name: 'LeftHandMiddle2', rx: 0.26 }, { name: 'LeftHandMiddle3', rx: 0.18 },
+      { name: 'LeftHandRing1', rx: 0.22 }, { name: 'LeftHandRing2', rx: 0.28 }, { name: 'LeftHandRing3', rx: 0.20 },
+      { name: 'LeftHandPinky1', rx: 0.24 }, { name: 'LeftHandPinky2', rx: 0.30 }, { name: 'LeftHandPinky3', rx: 0.22 },
+      { name: 'LeftHandThumb1', rx: 0.12 }, { name: 'LeftHandThumb2', rx: 0.16 },
+
+      { name: 'RightHandIndex1', rx: 0.18 }, { name: 'RightHandIndex2', rx: 0.24 }, { name: 'RightHandIndex3', rx: 0.16 },
+      { name: 'RightHandMiddle1', rx: 0.20 }, { name: 'RightHandMiddle2', rx: 0.26 }, { name: 'RightHandMiddle3', rx: 0.18 },
+      { name: 'RightHandRing1', rx: 0.22 }, { name: 'RightHandRing2', rx: 0.28 }, { name: 'RightHandRing3', rx: 0.20 },
+      { name: 'RightHandPinky1', rx: 0.24 }, { name: 'RightHandPinky2', rx: 0.30 }, { name: 'RightHandPinky3', rx: 0.22 },
+      { name: 'RightHandThumb1', rx: 0.12 }, { name: 'RightHandThumb2', rx: 0.16 },
     ];
-    fingerNames.forEach((name) => {
+    fingerCurls.forEach(({ name, rx }) => {
       if (bones[name] && restQuats[name]) {
         bones[name].quaternion.copy(restQuats[name]);
+        bones[name].rotateX(rx);
       }
     });
 
