@@ -16,6 +16,7 @@ import LoginModal from './components/Dashboard/LoginModal';
 import DualVideoMentorshipRoom from './components/Mentorship/DualVideoMentorshipRoom';
 import PresentationStudio from './components/Presentation/PresentationStudio';
 import GroupDiscussionStudio from './components/GDStudio/GroupDiscussionStudio';
+import ResumeSelfIntroStudio from './components/SelfIntro/ResumeSelfIntroStudio';
 import { fireLoginCelebration, speakWelcomeGreeting } from './utils/celebration';
 
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
@@ -834,9 +835,22 @@ export default function App() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
+          VIEW: RESUME-POWERED SELF-INTRODUCTION & INTERVIEW STUDIO
+      ══════════════════════════════════════════════════════════════ */}
+      {(currentView === 'self_intro_studio' || (currentView === 'arena' && currentMode === MODES.SELF_INTRO)) && (
+        <ResumeSelfIntroStudio
+          userName={userName}
+          onBackToDashboard={() => {
+            setCurrentView('dashboard');
+            setCurrentMode(MODES.GD);
+          }}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
           VIEW: ARENA 1-ON-1 CALL VIEW ("kebal bo and me dheku")
       ══════════════════════════════════════════════════════════════ */}
-      {currentView === 'arena' && (
+      {currentView === 'arena' && currentMode !== MODES.SELF_INTRO && (
         <div className="w-full h-screen relative overflow-hidden bg-[#000000]">
           {/* ── Top Minimal Floating Controls ── */}
           {/* Top-Left: Minimal Return Button */}

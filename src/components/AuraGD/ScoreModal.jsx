@@ -76,7 +76,7 @@ export default function ScoreModal({ scores, onClose, onReplayCongratulations })
               </h2>
             </div>
             <p className="text-teal-300 text-xs font-semibold mt-0.5">
-              {isCasual ? 'AuraGD Empathetic Mentorship — Safe Space Session' : "AuraGD AI Mentorship — Pragya's Performance Analysis"}
+              {isCasual ? 'Baatology Empathetic Mentorship — Safe Space Session' : "Baatology AI Mentorship — Pragya's Performance Analysis"}
             </p>
           </div>
           <div className="text-right">

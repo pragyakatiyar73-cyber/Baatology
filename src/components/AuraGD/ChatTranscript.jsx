@@ -43,7 +43,7 @@ export default function ChatTranscript({ messages, interimText }) {
               <span className={`text-[10px] font-bold tracking-wide ${
                 msg.role === 'ai' ? 'text-teal-400' : 'text-emerald-400'
               }`}>
-                {msg.role === 'ai' ? '🤖 AuraGD Evaluator' : '🎓 You'}
+                {msg.role === 'ai' ? '🤖 Baatology Evaluator' : '🎓 You'}
               </span>
               <span className="text-[9px] text-slate-600">{msg.timestamp}</span>
             </div>

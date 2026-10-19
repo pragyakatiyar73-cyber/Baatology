@@ -1,5 +1,5 @@
 // ============================================================
-// AuraGD – Conversational AI Intelligence, Question Answering
+// Baatology – Conversational AI Intelligence, Question Answering
 // & Dynamic Mentorship Engine
 //
 // Capabilities:
@@ -94,7 +94,7 @@ const CONCEPT_KNOWLEDGE_BASE = [
   },
   {
     patterns: [/\b(posture|eye contact|body language|nervous mistakes)\b/i],
-    response: `For top interview presence: maintain 80%+ eye contact by looking directly at the camera lens rather than looking down; keep your shoulders relaxed and back to avoid slouching; and avoid touching your face, hair, or neck as it signals nervousness to evaluators. AuraGD tracks this live in your Vision HUD!`,
+    response: `For top interview presence: maintain 80%+ eye contact by looking directly at the camera lens rather than looking down; keep your shoulders relaxed and back to avoid slouching; and avoid touching your face, hair, or neck as it signals nervousness to evaluators. Baatology tracks this live in your Vision HUD!`,
   },
   {
     patterns: [/\b(filler words?|umm?|uhh?|like|how to stop saying umm)\b/i],
@@ -137,7 +137,7 @@ function handleActionCommands(lower, userName) {
 
   // Action 5: Identity & capabilities
   if (/\b(who are you|what is your name|tum kaun ho|aap kaun ho|what can you do)\b/i.test(lower)) {
-    return `I am AuraGD, your 3D Embodied AI Soft-Skills & Technical Interview Evaluator! I analyze your verbal cadence, evaluate STAR architecture, detect nervous posture mistakes, and answer any engineering question you throw at me.`;
+    return `I am Baatology, your 3D Embodied AI Soft-Skills & Technical Interview Evaluator! I analyze your verbal cadence, evaluate STAR architecture, detect nervous posture mistakes, and answer any engineering question you throw at me.`;
   }
 
   // Action 6: Feelings of anxiety / pressure

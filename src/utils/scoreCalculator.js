@@ -1,5 +1,5 @@
 // ============================================================
-// AuraGD – Performance & STAR Framework Score Calculator
+// Baatology – Performance & STAR Framework Score Calculator
 // ============================================================
 
 export function calculateScores({

@@ -34,7 +34,7 @@ import { fireGDFinishCelebration } from '../../utils/celebration';
 
 export default function GroupDiscussionStudio({
   userName = 'Pragya',
-  userEmail = 'pragya@auragd.ai',
+  userEmail = 'pragya@baatology.ai',
   onBackToDashboard,
 }) {
   const [showTopicModal, setShowTopicModal] = useState(false);

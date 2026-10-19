@@ -39,7 +39,7 @@ function useCodeScreenTexture() {
 
     // Code lines with colorful syntax highlighting
     const lines = [
-      { text: 'import { useAuraMentor } from "@auragd/ai";', col: '#c084fc' },
+      { text: 'import { useAuraMentor } from "@baatology/ai";', col: '#c084fc' },
       { text: '', col: '#fff' },
       { text: 'export function PlacementEvaluator({ candidate }) {', col: '#60a5fa' },
       { text: '  const { eyeContact, fluency } = useVoiceHUD();', col: '#34d399' },
@@ -65,7 +65,7 @@ function useCodeScreenTexture() {
   }, []);
 }
 
-// Glowing Frosted Glass Chest Badge ("AuraGD AI Mentor 🤖")
+// Glowing Frosted Glass Chest Badge ("Baatology AI Mentor 🤖")
 function useBadgeTexture() {
   return useMemo(() => {
     const canvas = document.createElement('canvas');
@@ -85,7 +85,7 @@ function useBadgeTexture() {
     // Text Content
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px sans-serif';
-    ctx.fillText('AuraGD', 24, 42);
+    ctx.fillText('Baatology', 24, 42);
 
     ctx.fillStyle = '#00e5ff';
     ctx.font = 'bold 18px sans-serif';
@@ -854,7 +854,7 @@ export default function EmbodiedRobotRoom({
                 <Sparkles className="w-4 h-4 text-amber-300" />
               </span>
               <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-300">
-                AuraGD 3D Call
+                Baatology 3D Call
               </span>
             </div>
             {isSpeaking && onImmediateSpeak && (

@@ -1,5 +1,5 @@
 // ============================================================
-// AuraGD – Comprehensive Engineering Syllabus & Interview Notes Engine
+// Baatology – Comprehensive Engineering Syllabus & Interview Notes Engine
 // Real Academic Subjects: DSA, DBMS, Operating Systems, Web Tech & System Design
 // ============================================================
 

@@ -54,7 +54,7 @@ function ModelLoadingFallback() {
       <div className="flex flex-col items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/80 border border-cyan-500/40 backdrop-blur-md shadow-2xl">
         <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
         <span className="text-[11px] font-bold text-cyan-300 font-mono tracking-wide">
-          Initializing Aura GD 3D Robot...
+          Initializing Baatology 3D Mentor...
         </span>
       </div>
     </Html>
@@ -173,7 +173,7 @@ export default function AuraMentorDesk({
               Neural Telemetry
             </span>
             <span className="text-xs font-bold text-slate-200 block leading-tight">
-              Aura GD Conversational Core
+              Baatology Conversational Core
             </span>
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function AuraMentorDesk({
         <div className="px-4 py-1.5 rounded-full bg-black/90 border border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.4)] flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
           <span className="text-xs sm:text-sm font-black tracking-widest text-cyan-300 uppercase font-mono">
-            AURA GD MENTOR DESK
+            BAATOLOGY MENTOR DESK
           </span>
         </div>
 
@@ -191,10 +191,10 @@ export default function AuraMentorDesk({
           <button
             onClick={onStartTalk}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-black shadow-lg shadow-cyan-500/30 transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
-            title="Start conversation with Aura GD"
+            title="Start conversation with Baatology"
           >
             <MessageCircle className="w-3.5 h-3.5" />
-            <span>Talk with Aura</span>
+            <span>Talk with Baatology</span>
           </button>
         </div>
       </div>

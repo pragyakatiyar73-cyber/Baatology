@@ -58,7 +58,7 @@ export default function CodeWorkspaceWidget({
   const [isRunning, setIsRunning] = useState(false);
   const [copied, setCopied] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState([
-    'AuraGD Interactive Code Workspace v2.4',
+    'Baatology Interactive Code Workspace v2.4',
     'Language: Node.js (v20.12.0) • Ready for technical interview evaluation.',
     'Click "Run Tests" to execute candidate code in isolated runtime.',
   ]);

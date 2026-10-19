@@ -148,9 +148,9 @@ export default function Dashboard({
                     </button>
                   </div>
 
-                  {/* Card 2: Self Introduction */}
+                  {/* Card 2: Self Introduction (Resume-Powered) */}
                   <div
-                    onClick={() => onStartArena(MODES.SELF_INTRO)}
+                    onClick={() => onNavigate('self_intro_studio')}
                     className="bg-white rounded-[26px] p-6 border-2 border-[#e0f2fe] shadow-xs hover:shadow-xl hover:border-[#3b82f6] transition-all duration-300 flex flex-col items-center text-center justify-between min-h-[250px] group cursor-pointer hover:-translate-y-1"
                   >
                     <div className="w-14 h-14 rounded-full bg-[#3b82f6] flex items-center justify-center text-white shadow-md shadow-blue-200 group-hover:scale-105 transition-transform">
@@ -160,15 +160,15 @@ export default function Dashboard({
                       Self Introduction
                     </h3>
                     <p className="text-xs text-[#64748b] leading-relaxed mt-1 flex-1">
-                      Practice your introduction and get instant feedback on your speaking &amp; confidence.
+                      Upload your resume, practice your introduction, answer resume-tailored questions &amp; get AI mistake detection.
                     </p>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onStartArena(MODES.SELF_INTRO);
+                        onNavigate('self_intro_studio');
                       }}
                       className="mt-3 w-9 h-9 rounded-full bg-[#eff6ff] hover:bg-[#dbeafe] text-[#2563eb] flex items-center justify-center transition-all group-hover:scale-110 shadow-xs"
-                      title="Start Self Introduction"
+                      title="Start Self Introduction Practice"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>
@@ -234,7 +234,7 @@ export default function Dashboard({
                       <span>Presentation</span>
                     </button>
                     <button
-                      onClick={() => onStartArena(MODES.SELF_INTRO)}
+                      onClick={() => onNavigate('self_intro_studio')}
                       className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
                     >
                       <User className="w-3.5 h-3.5" />
@@ -260,7 +260,7 @@ export default function Dashboard({
                 >
                   <img
                     src={robotMascotImg}
-                    alt="AuraGD AI - Let's Talk!"
+                    alt="Baatology AI - Let's Talk!"
                     className="w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[420px] xl:max-w-[460px] h-auto object-contain drop-shadow-2xl"
                   />
                 </div>

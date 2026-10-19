@@ -36,11 +36,11 @@ export default function Sidebar({
       isActive: currentView === 'gd_studio',
     },
     {
-      id: MODES.SELF_INTRO,
+      id: 'self_intro_studio',
       label: 'Self Introduction',
       icon: User,
-      action: () => onStartArena(MODES.SELF_INTRO),
-      isActive: false,
+      action: () => onNavigate('self_intro_studio'),
+      isActive: currentView === 'self_intro_studio',
     },
     {
       id: 'presentation_studio',
@@ -82,7 +82,7 @@ export default function Sidebar({
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-[#1e1b4b] leading-tight">
-            AuraGD
+            Baatology
           </h1>
           <p className="text-[10px] font-semibold text-[#6366f1] tracking-wider uppercase">
             Speak • Learn • Grow

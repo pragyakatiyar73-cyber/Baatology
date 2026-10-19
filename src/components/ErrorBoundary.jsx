@@ -11,7 +11,7 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('AuraGD Error caught by boundary:', error, errorInfo);
+    console.error('Baatology Error caught by boundary:', error, errorInfo);
     this.setState({ error, errorInfo });
   }
 

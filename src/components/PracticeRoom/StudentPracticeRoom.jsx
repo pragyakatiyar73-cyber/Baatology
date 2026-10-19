@@ -851,7 +851,7 @@ export default function StudentPracticeRoom({ onBackToDashboard }) {
           <span>Local Client-Side Processing • Audio & Camera streams are never uploaded to any cloud.</span>
         </div>
         <div>
-          <span>AuraGD Placement Suite • Powered by Web Speech API</span>
+          <span>Baatology Placement Suite • Powered by Web Speech API</span>
         </div>
       </footer>
 

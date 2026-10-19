@@ -32,7 +32,7 @@ export default function CommunicationProgressBarChart({
             onClick={() => {
               if (navigator.share) {
                 navigator.share({
-                  title: 'My Communication Progress on AuraGD',
+                  title: 'My Communication Progress on Baatology',
                   text: 'Check out my progress in Group Discussion, Presentation, and Casual Talk!',
                   url: window.location.href,
                 }).catch(() => {});

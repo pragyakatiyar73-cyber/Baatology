@@ -171,7 +171,7 @@ function Model3DLoadingFallback() {
       <div className="flex flex-col items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/85 border border-cyan-500/40 backdrop-blur-md shadow-2xl">
         <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
         <span className="text-[11px] font-bold text-cyan-300 font-mono tracking-wide">
-          Connecting with Aura GD Mentor...
+          Connecting with Baatology Mentor...
         </span>
       </div>
     </Html>
@@ -426,7 +426,7 @@ export default function DigitalRobotAvatar({
           <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
           <div className="flex items-center gap-2">
             <span className="text-xs sm:text-sm font-black tracking-widest text-cyan-300 uppercase font-mono">
-              AURA GD MENTOR DESK
+              BAATOLOGY MENTOR DESK
             </span>
             <span className="hidden md:inline-block text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30">
               Seated in Executive Chair

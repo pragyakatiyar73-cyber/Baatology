@@ -1,5 +1,5 @@
 // ============================================================
-// AuraGD – Date-Wise Progress & Consistency History Engine
+// Baatology – Date-Wise Progress & Consistency History Engine
 // Persisted in localStorage with dynamic session recording
 // ============================================================
 
@@ -262,6 +262,10 @@ export function recordNewSession({ mode, score, eyeContact, fillers = 1 }) {
 
 export function getSessionHistory() {
   return getPracticeHistory();
+}
+
+export function recordPracticeSession({ mode, score, eyeContact, fillersCount, badge }) {
+  return recordNewSession(mode, score, eyeContact, fillersCount, badge);
 }
 
 function formatModeName(modeKey) {

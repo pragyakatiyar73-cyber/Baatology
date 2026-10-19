@@ -479,7 +479,7 @@ export default function FemaleMentor3DAvatar({
       {/* 1. FIXED FULL-SCREEN PHOTOREALISTIC FUTURISTIC GLASS BOARDROOM BACKGROUND (Matching Image 1) */}
       <img
         src="/backgrounds/futuristic_glass_office_room.jpg"
-        alt="AuraGD Futuristic Glass Boardroom"
+        alt="Baatology Futuristic Glass Boardroom"
         className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[1.02] contrast-[1.03]"
         onError={(e) => {
           e.currentTarget.src = '/backgrounds/futuristic_mentor_session.png';

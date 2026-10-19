@@ -69,7 +69,7 @@ export default function LoginModal({
           </div>
           <div>
             <h2 className="text-xl font-bold tracking-tight text-[#1e1b4b] flex items-center gap-1.5">
-              <span>Welcome to AuraGD</span>
+              <span>Welcome to Baatology</span>
               <Sparkles className="w-4 h-4 text-[#f59e0b]" />
             </h2>
             <p className="text-[11px] font-semibold text-[#6366f1] tracking-wider uppercase">

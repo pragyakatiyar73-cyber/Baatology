@@ -1,5 +1,5 @@
 // ============================================================
-// AuraGD – Group Discussion Feedback Engine & Avatar AI Logic
+// Baatology – Group Discussion Feedback Engine & Avatar AI Logic
 // Handles:
 // 1. 3 AI Avatar Profiles (Rohan, Ananya, Vikram) with distinct personalities & voices
 // 2. Curated GD Topics (Student topic de OR Avatar topic de)

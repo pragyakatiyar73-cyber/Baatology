@@ -4,14 +4,14 @@ import { getBestFemaleVoice, configureFemaleUtterance } from './femaleVoiceManag
 /**
  * Requirement 1: Full-Screen Fireworks/Confetti Blast
  * Blasts colorful confetti/fireworks particles from both bottom corners across
- * the entire viewport for 2.5 seconds using AuraGD's theme colors:
+ * the entire viewport for 2.5 seconds using Baatology's theme colors:
  * Teal (#14b8a6), Amber (#f59e0b), Cyan (#06b6d4), Gold (#fbbf24).
  */
 export function fireLoginCelebration() {
   const duration = 2.5 * 1000;
   const animationEnd = Date.now() + duration;
 
-  // AuraGD theme colors: teal, amber, cyan, gold (plus accent violet)
+  // Baatology theme colors: teal, amber, cyan, gold (plus accent violet)
   const colors = ['#14b8a6', '#f59e0b', '#06b6d4', '#fbbf24', '#8b5cf6'];
 
   // Initial energetic burst from both bottom corners
@@ -88,12 +88,12 @@ export function fireLoginCelebration() {
 /**
  * Requirement 2: Personalized AI Verbal Welcome
  * Automatically triggers browser window.speechSynthesis on login completion:
- * "Welcome, [Candidate Name]! Great to have you in AuraGD. Let's make you placement-ready today!"
+ * "Welcome, [Candidate Name]! Great to have you in Baatology. Let's make you placement-ready today!"
  * Warm, enthusiastic, and confident tone.
  */
 export function speakWelcomeGreeting(candidateName = 'Pragya') {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    console.warn('[AuraGD Celebration] Speech synthesis is not supported in this environment');
+    console.warn('[Baatology Celebration] Speech synthesis is not supported in this environment');
     return;
   }
 
@@ -102,7 +102,7 @@ export function speakWelcomeGreeting(candidateName = 'Pragya') {
     window.speechSynthesis.cancel();
 
     const name = candidateName.trim() || 'Pragya';
-    const text = `Welcome, ${name}! Great to have you in AuraGD. Let's make you placement-ready today!`;
+    const text = `Welcome, ${name}! Great to have you in Baatology. Let's make you placement-ready today!`;
 
     const utterance = new SpeechSynthesisUtterance(text);
     configureFemaleUtterance(utterance);
@@ -123,7 +123,7 @@ export function speakWelcomeGreeting(candidateName = 'Pragya') {
 
     window.speechSynthesis.speak(utterance);
   } catch (err) {
-    console.error('[AuraGD Celebration] Voice synthesis error:', err);
+    console.error('[Baatology Celebration] Voice synthesis error:', err);
   }
 }
 

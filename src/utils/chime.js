@@ -1,5 +1,5 @@
 // ============================================================
-// AuraGD – Web Audio Chime Synthesizer
+// Baatology – Web Audio Chime Synthesizer
 // Clean, non-intrusive notification chimes using native Web Audio
 // ============================================================
 
@@ -47,5 +47,39 @@ export function playPostureChime() {
     osc.stop(now + 0.46);
   } catch (err) {
     console.debug('Chime audio blocked by browser policy:', err);
+  }
+}
+
+/**
+ * Play a bright, warm celebratory success chime (C5 -> E5 -> G5 -> C6 arpeggio)
+ */
+export function playSuccessChime() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+    const startTime = ctx.currentTime;
+
+    notes.forEach((freq, idx) => {
+      const noteTime = startTime + idx * 0.08;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0, noteTime);
+      gain.gain.linearRampToValueAtTime(0.09, noteTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.36);
+    });
+  } catch (err) {
+    console.debug('Success chime blocked by browser audio policy:', err);
   }
 }
