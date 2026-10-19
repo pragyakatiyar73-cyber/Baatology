@@ -1,143 +1,70 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  GD_AVATARS,
+  POPULAR_GD_TOPICS,
+  getRandomAvatarTopic,
+  generateAvatarArgument,
+  analyzeStudentGDPerformance,
+} from '../utils/gdFeedbackEngine';
 
-export const DEFAULT_GD_TOPIC = {
-  id: 'gd-ai-healthcare',
-  title: 'Artificial Intelligence in Healthcare: Boon or Threat?',
-  category: 'Technology & Ethics',
-  description: 'Debating diagnostic precision, doctor displacement, data privacy, and ethical accountability in automated medical care.',
-  keyPoints: [
-    'Early cancer detection and radiological precision save thousands of lives.',
-    'Risk of algorithmic bias in patient diagnosis and insurance underwriting.',
-    'Human doctor empathy vs robotic decision making.',
-  ],
-};
-
-export const INITIAL_PARTICIPANTS = [
-  {
-    id: 'student-1',
-    name: 'Student 1 (Host)',
-    role: 'Host / Candidate',
-    college: 'Candidate Seat',
-    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop&crop=faces',
-    isSpeaking: false,
-    isLocalUser: true,
-    speechSeconds: 75,
-  },
-  {
-    id: 'student-2',
-    name: 'Student 2',
-    role: 'Peer Evaluator',
-    college: 'IIT Delhi',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=faces',
-    isSpeaking: false,
-    isLocalUser: false,
-    speechSeconds: 60,
-  },
-  {
-    id: 'student-3',
-    name: 'Student 3',
-    role: 'Peer Participant',
-    college: 'BITS Pilani',
-    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&h=150&fit=crop&crop=faces',
-    isSpeaking: false,
-    isLocalUser: false,
-    speechSeconds: 50,
-  },
-  {
-    id: 'student-4',
-    name: 'Student 4',
-    role: "Devil's Advocate",
-    college: 'NIT Trichy',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=faces',
-    isSpeaking: false,
-    isLocalUser: false,
-    speechSeconds: 55,
-  },
-];
+export const DEFAULT_GD_TOPIC = POPULAR_GD_TOPICS[0];
 
 export function useGroupDiscussionSession({
-  userName = 'Student 1 (Host)',
+  userName = 'Pragya',
   initialTopic = DEFAULT_GD_TOPIC,
 } = {}) {
   const [topic, setTopic] = useState(initialTopic);
   const [sessionStatus, setSessionStatus] = useState('running'); // 'idle' | 'running' | 'paused'
-  const [timerSeconds, setTimerSeconds] = useState(600); // 10:00 minutes
-  const [participants, setParticipants] = useState(() => {
-    return INITIAL_PARTICIPANTS.map((p) =>
-      p.isLocalUser ? { ...p, name: `${userName} (Host)` } : p
-    );
-  });
+  const [timerSeconds, setTimerSeconds] = useState(600); // 10:00 mins
   const [activeSpeakerId, setActiveSpeakerId] = useState('student-1');
-  const [inviteCode, setInviteCode] = useState('GD-741-KLP');
-  const [codeCopied, setCodeCopied] = useState(false);
+  const [isAvatarVoiceMuted, setIsAvatarVoiceMuted] = useState(false);
+
+  // 4 Core Participants: 1 Student (Host) + 3 AI Avatars (Rohan, Ananya, Vikram)
+  const [participants, setParticipants] = useState(() => [
+    {
+      id: 'student-1',
+      name: `${userName} (You)`,
+      role: 'Candidate / Student',
+      perspective: 'Your Own Stance',
+      college: 'Host Seat',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
+      isSpeaking: false,
+      isLocalUser: true,
+      speechSeconds: 25,
+      colorTheme: 'emerald',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    },
+    ...GD_AVATARS.map((av) => ({
+      ...av,
+      isLocalUser: false,
+      isSpeaking: false,
+      speechSeconds: 30,
+    })),
+  ]);
 
   // Live Discussion Transcripts
-  const [transcripts, setTranscripts] = useState([
+  const [transcripts, setTranscripts] = useState(() => [
     {
       id: 1,
-      speakerId: 'student-1',
-      speakerName: `${userName} (Host)`,
-      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop&crop=faces',
-      text: 'Good morning everyone. Today we are discussing whether AI in healthcare serves as a boon or a threat to patient outcomes.',
-      timestamp: '00:15',
-    },
-    {
-      id: 2,
-      speakerId: 'student-2',
-      speakerName: 'Student 2',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=faces',
-      text: 'I strongly agree with starting on precision diagnostics. AI radiograms have reduced diagnostic false negatives by 24%.',
-      timestamp: '00:45',
-    },
-    {
-      id: 3,
-      speakerId: 'student-4',
-      speakerName: 'Student 4',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=faces',
-      text: 'While precision is commendable, ethical accountability and insurance algorithmic bias remain critical hazards.',
-      timestamp: '01:20',
+      speakerId: 'rohan',
+      speakerName: 'Rohan Sharma',
+      role: 'Tech Optimist',
+      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop&crop=faces',
+      text: `Hello everyone! Welcome to today's group discussion on: "${initialTopic.title}". I strongly believe rapid technological adoption drives unprecedented growth, but let's open the floor. ${userName}, what is your initial perspective?`,
+      timestamp: '00:10',
     },
   ]);
 
+  // Track student contributions for post-GD grammar & vocabulary feedback
+  const [studentContributions, setStudentContributions] = useState([]);
+
   // Candidate Mic & Live STT
   const [isMicActive, setIsMicActive] = useState(true);
-  const [audioLevel, setAudioLevel] = useState(0); // 0-100 real-time microphone level
+  const [audioLevel, setAudioLevel] = useState(0); // 0-100 real-time microphone volume level
   const [liveCandidateTranscript, setLiveCandidateTranscript] = useState('');
   const [fillersDetected, setFillersDetected] = useState(0);
 
-  // Poll state
-  const [activePoll, setActivePoll] = useState({
-    id: 'poll-1',
-    question: 'Should AI medical decisions require mandatory human doctor oversight?',
-    options: [
-      { text: 'Yes, mandatory sign-off', votes: 3 },
-      { text: 'No, full autonomy for speed', votes: 1 },
-    ],
-    userVotedIndex: null,
-  });
-
-  // Notes state with persistence
-  const [notes, setNotes] = useState(() => {
-    try {
-      return localStorage.getItem('gd_session_notes') || '';
-    } catch {
-      return '';
-    }
-  });
-
-  // AI Telemetry
-  const [aiAnalysis, setAiAnalysis] = useState({
-    airTimePct: 28,
-    targetAirTimePct: 25,
-    airTimeStatus: 'Balanced',
-    articulationScore: 92,
-    teamPlayerScore: 94,
-    fillersCount: 0,
-    wpm: 136,
-    tip: 'Acknowledge Student 4’s point on ethical accountability before introducing your counter-argument on patient affordability.',
-  });
-
-  // Internal refs
+  // Avatar turn queue & speech synthesis references
   const recognitionRef = useRef(null);
   const isRecognizingRef = useRef(false);
   const timerIntervalRef = useRef(null);
@@ -146,8 +73,9 @@ export function useGroupDiscussionSession({
   const micStreamRef = useRef(null);
   const animFrameRef = useRef(null);
   const silenceTimerRef = useRef(null);
+  const currentAvatarUtteranceRef = useRef(null);
 
-  // ── 1. Countdown Timer Controls ──
+  // ── 1. Countdown Timer ──
   useEffect(() => {
     if (sessionStatus === 'running') {
       timerIntervalRef.current = setInterval(() => {
@@ -156,19 +84,82 @@ export function useGroupDiscussionSession({
     } else {
       clearInterval(timerIntervalRef.current);
     }
-
     return () => clearInterval(timerIntervalRef.current);
   }, [sessionStatus]);
 
-  const resetTimer = useCallback(() => {
-    setTimerSeconds(600);
-  }, []);
+  const resetTimer = useCallback(() => setTimerSeconds(600), []);
+  const addMinutes = useCallback((mins = 2) => setTimerSeconds((prev) => prev + mins * 60), []);
 
-  const addMinutes = useCallback((mins = 2) => {
-    setTimerSeconds((prev) => prev + mins * 60);
-  }, []);
+  // ── 2. Avatar Speech Synthesis with Distinct Voices ──
+  const speakAvatarSpeech = useCallback(
+    (avatarId, text) => {
+      if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
-  // ── 2. Real-Time Web Audio API Mic Analyser (Instant Voice Detection) ──
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+
+      if (isAvatarVoiceMuted || !text) {
+        // Just highlight speaking for 3 seconds if audio muted
+        setActiveSpeakerId(avatarId);
+        setParticipants((prev) =>
+          prev.map((p) => ({ ...p, isSpeaking: p.id === avatarId }))
+        );
+        setTimeout(() => {
+          setActiveSpeakerId('student-1');
+          setParticipants((prev) => prev.map((p) => ({ ...p, isSpeaking: false })));
+        }, 3500);
+        return;
+      }
+
+      const avatarObj = GD_AVATARS.find((a) => a.id === avatarId) || GD_AVATARS[0];
+      const utterance = new SpeechSynthesisUtterance(text);
+      currentAvatarUtteranceRef.current = utterance;
+
+      const voices = window.speechSynthesis.getVoices();
+      let chosenVoice = null;
+
+      if (avatarObj.voiceGender === 'female') {
+        chosenVoice =
+          voices.find((v) => v.name.includes('Jenny') || v.name.includes('Zira') || v.name.includes('Neerja') || v.name.includes('Google UK English Female') || v.name.includes('Female')) ||
+          voices.find((v) => v.lang.startsWith('en'));
+      } else if (avatarObj.voiceGender === 'male_deep') {
+        chosenVoice =
+          voices.find((v) => v.name.includes('George') || v.name.includes('David') || v.name.includes('Guy') || v.name.includes('Google US English')) ||
+          voices.find((v) => v.lang.startsWith('en'));
+      } else {
+        chosenVoice =
+          voices.find((v) => v.name.includes('David') || v.name.includes('Mark') || v.name.includes('Ravi')) ||
+          voices.find((v) => v.lang.startsWith('en'));
+      }
+
+      if (chosenVoice) utterance.voice = chosenVoice;
+      utterance.pitch = avatarObj.voicePitch || 1.0;
+      utterance.rate = avatarObj.voiceRate || 1.0;
+
+      utterance.onstart = () => {
+        setActiveSpeakerId(avatarId);
+        setParticipants((prev) =>
+          prev.map((p) => ({ ...p, isSpeaking: p.id === avatarId }))
+        );
+      };
+
+      utterance.onend = () => {
+        setParticipants((prev) => prev.map((p) => ({ ...p, isSpeaking: false })));
+        setActiveSpeakerId('student-1');
+      };
+
+      utterance.onerror = () => {
+        setParticipants((prev) => prev.map((p) => ({ ...p, isSpeaking: false })));
+        setActiveSpeakerId('student-1');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    },
+    [isAvatarVoiceMuted]
+  );
+
+  // ── 3. Real-Time Web Audio API Mic Analyser (Gauges voice volume) ──
   useEffect(() => {
     let isCancelled = false;
 
@@ -199,20 +190,22 @@ export function useGroupDiscussionSession({
           if (!isCancelled && analyserRef.current && isMicActive) {
             analyserRef.current.getByteFrequencyData(dataArray);
             let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              sum += dataArray[i];
-            }
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
             const avg = sum / dataArray.length;
             const normalized = Math.min(100, Math.round((avg / 128) * 100));
             setAudioLevel(normalized);
 
-            // If voice level > 12, host student is actively speaking
-            if (normalized > 12) {
+            if (normalized > 14) {
               setActiveSpeakerId('student-1');
+              setParticipants((prev) =>
+                prev.map((p) => ({ ...p, isSpeaking: p.id === 'student-1' }))
+              );
               clearTimeout(silenceTimerRef.current);
               silenceTimerRef.current = setTimeout(() => {
-                // If quiet for 2.5 seconds, leave active or idle
-              }, 2500);
+                setParticipants((prev) =>
+                  prev.map((p) => (p.id === 'student-1' ? { ...p, isSpeaking: false } : p))
+                );
+              }, 1200);
             }
           } else {
             setAudioLevel(0);
@@ -226,31 +219,52 @@ export function useGroupDiscussionSession({
       }
     }
 
-    if (isMicActive) {
-      initAudioAnalyser();
-    } else {
-      setAudioLevel(0);
-    }
+    if (isMicActive) initAudioAnalyser();
+    else setAudioLevel(0);
 
     return () => {
       isCancelled = true;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-      }
+      if (micStreamRef.current) micStreamRef.current.getTracks().forEach((t) => t.stop());
+      if (audioContextRef.current) audioContextRef.current.close().catch(() => {});
     };
   }, [isMicActive]);
 
-  // ── 3. High-Accuracy Continuous Speech-to-Text STT ──
+  // ── 4. Trigger an Avatar to Respond to Student's Speech ──
+  const triggerAvatarResponse = useCallback(
+    (lastStudentSpeech) => {
+      // Rotate among the 3 AI avatars
+      const avatarKeys = ['ananya', 'vikram', 'rohan'];
+      const chosenAvatarId = avatarKeys[Math.floor(Math.random() * avatarKeys.length)];
+      const avatarMeta = GD_AVATARS.find((a) => a.id === chosenAvatarId) || GD_AVATARS[0];
+
+      const argumentText = generateAvatarArgument(chosenAvatarId, topic.title, lastStudentSpeech, userName);
+
+      const newEntry = {
+        id: Date.now(),
+        speakerId: chosenAvatarId,
+        speakerName: avatarMeta.name,
+        role: avatarMeta.role,
+        avatar: avatarMeta.avatar,
+        text: argumentText,
+        timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
+      };
+
+      setTranscripts((prev) => [...prev, newEntry]);
+
+      // Speak aloud via TTS
+      speakAvatarSpeech(chosenAvatarId, argumentText);
+    },
+    [topic.title, userName, speakAvatarSpeech]
+  );
+
+  // ── 5. High-Accuracy Continuous Speech-to-Text STT ──
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn('[GD STT] SpeechRecognition API not supported in this browser.');
+      console.warn('[GD STT] SpeechRecognition not supported in this browser.');
       return;
     }
 
@@ -258,7 +272,6 @@ export function useGroupDiscussionSession({
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    // 'en-IN' provides outstanding recognition for Indian English, technical terms, and Hinglish
     recognition.lang = 'en-IN';
 
     recognition.onstart = () => {
@@ -287,69 +300,48 @@ export function useGroupDiscussionSession({
         const words = activeText.toLowerCase().split(/\s+/);
         const count = words.filter((w) => fillerList.includes(w)).length;
         if (count > 0) {
-          setFillersDetected((prev) => {
-            const updated = prev + count;
-            setAiAnalysis((prevAi) => ({ ...prevAi, fillersCount: updated }));
-            return updated;
-          });
+          setFillersDetected((prev) => prev + count);
         }
       }
 
       if (final) {
         const finalCleaned = final.trim();
-        // Append candidate contribution to transcript
         const newEntry = {
           id: Date.now(),
           speakerId: 'student-1',
-          speakerName: `${userName} (Host)`,
-          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop&crop=faces',
+          speakerName: `${userName} (You)`,
+          role: 'Candidate / Student',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
           text: finalCleaned,
           timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
         };
 
         setTranscripts((prev) => [...prev, newEntry]);
+        setStudentContributions((prev) => [...prev, newEntry]);
         setLiveCandidateTranscript('');
 
-        // Recalculate candidate WPM & Air-time
+        // Recalculate speech seconds
         const wordCount = finalCleaned.split(/\s+/).length;
-        const estimatedSeconds = Math.max(4, Math.round((wordCount / 135) * 60));
-
+        const estSecs = Math.max(4, Math.round((wordCount / 135) * 60));
         setParticipants((prev) =>
           prev.map((p) =>
-            p.id === 'student-1'
-              ? { ...p, speechSeconds: (p.speechSeconds || 0) + estimatedSeconds }
-              : p
+            p.id === 'student-1' ? { ...p, speechSeconds: (p.speechSeconds || 0) + estSecs } : p
           )
         );
 
-        // Update AI Analysis
-        setAiAnalysis((prev) => {
-          const newWpm = Math.min(180, Math.max(105, Math.round(wordCount > 3 ? (wordCount / (estimatedSeconds / 60)) : prev.wpm)));
-          return {
-            ...prev,
-            wpm: newWpm,
-            airTimePct: Math.min(65, prev.airTimePct + 2),
-            articulationScore: Math.min(98, prev.articulationScore + (wordCount > 10 ? 1 : 0)),
-          };
-        });
-
-        // Trigger intelligent peer student rebuttal/support after 3 seconds
+        // Avatar responds automatically after 1.8 seconds!
         setTimeout(() => {
-          triggerPeerResponse(finalCleaned);
-        }, 3200);
+          triggerAvatarResponse(finalCleaned);
+        }, 1800);
       }
     };
 
     recognition.onerror = (event) => {
-      if (event.error === 'not-allowed') {
-        console.warn('[GD STT] Mic permission denied.');
-      }
       isRecognizingRef.current = false;
     };
 
     recognition.onend = () => {
       isRecognizingRef.current = false;
-      // Auto-restart watchdog if mic should be active
       if (isMicActive && sessionStatus === 'running') {
         try {
           recognition.start();
@@ -371,199 +363,112 @@ export function useGroupDiscussionSession({
       } catch (_) {}
       isRecognizingRef.current = false;
     };
-  }, [isMicActive, sessionStatus, userName]);
+  }, [isMicActive, sessionStatus, userName, triggerAvatarResponse]);
 
-  // ── 4. Peer Student Dynamic Turn-Taking (Contextual AI Arguments) ──
-  const triggerPeerResponse = useCallback(
-    async (lastCandidateSpeech) => {
-      // Pick a random peer who is NOT the host
-      const peerCandidates = participants.filter((p) => !p.isLocalUser);
-      if (peerCandidates.length === 0) return;
-
-      const randomPeer = peerCandidates[Math.floor(Math.random() * peerCandidates.length)];
-      setActiveSpeakerId(randomPeer.id);
-
-      // Mark peer speaking
-      setParticipants((prev) =>
-        prev.map((p) => ({
-          ...p,
-          isSpeaking: p.id === randomPeer.id,
-        }))
-      );
-
-      try {
-        const res = await fetch('http://localhost:3001/api/gd/argument', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            topic: topic.title,
-            speaker: randomPeer.name,
-            studentSpeech: lastCandidateSpeech,
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.argument) {
-            setTranscripts((prev) => [
-              ...prev,
-              {
-                id: Date.now(),
-                speakerId: randomPeer.id,
-                speakerName: randomPeer.name,
-                avatar: randomPeer.avatar,
-                text: data.argument,
-                timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
-              },
-            ]);
-
-            // Update peer speaking seconds
-            setParticipants((prev) =>
-              prev.map((p) =>
-                p.id === randomPeer.id
-                  ? { ...p, speechSeconds: (p.speechSeconds || 0) + 12 }
-                  : p
-              )
-            );
-          }
-        }
-      } catch (_) {
-        // Fallback argument if offline
-        const fallbackText = `Building on what was just mentioned regarding ${topic.title}, we must evaluate scalability and accessibility for all stakeholders involved.`;
-        setTranscripts((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            speakerId: randomPeer.id,
-            speakerName: randomPeer.name,
-            avatar: randomPeer.avatar,
-            text: fallbackText,
-            timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
-          },
-        ]);
-      }
-
-      // Reset speaker indicator to candidate after 4 seconds
-      setTimeout(() => {
-        setActiveSpeakerId('student-1');
-        setParticipants((prev) =>
-          prev.map((p) => ({ ...p, isSpeaking: false }))
-        );
-      }, 4500);
-    },
-    [participants, topic.title]
-  );
-
-  // ── 5. Add Dynamic Student to Roundtable ──
-  const addParticipant = useCallback((newStudent) => {
-    setParticipants((prev) => [...prev, newStudent]);
-
-    // Add welcoming transcript message
-    setTranscripts((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        isSystem: true,
-        speakerName: 'System',
-        text: `✨ ${newStudent.name} (${newStudent.role}${newStudent.college ? ` • ${newStudent.college}` : ''}) joined the roundtable!`,
-        timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
-      },
-    ]);
-  }, []);
-
-  // ── 6. Remove Student from Roundtable ──
-  const removeParticipant = useCallback((studentId) => {
-    setParticipants((prev) => prev.filter((p) => p.id !== studentId));
-  }, []);
-
-  // ── 7. Manual Argument Submission (Text Input) ──
+  // ── 6. Student Submits Manual Typed Argument ──
   const submitManualArgument = useCallback(
     (text) => {
       if (!text || !text.trim()) return;
-      const clean = text.trim();
+      const cleaned = text.trim();
+
       const newEntry = {
         id: Date.now(),
         speakerId: 'student-1',
-        speakerName: `${userName} (Host)`,
-        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop&crop=faces',
-        text: clean,
+        speakerName: `${userName} (You)`,
+        role: 'Candidate / Student',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
+        text: cleaned,
         timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
       };
-      setTranscripts((prev) => [...prev, newEntry]);
 
-      // Trigger peer response
+      setTranscripts((prev) => [...prev, newEntry]);
+      setStudentContributions((prev) => [...prev, newEntry]);
+
+      // Trigger Avatar rebuttal/response after 1.5 seconds
       setTimeout(() => {
-        triggerPeerResponse(clean);
-      }, 2500);
+        triggerAvatarResponse(cleaned);
+      }, 1500);
     },
-    [triggerPeerResponse, userName]
+    [userName, triggerAvatarResponse]
   );
 
-  // ── 8. Poll Voting ──
-  const votePoll = useCallback((optionIndex) => {
-    setActivePoll((prev) => {
-      if (prev.userVotedIndex !== null) return prev; // already voted
-      const updatedOptions = prev.options.map((opt, i) =>
-        i === optionIndex ? { ...opt, votes: opt.votes + 1 } : opt
-      );
-      return {
-        ...prev,
-        options: updatedOptions,
-        userVotedIndex: optionIndex,
-      };
-    });
-  }, []);
+  // ── 7. Manually Prompt Next Avatar to Speak ──
+  const promptNextAvatarToSpeak = useCallback(() => {
+    const lastStudent = studentContributions[studentContributions.length - 1]?.text || '';
+    triggerAvatarResponse(lastStudent);
+  }, [studentContributions, triggerAvatarResponse]);
 
-  // ── 9. Notes Persistence ──
-  const updateNotes = useCallback((newText) => {
-    setNotes(newText);
-    try {
-      localStorage.setItem('gd_session_notes', newText);
-    } catch (_) {}
-  }, []);
-
-  // ── 10. Copy Invite Code ──
-  const copyInviteCode = useCallback(() => {
-    navigator.clipboard?.writeText?.(inviteCode);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2500);
-  }, [inviteCode]);
-
-  // ── 11. Add Custom Point to Board ──
-  const addBulletPoint = useCallback((newBullet) => {
-    if (!newBullet || !newBullet.trim()) return;
-    setTopic((prev) => ({
-      ...prev,
-      keyPoints: [...(prev.keyPoints || []), newBullet.trim()],
-    }));
-  }, []);
-
-  // ── 12. Delete Point from Board ──
-  const removeBulletPoint = useCallback((index) => {
-    setTopic((prev) => ({
-      ...prev,
-      keyPoints: prev.keyPoints.filter((_, i) => i !== index),
-    }));
-  }, []);
-
-  // ── 13. Select New Topic ──
-  const selectTopic = useCallback((newTopic) => {
-    setTopic(newTopic);
+  // ── 8. Change Topic (Student Topic De OR Avatar Topic De) ──
+  const setCustomStudentTopic = useCallback((topicTitle, topicDesc = '') => {
+    const custom = {
+      id: `gd-custom-${Date.now()}`,
+      title: topicTitle.trim() || 'Custom Discussion Topic',
+      category: 'Student Choice',
+      description: topicDesc.trim() || 'Open discussion with AI avatars.',
+      keyPoints: [
+        'Present structured premise with real-world examples.',
+        'Address ethical and technical tradeoffs.',
+        'Formulate practical roadmap for resolution.',
+      ],
+    };
+    setTopic(custom);
     setTimerSeconds(600);
     setTranscripts([
       {
         id: Date.now(),
-        isSystem: true,
-        speakerName: 'System',
-        text: `📋 Topic updated to: "${newTopic.title}"`,
+        speakerId: 'rohan',
+        speakerName: 'Rohan Sharma',
+        role: 'Tech Optimist',
+        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop&crop=faces',
+        text: `Great choice of topic! We are now discussing: "${custom.title}". Let's start the round. Who would like to present their opening point?`,
         timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
       },
     ]);
-  }, []);
+    speakAvatarSpeech(
+      'rohan',
+      `Great choice of topic! We are now discussing: ${custom.title}. Please share your opening thoughts.`
+    );
+  }, [speakAvatarSpeech]);
 
-  // Toggle mic active
+  const setRandomAvatarChoiceTopic = useCallback(() => {
+    const randomTopic = getRandomAvatarTopic();
+    setTopic(randomTopic);
+    setTimerSeconds(600);
+    setTranscripts([
+      {
+        id: Date.now(),
+        speakerId: 'ananya',
+        speakerName: 'Ananya Roy',
+        role: 'Balanced Analyst',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
+        text: `I have picked an engaging topic for us: "${randomTopic.title}". ${randomTopic.description} ${userName}, would you like to lead off with the opening argument?`,
+        timestamp: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
+      },
+    ]);
+    speakAvatarSpeech(
+      'ananya',
+      `I have selected our discussion topic: ${randomTopic.title}. Pragya, would you like to present your opening point?`
+    );
+  }, [userName, speakAvatarSpeech]);
+
+  // ── 9. Generate Post-GD Performance Analysis for Modal ──
+  const getFullAnalysisReport = useCallback(() => {
+    return analyzeStudentGDPerformance(studentContributions, topic);
+  }, [studentContributions, topic]);
+
+  // Toggle mic
   const toggleMic = useCallback(() => {
     setIsMicActive((prev) => !prev);
+  }, []);
+
+  // Toggle mute avatar voices
+  const toggleAvatarVoiceMute = useCallback(() => {
+    setIsAvatarVoiceMuted((prev) => {
+      if (!prev && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      return !prev;
+    });
   }, []);
 
   return {
@@ -572,30 +477,27 @@ export function useGroupDiscussionSession({
     timerSeconds,
     participants,
     activeSpeakerId,
-    inviteCode,
-    codeCopied,
     transcripts,
     isMicActive,
     audioLevel,
     liveCandidateTranscript,
-    aiAnalysis,
     fillersDetected,
-    activePoll,
-    notes,
+    isAvatarVoiceMuted,
+    studentContributions,
     toggleMic,
     setIsMicActive,
     setSessionStatus,
     resetTimer,
     addMinutes,
-    addParticipant,
-    removeParticipant,
     submitManualArgument,
-    votePoll,
-    updateNotes,
-    copyInviteCode,
-    addBulletPoint,
-    removeBulletPoint,
-    selectTopic,
-    setActiveSpeakerId,
+    promptNextAvatarToSpeak,
+    setCustomStudentTopic,
+    setRandomAvatarChoiceTopic,
+    selectTopic: (t) => {
+      setTopic(t);
+      setTimerSeconds(600);
+    },
+    getFullAnalysisReport,
+    toggleAvatarVoiceMute,
   };
 }
