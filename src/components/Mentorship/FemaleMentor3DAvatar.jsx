@@ -157,41 +157,42 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     }
 
     // ── 2. Natural Seated Human Arm & Hand Rest Posture (Resting naturally on lap / chair) ──
-    const speakPulse = isSpeaking ? Math.sin(t * 2.8) * 0.035 : 0;
-    const breatheGentle = Math.sin(t * 1.6) * 0.006;
-
     // Left Arm & Forearm: Hanging down along ribcage and resting forward in lap
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-0.45);
-      bones.LeftArm.rotateX(0.20 + breatheGentle);
+      bones.LeftArm.rotateZ(-1.32);
+      bones.LeftArm.rotateX(0.24);
+      bones.LeftArm.rotateY(-0.08);
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(1.50);
-      bones.LeftForeArm.rotateZ(0.65);
+      bones.LeftForeArm.rotateX(0.95);
+      bones.LeftForeArm.rotateZ(0.38);
+      bones.LeftForeArm.rotateY(-0.12);
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(-0.15);
-      bones.LeftHand.rotateZ(0.10);
+      bones.LeftHand.rotateX(0.12);
+      bones.LeftHand.rotateZ(-0.08);
     }
 
-    // Right Arm & Forearm: Symmetrical seated rest with subtle live speaking micro-gesture
+    // Right Arm & Forearm: Symmetrical seated rest naturally on lap (completely fixed, no repetitive movement)
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(0.45);
-      bones.RightArm.rotateX(0.20 + speakPulse * 0.25 + breatheGentle);
+      bones.RightArm.rotateZ(1.32);
+      bones.RightArm.rotateX(0.24);
+      bones.RightArm.rotateY(0.08);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(1.50 + speakPulse * 0.35);
-      bones.RightForeArm.rotateZ(-0.65);
+      bones.RightForeArm.rotateX(0.95);
+      bones.RightForeArm.rotateZ(-0.38);
+      bones.RightForeArm.rotateY(0.12);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(-0.15 - speakPulse * 0.2);
-      bones.RightHand.rotateZ(-0.10);
+      bones.RightHand.rotateX(0.12);
+      bones.RightHand.rotateZ(0.08);
     }
 
     // Relaxed natural finger resting pose (gently curved like human hands at rest)
@@ -472,22 +473,31 @@ export default function FemaleMentor3DAvatar({
   isSpeaking = false,
   isListening = false,
   isThinking = false,
-  mentorName = 'Dr. Ann Vance',
+  mentorName = 'Baatology AI Mentor',
+  isDarkBackground = false,
 }) {
   return (
-    <div className="relative w-full h-full overflow-hidden select-none bg-[#090d16] flex items-center justify-center">
-      {/* 1. FIXED FULL-SCREEN PHOTOREALISTIC FUTURISTIC GLASS BOARDROOM BACKGROUND (Matching Image 1) */}
-      <img
-        src="/backgrounds/futuristic_glass_office_room.jpg"
-        alt="Baatology Futuristic Glass Boardroom"
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[1.02] contrast-[1.03]"
-        onError={(e) => {
-          e.currentTarget.src = '/backgrounds/futuristic_mentor_session.png';
-        }}
-      />
+    <div
+      className={`relative w-full h-full overflow-hidden select-none flex items-center justify-center transition-colors duration-500 ${
+        isDarkBackground ? 'bg-[#000000]' : 'bg-[#090d16]'
+      }`}
+    >
+      {/* 1. FULL-SCREEN BACKGROUND (Only visible when isDarkBackground is false) */}
+      {!isDarkBackground && (
+        <img
+          src="/backgrounds/futuristic_glass_office_room.jpg"
+          alt="Baatology Futuristic Glass Boardroom"
+          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[1.02] contrast-[1.03]"
+          onError={(e) => {
+            e.currentTarget.src = '/backgrounds/futuristic_mentor_session.png';
+          }}
+        />
+      )}
 
       {/* Subtle Futuristic Tech Room Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/15 pointer-events-none z-0" />
+      {!isDarkBackground && (
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/15 pointer-events-none z-0" />
+      )}
 
       {/* 2. TRANSPARENT 3D CANVAS */}
       <div className="absolute inset-0 w-full h-full z-10">
