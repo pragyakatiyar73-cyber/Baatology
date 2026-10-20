@@ -157,42 +157,38 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     }
 
     // ── 2. Natural Seated Human Arm & Hand Rest Posture (Resting naturally on lap / chair) ──
-    // Left Arm & Forearm: Hanging down along ribcage and resting forward in lap
+    // Hands are FIXED and anchored in place, resting naturally in lap like a human sitting in a chair
+
+    // Left Arm & Forearm: Hanging naturally down along ribcage and resting forward in lap
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-1.32);
-      bones.LeftArm.rotateX(0.24);
-      bones.LeftArm.rotateY(-0.08);
+      bones.LeftArm.rotateZ(-0.68);
+      bones.LeftArm.rotateX(0.18);
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(0.95);
-      bones.LeftForeArm.rotateZ(0.38);
-      bones.LeftForeArm.rotateY(-0.12);
+      bones.LeftForeArm.rotateX(0.28);
+      bones.LeftForeArm.rotateZ(-0.08);
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(0.12);
-      bones.LeftHand.rotateZ(-0.08);
+      bones.LeftHand.rotateX(-0.10);
     }
 
-    // Right Arm & Forearm: Symmetrical seated rest naturally on lap (completely fixed, no repetitive movement)
+    // Right Arm & Forearm: Symmetrical seated rest (FIXED - No erratic waving gestures)
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(1.32);
-      bones.RightArm.rotateX(0.24);
-      bones.RightArm.rotateY(0.08);
+      bones.RightArm.rotateZ(0.68);
+      bones.RightArm.rotateX(0.18);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(0.95);
-      bones.RightForeArm.rotateZ(-0.38);
-      bones.RightForeArm.rotateY(0.12);
+      bones.RightForeArm.rotateX(0.28);
+      bones.RightForeArm.rotateZ(0.08);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(0.12);
-      bones.RightHand.rotateZ(0.08);
+      bones.RightHand.rotateX(-0.10);
     }
 
     // Relaxed natural finger resting pose (gently curved like human hands at rest)
@@ -474,29 +470,37 @@ export default function FemaleMentor3DAvatar({
   isListening = false,
   isThinking = false,
   mentorName = 'Baatology AI Mentor',
-  isDarkBackground = false,
+  backgroundMode = 'office', // 'office' | 'black'
 }) {
+  const isBlack = backgroundMode === 'black';
+
   return (
     <div
       className={`relative w-full h-full overflow-hidden select-none flex items-center justify-center transition-colors duration-500 ${
-        isDarkBackground ? 'bg-[#000000]' : 'bg-[#090d16]'
+        isBlack ? 'bg-[#000000]' : 'bg-[#090d16]'
       }`}
     >
-      {/* 1. FULL-SCREEN BACKGROUND (Only visible when isDarkBackground is false) */}
-      {!isDarkBackground && (
-        <img
-          src="/backgrounds/futuristic_glass_office_room.jpg"
-          alt="Baatology Futuristic Glass Boardroom"
-          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[1.02] contrast-[1.03]"
-          onError={(e) => {
-            e.currentTarget.src = '/backgrounds/futuristic_mentor_session.png';
-          }}
-        />
+      {/* 1. PHOTOREALISTIC FUTURISTIC GLASS BOARDROOM BACKGROUND (HIDDEN WHEN BLACK BACKGROUND SELECTED) */}
+      {!isBlack && (
+        <>
+          <img
+            src="/backgrounds/futuristic_glass_office_room.jpg"
+            alt="Baatology Futuristic Glass Boardroom"
+            className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0 filter brightness-[1.02] contrast-[1.03]"
+            onError={(e) => {
+              e.currentTarget.src = '/backgrounds/futuristic_mentor_session.png';
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/15 pointer-events-none z-0" />
+        </>
       )}
 
-      {/* Subtle Futuristic Tech Room Gradient */}
-      {!isDarkBackground && (
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/15 pointer-events-none z-0" />
+      {/* Atmospheric Rim Glows for Pure Black Mode */}
+      {isBlack && (
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-cyan-500/10 blur-[120px]" />
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[500px] h-48 rounded-full bg-indigo-500/10 blur-[100px]" />
+        </div>
       )}
 
       {/* 2. TRANSPARENT 3D CANVAS */}
