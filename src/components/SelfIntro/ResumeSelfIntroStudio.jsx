@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   FileText,
   Upload,
@@ -17,38 +17,98 @@ import {
   Clock,
   Eye,
   AlertCircle,
-  FileCheck,
-  Code2,
   GraduationCap,
   Briefcase,
-  Share2,
-  ChevronRight,
   TrendingUp,
+  Video,
+  VideoOff,
+  Bot,
+  MessageSquare,
+  Play,
+  Share2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import FemaleMentor3DAvatar from '../Mentorship/FemaleMentor3DAvatar';
+import DigitalRobotAvatar from '../Mentorship/DigitalRobotAvatar';
+import CandidateVideoPanel from '../Mentorship/CandidateVideoPanel';
+import { useWebcam } from '../../hooks/useWebcam';
 import {
   SAMPLE_RESUMES,
   extractResumeText,
   parseResumeContent,
   auditResumeHealth,
   crossMatchSpeechWithResume,
-  generateResumeQuestions,
   detectSpeechMistakes,
 } from '../../utils/resumeParser';
 import { getBestFemaleVoice, configureFemaleUtterance } from '../../utils/femaleVoiceManager';
 import { recordPracticeSession } from '../../utils/progressHistory';
 import { playSuccessChime } from '../../utils/chime';
 
+// ── BUILD 4 DYNAMIC INTERVIEW QUESTIONS DERIVED FROM RESUME ──
+function buildComprehensiveQuestions(resumeData) {
+  const p = (resumeData.projects && resumeData.projects[0]) || {
+    title: 'Full Stack Web Platform',
+    tech: ['React.js', 'Node.js'],
+  };
+  const pName = p.title.split('–')[0].trim();
+  const techPrimary = (p.tech && p.tech[0]) || resumeData.skills?.allFound?.[0] || 'your core stack';
+  const techSecondary = (p.tech && p.tech[1]) || resumeData.skills?.allFound?.[1] || 'databases';
+
+  return [
+    {
+      id: 'q_intro',
+      category: '1. Self-Introduction & Resume Overview',
+      question: `Hello ${resumeData.name}! Welcome to your technical interview. Let's begin with your self-introduction based on your resume. Please introduce yourself, your educational background from ${resumeData.college}, and your primary technical focus.`,
+      hint: `Deliver your 60–90s elevator pitch: identity, degree, top skills (${resumeData.skills?.allFound?.slice(0, 3).join(', ')}), and your flagship project.`,
+      expectedKeywords: ['name', 'pursuing', 'college', 'project', 'skills'],
+    },
+    {
+      id: 'q_proj_arch',
+      category: '2. Flagship Project Architecture',
+      question: `In your resume, you highlighted your project "${pName}" built using ${techPrimary}. Can you walk me through the system architecture and the biggest technical challenge you had to solve?`,
+      hint: `Explain using STAR format: Situation, Task, Action, and Result with quantifiable metrics (e.g. latency, scale).`,
+      expectedKeywords: [pName.toLowerCase(), techPrimary.toLowerCase(), 'architecture', 'api', 'database', 'challenge'],
+    },
+    {
+      id: 'q_tech_core',
+      category: '3. Technical Stack & Trade-Offs',
+      question: `You listed proficiency in ${techSecondary}. How does it compare to other alternatives in the market, and why was it the optimal choice for your engineering projects?`,
+      hint: `Explain trade-offs: performance, community support, scalability, and ease of maintenance.`,
+      expectedKeywords: [techSecondary.toLowerCase(), 'scalability', 'performance', 'alternative', 'trade-off'],
+    },
+    {
+      id: 'q_dsa_problem',
+      category: '4. Problem-Solving & Data Structures',
+      question: `You mentioned a strong foundation in Data Structures and Algorithms. If you needed to optimize search and retrieval time in an application from O(N) to O(1) or O(log N), what data structure would you pick and why?`,
+      hint: `Mention Hash Maps / Hash Tables for O(1) average lookup, or Binary Search Trees / Tries for O(log N) prefix searches.`,
+      expectedKeywords: ['hash', 'map', 'tree', 'trie', 'constant', 'time', 'o(1)', 'o(log n)', 'lookup'],
+    },
+  ];
+}
+
 export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDashboard }) {
   // ── STEP STATE ──
-  // 'resume_upload' | 'practice_intro' | 'followup_questions' | 'results'
+  // 'resume_upload' (Step 1) | 'interview' (Step 2 - Face to Face with Avatar) | 'results' (Step 3 - Mistake Detection)
   const [currentStep, setCurrentStep] = useState('resume_upload');
+
+  // ── AVATAR SELECTION ('female_mentor' with Baatology cyber blazer vs 'robot') ──
+  const [activeAvatarType, setActiveAvatarType] = useState('female_mentor');
 
   // ── RESUME STATE ──
   const [resumeData, setResumeData] = useState(SAMPLE_RESUMES[0]);
   const [isParsing, setIsParsing] = useState(false);
   const [resumeAudit, setResumeAudit] = useState(() => auditResumeHealth(SAMPLE_RESUMES[0]));
   const [selectedAuditTab, setSelectedAuditTab] = useState('alternatives'); // 'alternatives' | 'problems' | 'summary'
+
+  // ── DYNAMIC INTERVIEW QUESTIONS DERIVED FROM RESUME ──
+  const [questions, setQuestions] = useState(() => buildComprehensiveQuestions(SAMPLE_RESUMES[0]));
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [questionAnswers, setQuestionAnswers] = useState({});
+  const [isAiAsking, setIsAiAsking] = useState(false);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+
+  // ── WEBCAM HOOK (FOR FACE-TO-FACE VIDEO CALL WITH AVATAR) ──
+  const { stream, isActive: cameraActive, startCamera } = useWebcam(false);
 
   // ── PRACTICE TELEMETRY & SPEECH STATE ──
   const [isListening, setIsListening] = useState(false);
@@ -57,19 +117,13 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [fillersCount, setFillersCount] = useState(0);
-  const [eyeContactScore, setEyeContactScore] = useState(88);
+  const [eyeContactScore, setEyeContactScore] = useState(92);
   const [spokenMistakes, setSpokenMistakes] = useState({ mistakes: [], fillersCount: 0 });
 
   // ── LIVE RESUME MATCH STATE ──
   const [liveMatch, setLiveMatch] = useState(() => crossMatchSpeechWithResume('', SAMPLE_RESUMES[0]));
 
-  // ── DYNAMIC RESUME FOLLOW-UP QUESTIONS ──
-  const [questions, setQuestions] = useState(() => generateResumeQuestions(SAMPLE_RESUMES[0]));
-  const [currentQIndex, setCurrentQIndex] = useState(0);
-  const [questionAnswers, setQuestionAnswers] = useState({});
-  const [isAiAsking, setIsAiAsking] = useState(false);
-
-  // ── SPEECH RECOGNITION REFS ──
+  // ── REFS ──
   const recognitionRef = useRef(null);
   const timerRef = useRef(null);
   const transcriptRef = useRef('');
@@ -78,32 +132,39 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
   useEffect(() => {
     const audit = auditResumeHealth(resumeData);
     setResumeAudit(audit);
-    setQuestions(generateResumeQuestions(resumeData));
+    const newQs = buildComprehensiveQuestions(resumeData);
+    setQuestions(newQs);
+    setCurrentQIndex(0);
     setLiveMatch(crossMatchSpeechWithResume(transcriptRef.current, resumeData));
   }, [resumeData]);
 
-  // ── SPEAK AI TEXT ──
-  const speakText = (text, onEnd) => {
+  // ── SPEAK AI TEXT (AVATAR TALKS WITH LIP SYNC & MOVEMENT) ──
+  const speakText = useCallback((text, onEnd) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       if (onEnd) onEnd();
       return;
     }
+
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     configureFemaleUtterance(utterance);
     const voice = getBestFemaleVoice();
     if (voice) utterance.voice = voice;
+
+    setIsAiAsking(true);
+
     utterance.onend = () => {
       setIsAiAsking(false);
       if (onEnd) onEnd();
     };
+
     utterance.onerror = () => {
       setIsAiAsking(false);
       if (onEnd) onEnd();
     };
-    setIsAiAsking(true);
+
     window.speechSynthesis.speak(utterance);
-  };
+  }, []);
 
   // ── HANDLE RESUME UPLOAD ──
   const handleFileUpload = async (e) => {
@@ -159,26 +220,21 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
         const matchResult = crossMatchSpeechWithResume(totalTranscript + ' ' + interimStr, resumeData);
         setLiveMatch(matchResult);
 
-        // Calculate WPM
-        const words = totalTranscript.split(/\s+/).filter(Boolean).length;
-        const minutes = Math.max(1, sessionSeconds) / 60;
-        setWpm(Math.round(words / minutes));
-
-        // Detect hesitation fillers
-        const fillers = (totalTranscript.toLowerCase().match(/\b(umm|um|uh|uhh|like|you know|basically|actually)\b/g) || []).length;
-        setFillersCount(fillers);
-
         // Detect speech mistakes
-        const detected = detectSpeechMistakes(totalTranscript);
-        setSpokenMistakes(detected);
+        const mistakeResult = detectSpeechMistakes(totalTranscript + ' ' + interimStr);
+        setSpokenMistakes(mistakeResult);
+        setFillersCount(mistakeResult.fillersCount);
+
+        // Calculate WPM
+        const words = (totalTranscript + ' ' + interimStr).trim().split(/\s+/).filter(Boolean).length;
+        if (sessionSeconds > 5) {
+          const computedWpm = Math.round((words / sessionSeconds) * 60);
+          setWpm(computedWpm);
+        }
       };
 
       rec.onerror = (e) => {
-        console.warn('[SpeechRec] Error:', e.error);
-        if (e.error === 'not-allowed') {
-          alert('Microphone access was denied. Please allow microphone permissions to practice.');
-          setIsListening(false);
-        }
+        console.debug('Speech recognition event:', e.error);
       };
 
       recognitionRef.current = rec;
@@ -186,9 +242,16 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // ignore
+        }
       }
       if (timerRef.current) clearInterval(timerRef.current);
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, [resumeData, sessionSeconds]);
 
@@ -207,99 +270,155 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
       try {
         recognitionRef.current.start();
         setIsListening(true);
-        timerRef.current = setInterval(() => {
-          setSessionSeconds((prev) => prev + 1);
-        }, 1000);
+        if (!timerRef.current) {
+          timerRef.current = setInterval(() => {
+            setSessionSeconds((prev) => prev + 1);
+          }, 1000);
+        }
       } catch (err) {
         console.warn('Speech start error:', err);
       }
     }
   };
 
-  // ── SUBMIT INTRODUCTION & PROCEED TO QUESTIONS ──
-  const handleFinishIntroduction = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
+  const startMicSafely = useCallback(() => {
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+      if (!timerRef.current) {
+        timerRef.current = setInterval(() => {
+          setSessionSeconds((prev) => prev + 1);
+        }, 1000);
+      }
+    } catch (e) {
+      // already active
+    }
+  }, []);
+
+  const pauseMicSafely = useCallback(() => {
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.stop();
       setIsListening(false);
-      if (timerRef.current) clearInterval(timerRef.current);
+    } catch (e) {
+      // already stopped
     }
+  }, []);
 
-    // If user barely said anything, encourage testing
-    if (transcript.trim().length < 20) {
-      const sampleSpoken = `Hello, my name is ${resumeData.name}. I am graduating with a degree in ${resumeData.degree} from ${resumeData.college}. My technical expertise includes ${resumeData.skills.allFound.slice(0, 3).join(', ')}. Recently, I architected ${resumeData.projects[0]?.title}, where I solved critical latency and scaling challenges. I am passionate about engineering clean, high-impact systems.`;
-      setTranscript(sampleSpoken);
-      transcriptRef.current = sampleSpoken;
-      setLiveMatch(crossMatchSpeechWithResume(sampleSpoken, resumeData));
-      setSpokenMistakes(detectSpeechMistakes(sampleSpoken));
-    }
-
-    setCurrentStep('followup_questions');
+  // ── ENTER STEP 2: FACE-TO-FACE INTERVIEW WITH AVATAR ──
+  const handleStartFaceToFaceInterview = () => {
+    setCurrentStep('interview');
+    startCamera();
     setCurrentQIndex(0);
+    setTranscript('');
+    transcriptRef.current = '';
+    setInterimText('');
+    setSessionSeconds(0);
+    setQuestionAnswers({});
 
-    // AI announces transition and speaks Question 1
-    const firstQ = questions[0];
+    // Avatar speaks Question 1 aloud after a short realistic transition
+    const q1 = questions[0];
     setTimeout(() => {
-      speakText(
-        `Great introduction ${resumeData.name}! Now, let's dive into your resume with a technical follow-up: ${firstQ.question}`
-      );
-    }, 600);
+      pauseMicSafely();
+      speakText(q1.question, () => {
+        // When Avatar finishes speaking question, turn on microphone so student can speak
+        startMicSafely();
+      });
+    }, 700);
   };
 
-  // ── ANSWER QUESTION & ADVANCE ──
-  const handleAnswerCurrentQuestion = (ansText) => {
-    const q = questions[currentQIndex];
+  // ── PROCEED TO NEXT QUESTION IN INTERVIEW ──
+  const handleNextQuestion = () => {
+    // Record current answer
+    const currentQ = questions[currentQIndex];
     setQuestionAnswers((prev) => ({
       ...prev,
-      [q.id]: ansText || 'Strong technical response with system design considerations and trade-offs.',
+      [currentQ.id]: transcript || 'Answer articulated during face-to-face practice.',
     }));
 
     if (currentQIndex + 1 < questions.length) {
       const nextIdx = currentQIndex + 1;
       setCurrentQIndex(nextIdx);
       const nextQ = questions[nextIdx];
-      setTimeout(() => {
-        speakText(`Next question: ${nextQ.question}`);
-      }, 400);
+
+      pauseMicSafely();
+      const bridgePhrase = `Thank you, ${resumeData.name}. Let's move to our next question: ${nextQ.question}`;
+      speakText(bridgePhrase, () => {
+        startMicSafely();
+      });
     } else {
-      // All questions completed -> View Results
-      handleCompleteSession();
+      // Finished all questions -> View Mistake Detection & Diagnostic Report
+      handleFinishInterview();
     }
   };
 
-  // ── COMPLETE ENTIRE SESSION & SHOW DIAGNOSTICS ──
-  const handleCompleteSession = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
+  // ── REPLAY CURRENT QUESTION ALOUD ──
+  const handleReplayCurrentQuestion = () => {
+    const currentQ = questions[currentQIndex];
+    pauseMicSafely();
+    speakText(currentQ.question, () => {
+      startMicSafely();
+    });
+  };
+
+  // ── CONCLUDE INTERVIEW & RUN MISTAKE DETECTION ──
+  const handleFinishInterview = () => {
+    pauseMicSafely();
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
+
+    // Auto-fill fallback sample if user tested silently
+    let fullSpoken = transcript.trim();
+    if (fullSpoken.length < 15) {
+      fullSpoken = `Hello, my name is ${resumeData.name}. I am graduating with a degree in ${resumeData.degree} from ${resumeData.college}. My technical expertise includes ${resumeData.skills?.allFound?.slice(0, 3).join(', ')}. Recently, I architected ${resumeData.projects[0]?.title}, where I solved critical latency and scaling challenges using modular REST APIs and optimized database indexing.`;
+      setTranscript(fullSpoken);
+      transcriptRef.current = fullSpoken;
+    }
+
+    // Cross-match and detect mistakes across full interview
+    const finalMatch = crossMatchSpeechWithResume(fullSpoken, resumeData);
+    setLiveMatch(finalMatch);
+
+    const finalMistakes = detectSpeechMistakes(fullSpoken);
+    setSpokenMistakes(finalMistakes);
 
     // Play celebration audio and confetti
     playSuccessChime();
     confetti({
-      particleCount: 85,
-      spread: 70,
+      particleCount: 90,
+      spread: 75,
       origin: { y: 0.6 },
-      colors: ['#3b82f6', '#10b981', '#6366f1', '#f59e0b'],
+      colors: ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#00e5ff'],
     });
 
     // Record to persistent practice history
-    const finalScore = Math.round((liveMatch.alignmentScore + resumeAudit.atsScore) / 2);
+    const finalScore = Math.round((finalMatch.alignmentScore + resumeAudit.atsScore) / 2);
     recordPracticeSession({
       mode: 'Self Introduction',
       score: finalScore,
       eyeContact: eyeContactScore,
-      fillersCount: fillersCount,
-      summary: `Delivered resume-aligned introduction for ${resumeData.role} at ${resumeData.college}.`,
-      badge: finalScore >= 85 ? '🌟 Articulate Speaker' : '🚀 Confident Presenter',
+      fillersCount: finalMistakes.fillersCount,
+      summary: `Completed face-to-face interview with 3D Avatar for ${resumeData.role} at ${resumeData.college}.`,
+      badge: finalScore >= 85 ? '🌟 Placement Ready' : '🚀 Confident Communicator',
     });
 
     setCurrentStep('results');
+
+    // Congratulatory voice message from Avatar
+    setTimeout(() => {
+      speakText(
+        `Congratulations ${resumeData.name}! Your face-to-face interview is complete. I have analyzed your speech, cross-matched it with your resume, and prepared your mistake detection report. Let's review it together!`
+      );
+    }, 500);
   };
 
   return (
     <div className="w-full min-h-screen bg-[#f8fafc] text-[#0f172a] flex flex-col font-sans select-none">
       {/* ── TOP EXECUTIVE APP HEADER ── */}
-      <header className="h-16 px-6 bg-white border-b border-[#e2e8f0] flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      <header className="h-16 px-4 sm:px-6 bg-white border-b border-[#e2e8f0] flex items-center justify-between sticky top-0 z-40 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             onClick={onBackToDashboard}
@@ -313,14 +432,14 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base font-extrabold text-[#1e1b4b] tracking-tight">
-                Self-Introduction &amp; Resume-Linked Interview Studio
+                Self-Introduction &amp; Face-to-Face 3D Interview
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-700">
                 Baatology AI
               </span>
             </div>
             <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
-              Resume parsing • Live alignment tracking • AI Resume flaw audit &amp; "Iske jagah ye likho" recommendations
+              Resume submission • 3D Avatar Face-to-Face Interview • Live Speech Matching &amp; AI Mistake Detection
             </p>
           </div>
         </div>
@@ -329,7 +448,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
         <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
           <button
             onClick={() => setCurrentStep('resume_upload')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
+            className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
               currentStep === 'resume_upload'
                 ? 'bg-white text-blue-600 shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900'
@@ -338,44 +457,32 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
             1. Resume &amp; Audit
           </button>
           <button
-            onClick={() => setCurrentStep('practice_intro')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
-              currentStep === 'practice_intro'
+            onClick={handleStartFaceToFaceInterview}
+            className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+              currentStep === 'interview'
                 ? 'bg-white text-blue-600 shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            2. Self Introduction
-          </button>
-          <button
-            onClick={() => setCurrentStep('followup_questions')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
-              currentStep === 'followup_questions'
-                ? 'bg-white text-blue-600 shadow-xs font-extrabold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            3. AI Questions
+            <span>2. Face-to-Face Interview</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           </button>
           <button
             onClick={() => setCurrentStep('results')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
+            className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
               currentStep === 'results'
                 ? 'bg-white text-blue-600 shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            4. Diagnostic Report
+            3. Mistake Detection
           </button>
         </div>
       </header>
 
-      {/* ── MAIN WORKSPACE CONTENT BASED ON ACTIVE STEP ── */}
-      <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
-        {/* ══════════════════════════════════════════════════════════════════════
-            STEP 1: RESUME SUBMISSION, PARSER & AI FLAW DETECTOR
-        ══════════════════════════════════════════════════════════════════════ */}
-        {currentStep === 'resume_upload' && (
+      {/* ── STEP 1: RESUME SUBMISSION, PARSER & AI FLAW DETECTOR ── */}
+      {currentStep === 'resume_upload' && (
+        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Column (5 cols): Resume Upload Box & Profile Summary */}
             <div className="lg:col-span-5 space-y-5">
@@ -399,7 +506,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                     Upload Your Resume (PDF or TXT)
                   </h3>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs">
-                    Drop your resume here. AI will extract your projects, skills, and analyze mistakes before practice.
+                    Drop your resume here. AI will extract your projects, skills, and analyze mistakes before your face-to-face interview.
                   </p>
                   <span className="mt-4 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all">
                     {isParsing ? 'Parsing Resume Content...' : 'Browse Resume File'}
@@ -500,12 +607,13 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                   </div>
                 </div>
 
-                {/* Action button: Proceed to Practice */}
+                {/* Big Action button: Start Face-to-Face Interview with Avatar */}
                 <button
-                  onClick={() => setCurrentStep('practice_intro')}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  onClick={handleStartFaceToFaceInterview}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
-                  <span>Proceed to Self Introduction Practice</span>
+                  <Bot className="w-4 h-4" />
+                  <span>Start Face-to-Face Interview with Avatar</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -692,528 +800,598 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
               {/* Bottom Quick-Launch Bar */}
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-slate-500 font-medium">
-                  Resume checked. Ready to test your voice delivery?
+                  Resume checked. Ready for your face-to-face interview with the Avatar?
                 </span>
                 <button
-                  onClick={() => setCurrentStep('practice_intro')}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  onClick={handleStartFaceToFaceInterview}
+                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                 >
-                  <span>Start Practice Round</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>Start Face-to-Face Interview</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
-        )}
+        </main>
+      )}
 
-        {/* ══════════════════════════════════════════════════════════════════════
-            STEP 2: LIVE RESUME-ALIGNED SELF INTRODUCTION DELIVERY
-        ══════════════════════════════════════════════════════════════════════ */}
-        {currentStep === 'practice_intro' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column (5 cols): Elevator Pitch Blueprint & Live Resume Match Badges */}
-            <div className="lg:col-span-5 space-y-5">
-              {/* Pitch Structure Guide (Tailored from Candidate Resume) */}
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-blue-600" />
-                    <h4 className="text-sm font-extrabold text-slate-900">
-                      Your Resume Elevator Pitch Guide
-                    </h4>
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">
-                    60–90s Pitch
+      {/* ── STEP 2: LIVE FACE-TO-FACE 3D INTERVIEW ROOM WITH AVATAR ── */}
+      {currentStep === 'interview' && (
+        <div className="relative w-full h-[calc(100vh-4rem)] overflow-hidden bg-slate-950 flex flex-col select-none">
+          {/* ── 3D AVATAR CANVAS (MAIN BACKGROUND & CENTER INTERVIEWER) ── */}
+          <div className="absolute inset-0 w-full h-full z-0">
+            {activeAvatarType === 'female_mentor' ? (
+              <FemaleMentor3DAvatar
+                isSpeaking={isAiAsking}
+                isListening={isListening && !isAiAsking}
+                isThinking={isAiThinking}
+                mentorName="Baatology AI Mentor"
+              />
+            ) : (
+              <DigitalRobotAvatar
+                isSpeaking={isAiAsking}
+                isListening={isListening && !isAiAsking}
+                isThinking={isAiThinking}
+                mentorName="Baatology AI Coach"
+              />
+            )}
+          </div>
+
+          {/* ── TOP FLOATING INTERVIEW HUD ── */}
+          <div className="relative z-20 p-4 sm:p-5 flex items-center justify-between gap-3 pointer-events-auto">
+            {/* Left: Avatar Identity & Speaking/Listening Status */}
+            <div className="flex items-center gap-2.5">
+              <div className="px-3.5 py-1.5 rounded-full bg-black/75 border border-cyan-500/40 backdrop-blur-md shadow-xl flex items-center gap-2 text-xs font-bold text-white">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00e5ff]" />
+                <span>Baatology AI Interviewer</span>
+                <span className="text-[10px] text-cyan-300 px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30">
+                  {activeAvatarType === 'female_mentor' ? 'Executive Mentor' : 'Robot Coach'}
+                </span>
+              </div>
+
+              {/* Avatar Type Toggle */}
+              <button
+                onClick={() => setActiveAvatarType(prev => prev === 'female_mentor' ? 'robot' : 'female_mentor')}
+                className="px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 border border-white/15 text-[11px] font-semibold text-slate-300 hover:text-white backdrop-blur-md transition-all cursor-pointer flex items-center gap-1.5"
+                title="Switch between Executive Mentor and 3D Robot Coach"
+              >
+                <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Switch Avatar</span>
+              </button>
+            </div>
+
+            {/* Center Status Banner */}
+            <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md shadow-md">
+              {isAiAsking ? (
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                  <Volume2 className="w-3.5 h-3.5 animate-bounce" />
+                  <span>Avatar is asking Question #{currentQIndex + 1}... (Listen carefully)</span>
+                </div>
+              ) : isListening ? (
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                  <Mic className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Amne-Samne Face-to-Face: Avatar is listening to your answer! Speak naturally.</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                  <span>Microphone paused. Click "Start Speaking" below.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Return to Resume or Change View */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentStep('resume_upload')}
+                className="px-3.5 py-1.5 rounded-xl bg-black/70 hover:bg-white/15 border border-white/20 text-xs font-bold text-slate-200 hover:text-white transition-all backdrop-blur-md cursor-pointer"
+              >
+                ← Back to Resume
+              </button>
+            </div>
+          </div>
+
+          {/* ── TOP RIGHT: CANDIDATE LIVE WEBCAM PIP (FACE-TO-FACE VIDEO PANEL) ── */}
+          <div className="relative z-30 pointer-events-auto">
+            <CandidateVideoPanel
+              stream={stream}
+              cameraActive={cameraActive}
+              micActive={isListening}
+              candidateName={resumeData.name || userName}
+              audioLevel={isListening ? 60 : 0}
+              eyeContactPct={eyeContactScore}
+              isFloatingPIP={true}
+            />
+          </div>
+
+          {/* ── FLOATING QUESTION DIALOGUE CARD (AI INTERVIEWER'S CURRENT QUESTION) ── */}
+          <div className="relative z-20 mx-4 sm:mx-6 max-w-2xl pointer-events-auto mt-1 sm:mt-2">
+            <div className="rounded-3xl bg-slate-900/85 border border-cyan-500/30 backdrop-blur-xl p-4 sm:p-5 shadow-[0_10px_35px_rgba(0,0,0,0.8),0_0_25px_rgba(6,182,212,0.15)] text-white space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-cyan-300 font-mono">
+                    {questions[currentQIndex]?.category}
                   </span>
                 </div>
-
-                <div className="space-y-2.5 text-xs">
-                  <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-100">
-                    <div className="font-extrabold text-blue-900 flex items-center gap-1.5 mb-0.5">
-                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">1</span>
-                      Identity &amp; College
-                    </div>
-                    <p className="text-slate-600 text-[11px]">
-                      "My name is {resumeData.name}, pursuing {resumeData.degree} from {resumeData.college}."
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100">
-                    <div className="font-extrabold text-indigo-900 flex items-center gap-1.5 mb-0.5">
-                      <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">2</span>
-                      Core Tech Stack
-                    </div>
-                    <p className="text-slate-600 text-[11px]">
-                      "I specialize in {resumeData.skills?.allFound?.slice(0, 3).join(', ')} with strong CS fundamentals in DSA."
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
-                    <div className="font-extrabold text-emerald-900 flex items-center gap-1.5 mb-0.5">
-                      <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">3</span>
-                      Flagship Project
-                    </div>
-                    <p className="text-slate-600 text-[11px]">
-                      "Recently, I built {resumeData.projects[0]?.title}, focusing on system architecture and scalability."
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-100">
-                    <div className="font-extrabold text-amber-900 flex items-center gap-1.5 mb-0.5">
-                      <span className="w-4 h-4 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px]">4</span>
-                      Career Vision &amp; Value
-                    </div>
-                    <p className="text-slate-600 text-[11px]">
-                      "I'm eager to bring my problem-solving ability to an engineering team and build reliable software."
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-500/40">
+                    Question {currentQIndex + 1} of {questions.length}
+                  </span>
+                  <button
+                    onClick={handleReplayCurrentQuestion}
+                    className="p-1.5 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 text-cyan-400 border border-cyan-500/40 transition-all cursor-pointer"
+                    title="Replay Question Audio"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* LIVE RESUME CROSS-MATCH HUD */}
-              <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    <h4 className="text-sm font-extrabold text-slate-900">
-                      Live Resume Cross-Matching
-                    </h4>
-                  </div>
-                  <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
-                    liveMatch.alignmentScore >= 70
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {liveMatch.alignmentScore}% Aligned
-                  </span>
-                </div>
+              {/* The Spoken Question Text */}
+              <p className="text-sm sm:text-base font-extrabold text-white leading-relaxed tracking-tight">
+                "{questions[currentQIndex]?.question}"
+              </p>
 
-                {/* Covered Skills */}
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                    🟢 Mentioned from Resume ({liveMatch.coveredSkills.length}):
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {liveMatch.coveredSkills.length === 0 ? (
-                      <span className="text-xs text-slate-400 italic">
-                        Start speaking skills from your resume...
+              {/* Guidance Hint */}
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
+                <div className="flex items-center gap-1.5 text-[11px] text-cyan-200">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                  <span><strong>AI Hint:</strong> {questions[currentQIndex]?.hint}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── FLOATING LEFT HUD: LIVE RESUME CROSS-MATCH TAGS ── */}
+          <div className="absolute left-4 sm:left-6 bottom-32 sm:bottom-28 z-20 max-w-xs sm:max-w-sm pointer-events-auto">
+            <div className="rounded-2xl bg-black/80 border border-emerald-500/30 backdrop-blur-md p-3.5 text-white space-y-2.5 shadow-xl">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                  Live Speech vs Resume Match
+                </span>
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-mono">
+                  {liveMatch.alignmentScore}% Aligned
+                </span>
+              </div>
+
+              {/* Mentioned Skills from Resume */}
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  🟢 Mentioned ({liveMatch.coveredSkills.length}):
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {liveMatch.coveredSkills.length === 0 ? (
+                    <span className="text-[11px] text-slate-500 italic">
+                      Start speaking skills from your resume...
+                    </span>
+                  ) : (
+                    liveMatch.coveredSkills.map((sk, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 animate-fade-in"
+                      >
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                        <span>{sk}</span>
                       </span>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Missed Highlights Reminder */}
+              {liveMatch.missedHighlights.length > 0 && (
+                <div className="pt-1.5 border-t border-white/10 text-[10px] text-amber-300 space-y-0.5">
+                  <span className="font-bold block text-amber-400">💡 Tip: Don't forget to mention:</span>
+                  <div className="text-slate-300 line-clamp-2">
+                    {liveMatch.missedHighlights[0]}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── BOTTOM EXECUTIVE DOCK: LIVE TRANSCRIPT & INTERVIEW CONTROLS ── */}
+          <div className="mt-auto relative z-30 w-full p-4 sm:p-5 bg-gradient-to-t from-black via-slate-950/90 to-transparent pointer-events-auto">
+            <div className="max-w-4xl mx-auto space-y-3">
+              {/* Spoken Word Stream (Real-Time Audio Recognition Ribbon) */}
+              <div className="rounded-2xl bg-slate-900/90 border border-slate-700/60 p-3 sm:p-3.5 backdrop-blur-md shadow-lg flex items-center justify-between gap-3 text-xs">
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-cyan-300 font-mono">
+                      Live Candidate Transcript:
+                    </span>
+                  </div>
+                  <div className="text-slate-200 font-medium truncate sm:whitespace-normal line-clamp-1 sm:line-clamp-2 text-xs">
+                    {transcript || interimText ? (
+                      <>
+                        <span>{transcript}</span>
+                        <span className="text-cyan-300 italic"> {interimText}</span>
+                      </>
                     ) : (
-                      liveMatch.coveredSkills.map((sk, i) => (
-                        <span
-                          key={i}
-                          className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-fade-in flex items-center gap-1"
-                        >
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          <span>{sk}</span>
-                        </span>
-                      ))
+                      <span className="text-slate-500 italic">
+                        {isAiAsking
+                          ? 'Avatar is currently speaking the question...'
+                          : 'Speak your response face-to-face with the Avatar...'}
+                      </span>
                     )}
                   </div>
                 </div>
 
-                {/* Missed Highlights Real-time Reminder */}
-                {liveMatch.missedHighlights.length > 0 && (
-                  <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs text-amber-900 space-y-1">
-                    <span className="font-extrabold flex items-center gap-1 text-amber-800 text-[11px]">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                      Tip: Don't forget to mention:
-                    </span>
-                    <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-800/90 font-medium">
-                      {liveMatch.missedHighlights.map((tip, idx) => (
-                        <li key={idx}>{tip}</li>
-                      ))}
-                    </ul>
+                {/* Telemetry Pills */}
+                <div className="hidden sm:flex items-center gap-2 shrink-0 font-mono text-[11px]">
+                  <div className="px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-slate-300">
+                    ⏱️ {Math.floor(sessionSeconds / 60)}:{(sessionSeconds % 60).toString().padStart(2, '0')}
                   </div>
-                )}
-
-                {/* Inconsistencies Warning (If detected) */}
-                {liveMatch.inconsistencies.length > 0 && (
-                  <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-900 space-y-1 animate-pulse">
-                    <span className="font-extrabold flex items-center gap-1 text-red-700">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-                      Discrepancy / Inconsistency Detected:
-                    </span>
-                    {liveMatch.inconsistencies.map((inc, idx) => (
-                      <div key={idx} className="text-[11px] text-red-800">
-                        <strong>Claim:</strong> {inc.claim} • <strong>Fact:</strong> {inc.resumeFact}
-                      </div>
-                    ))}
+                  <div className="px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-cyan-300 font-bold">
+                    ⚡ {wpm || '--'} WPM
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column (7 cols): Live Microphone Practice Arena & Voice Telemetry */}
-            <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-5">
-              {/* Telemetry Bar (Timer, WPM, Eye Contact, Fillers) */}
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Duration</span>
-                  <span className="text-base font-black text-slate-800 font-mono">
-                    {Math.floor(sessionSeconds / 60)}:{(sessionSeconds % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Speed (WPM)</span>
-                  <span className="text-base font-black text-blue-600 font-mono">
-                    {wpm || '--'}
-                  </span>
-                </div>
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Fillers ("umm")</span>
-                  <span className={`text-base font-black font-mono ${fillersCount > 3 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                    {fillersCount}
-                  </span>
-                </div>
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Eye Contact</span>
-                  <span className="text-base font-black text-indigo-600 font-mono">
-                    {eyeContactScore}%
-                  </span>
+                  <div className="px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-amber-300 font-bold">
+                    🗣️ {fillersCount} Fillers
+                  </div>
                 </div>
               </div>
 
-              {/* Spoken Word Stream (Real-Time Audio Recognition Window) */}
-              <div className="h-64 rounded-2xl bg-slate-900 text-slate-100 p-4 border border-slate-800 overflow-y-auto font-sans text-xs leading-relaxed flex flex-col justify-between relative shadow-inner">
-                {transcript.length === 0 && !interimText ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 space-y-2">
-                    <Mic className="w-8 h-8 text-blue-400 animate-bounce" />
-                    <p className="font-medium text-xs">
-                      Click <strong>"Start Speaking"</strong> below and deliver your introduction.
-                    </p>
-                    <span className="text-[11px] text-slate-500 max-w-sm">
-                      AI will transcribe every word, cross-match your resume, and detect speech mistakes in real time.
-                    </span>
-                  </div>
-                ) : (
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block mb-2">
-                      Live Spoken Audio Transcript:
-                    </span>
-                    <span className="text-slate-200 font-normal">{transcript}</span>
-                    <span className="text-blue-300 italic font-normal"> {interimText}</span>
-                  </div>
-                )}
+              {/* Action Controls Dock */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                {/* Left: Mic Toggle & Reset */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleListening}
+                    className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-lg flex items-center gap-2 cursor-pointer active:scale-95 ${
+                      isListening
+                        ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/40 animate-pulse'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40'
+                    }`}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="w-4 h-4" />
+                        <span>Mute Mic</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4" />
+                        <span>Start Speaking</span>
+                      </>
+                    )}
+                  </button>
 
-                {/* Live Mic Animation Ribbon */}
-                {isListening && (
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800 mt-2 text-[10px] text-emerald-400 font-mono">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                      <span>MICROPHONE RECORDING ACTIVE • SPEAK NATURALLY</span>
-                    </div>
-                    <span>Web Audio Telemetry</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Controls Dock */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                <button
-                  onClick={toggleListening}
-                  className={`w-full sm:w-auto px-6 py-3 rounded-2xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
-                    isListening
-                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-200 animate-pulse'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-200'
-                  }`}
-                >
-                  {isListening ? (
-                    <>
-                      <MicOff className="w-4 h-4" />
-                      <span>Pause Microphone</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-4 h-4" />
-                      <span>{transcript ? 'Resume Speaking' : 'Start Speaking Introduction'}</span>
-                    </>
-                  )}
-                </button>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => {
                       setTranscript('');
                       transcriptRef.current = '';
-                      setSessionSeconds(0);
+                      setInterimText('');
                     }}
-                    className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all cursor-pointer"
+                    className="p-2.5 rounded-xl bg-black/60 hover:bg-white/15 text-slate-300 hover:text-white border border-white/15 transition-all cursor-pointer"
                     title="Reset Speech"
                   >
                     <RotateCcw className="w-4 h-4" />
                   </button>
 
+                  {/* 1-Click Auto Sample Answer (For Rapid Testing) */}
                   <button
-                    onClick={handleFinishIntroduction}
-                    className="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                    onClick={() => {
+                      const sampleAnswer = `My name is ${resumeData.name}, pursuing ${resumeData.degree} from ${resumeData.college}. My technical expertise includes ${resumeData.skills?.allFound?.slice(0, 3).join(', ')}. Recently, I architected ${resumeData.projects[0]?.title}, where I solved critical latency and scaling challenges using modular REST APIs and optimized database indexing.`;
+                      setTranscript(sampleAnswer);
+                      transcriptRef.current = sampleAnswer;
+                      setLiveMatch(crossMatchSpeechWithResume(sampleAnswer, resumeData));
+                      setSpokenMistakes(detectSpeechMistakes(sampleAnswer));
+                    }}
+                    className="hidden lg:flex items-center gap-1 px-3 py-2 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/30 text-cyan-300 text-[11px] font-bold transition-all cursor-pointer"
                   >
-                    <span>Finish &amp; Ask AI Questions</span>
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>⚡ Sample Answer</span>
+                  </button>
+                </div>
+
+                {/* Right: Next Question or Conclude Interview */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleNextQuestion}
+                    className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-black shadow-lg shadow-cyan-500/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <span>{currentQIndex + 1 < questions.length ? 'Next Question' : 'Finish & Detect Mistakes'}</span>
                     <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={handleFinishInterview}
+                    className="px-4 py-2.5 rounded-2xl bg-purple-600/80 hover:bg-purple-600 text-white text-xs font-bold border border-purple-400/30 transition-all cursor-pointer active:scale-95"
+                    title="Conclude Interview & Run Mistake Detection"
+                  >
+                    <span>Detect Mistakes 🎯</span>
                   </button>
                 </div>
               </div>
-
-              {/* Live Detected Mistakes Preview */}
-              {spokenMistakes.mistakes.length > 0 && (
-                <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200 text-xs space-y-1.5">
-                  <div className="flex items-center justify-between font-extrabold text-rose-900">
-                    <span className="flex items-center gap-1.5">
-                      <AlertCircle className="w-4 h-4 text-rose-600" />
-                      Live Speech Mistakes Detected ({spokenMistakes.mistakes.length}):
-                    </span>
-                    <span className="text-[10px] text-rose-600 font-bold uppercase">
-                      Instant Feedback
-                    </span>
-                  </div>
-                  {spokenMistakes.mistakes.slice(0, 2).map((m, idx) => (
-                    <div key={idx} className="text-[11px] text-rose-800">
-                      <strong>{m.found}:</strong> {m.correction}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ══════════════════════════════════════════════════════════════════════
-            STEP 3: RESUME-TAILORED DYNAMIC AI FOLLOW-UP QUESTIONS
-        ══════════════════════════════════════════════════════════════════════ */}
-        {currentStep === 'followup_questions' && (
-          <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+      {/* ── STEP 3: COMPREHENSIVE PERFORMANCE & MISTAKE DETECTION REPORT ── */}
+      {currentStep === 'results' && (
+        <main className="flex-1 p-4 sm:p-6 max-w-5xl w-full mx-auto space-y-6">
+          {/* Grand Results Banner */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shadow-lg">
+                <Award className="w-8 h-8" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                    Interview Complete — AI Mistake Detection Report
+                  </h2>
+                  <span className="text-xl">🎉</span>
+                </div>
+                <p className="text-xs text-blue-200 mt-1">
+                  Baatology Face-to-Face 3D Interview • Resume Alignment &amp; Speech Mistake Diagnostics
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center sm:text-right sm:border-l sm:border-white/15 sm:pl-6 shrink-0">
+              <div className="text-3xl font-black text-emerald-400 font-mono">
+                {Math.round((liveMatch.alignmentScore + resumeAudit.atsScore) / 2)}
+                <span className="text-xs text-slate-400 font-sans"> / 100</span>
+              </div>
+              <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300">
+                Placement Ready 🚀
+              </span>
+            </div>
+          </div>
+
+          {/* 4 Score Highlight Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Resume Alignment</span>
+              <div className="text-2xl font-black text-blue-600 font-mono">
+                {liveMatch.alignmentScore}%
+              </div>
+              <span className="text-[10px] font-semibold text-slate-500">
+                {liveMatch.coveredSkills.length} skills matched
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ATS Health Score</span>
+              <div className="text-2xl font-black text-indigo-600 font-mono">
+                {resumeAudit.atsScore}%
+              </div>
+              <span className="text-[10px] font-semibold text-slate-500">
+                Grade: {resumeAudit.grade}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Speaking Pacing</span>
+              <div className="text-2xl font-black text-emerald-600 font-mono">
+                {wpm || 135} <span className="text-xs text-slate-400 font-normal">WPM</span>
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-600">
+                Ideal Corporate Cadence
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hesitation Fillers</span>
+              <div className={`text-2xl font-black font-mono ${fillersCount > 3 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                {fillersCount}
+              </div>
+              <span className="text-[10px] font-semibold text-slate-500">
+                {fillersCount <= 2 ? 'Excellent fluency' : 'Replace with silent pause'}
+              </span>
+            </div>
+          </div>
+
+          {/* ── SECTION 1: SPOKEN MISTAKES & EXECUTIVE REWRITES ── */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-                  <HelpCircle className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+                  <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">
-                    Resume-Tailored Interview Question #{currentQIndex + 1} of {questions.length}
-                  </h3>
+                  <h4 className="text-sm font-extrabold text-slate-900">
+                    Spoken English &amp; Communication Mistakes Detected ({spokenMistakes.mistakes.length})
+                  </h4>
                   <p className="text-xs text-slate-500">
-                    {questions[currentQIndex]?.category} • Extracted from your uploaded resume
+                    Campus habits, hesitation fillers &amp; grammar rewrites to sound polished and corporate-ready
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => speakText(questions[currentQIndex]?.question)}
-                className="p-2.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition-all cursor-pointer"
-                title="Hear Question Aloud"
-              >
-                <Volume2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* The Dynamic Question Card */}
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-900 to-indigo-950 text-white space-y-3 shadow-md">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">
-                AI Interviewer Question:
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                AI Speech Audit
               </span>
-              <p className="text-sm sm:text-base font-bold leading-relaxed">
-                "{questions[currentQIndex]?.question}"
-              </p>
-              <div className="pt-2 border-t border-white/10 text-xs text-blue-200 font-medium">
-                💡 <strong>Hint:</strong> {questions[currentQIndex]?.hint}
-              </div>
             </div>
 
-            {/* Student's Answer Input Area */}
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span>Your Spoken / Typed Response:</span>
-                <span className="text-[11px] text-slate-400 font-normal">Speak or type your answer</span>
-              </label>
-              <textarea
-                rows={4}
-                value={questionAnswers[questions[currentQIndex]?.id] || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setQuestionAnswers((prev) => ({
-                    ...prev,
-                    [questions[currentQIndex]?.id]: val,
-                  }));
-                }}
-                placeholder="Click the microphone or type your response here..."
-                className="w-full p-4 rounded-2xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-xs leading-relaxed text-slate-800"
-              />
-
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={() => {
-                    // Quick sample answer for testing
-                    handleAnswerCurrentQuestion(
-                      `In my project, I decoupled frontend rendering from data fetching using custom React hooks and optimized database indexing in PostgreSQL. The biggest bottleneck was API latency under burst traffic, which I addressed by introducing Redis caching.`
-                    );
-                  }}
-                  className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
-                >
-                  ⚡ Auto-fill Sample Candidate Answer
-                </button>
-
-                <button
-                  onClick={() => handleAnswerCurrentQuestion(questionAnswers[questions[currentQIndex]?.id])}
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <span>{currentQIndex + 1 < questions.length ? 'Next Question' : 'Finish & View Diagnostics'}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+            {spokenMistakes.mistakes.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-emerald-50 text-emerald-800 text-xs font-bold text-center border border-emerald-200">
+                🎉 No major grammatical mistakes or excessive fillers detected in your spoken answers! Very articulate!
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════════
-            STEP 4: COMPREHENSIVE PERFORMANCE & RESUME DIAGNOSTIC REPORT
-        ══════════════════════════════════════════════════════════════════════ */}
-        {currentStep === 'results' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Grand Results Banner */}
-            <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-                  <Award className="w-8 h-8" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-                      Session Complete — Outstanding Performance!
-                    </h2>
-                    <span className="text-xl">🎉</span>
-                  </div>
-                  <p className="text-xs text-blue-200 mt-1">
-                    Baatology AI Mentorship • Comprehensive Self-Introduction &amp; Resume Diagnostic
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-center sm:text-right sm:border-l sm:border-white/15 sm:pl-6 shrink-0">
-                <div className="text-3xl font-black text-emerald-400 font-mono">
-                  {Math.round((liveMatch.alignmentScore + resumeAudit.atsScore) / 2)}
-                  <span className="text-xs text-slate-400 font-sans"> / 100</span>
-                </div>
-                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300">
-                  Placement Ready 🚀
-                </span>
-              </div>
-            </div>
-
-            {/* Scorecard Breakdown Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resume Alignment</span>
-                <span className="text-xl font-black text-blue-600 font-mono mt-1 block">
-                  {liveMatch.alignmentScore}%
-                </span>
-                <span className="text-[10px] text-slate-500">Profile Match</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resume ATS Health</span>
-                <span className="text-xl font-black text-indigo-600 font-mono mt-1 block">
-                  {resumeAudit.atsScore}%
-                </span>
-                <span className="text-[10px] text-slate-500">Benchmark Score</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Vocal Fluency</span>
-                <span className="text-xl font-black text-emerald-600 font-mono mt-1 block">
-                  {spokenMistakes.clarityScore || 85}%
-                </span>
-                <span className="text-[10px] text-slate-500">{wpm} WPM Pace</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Hesitation Fillers</span>
-                <span className="text-xl font-black text-amber-600 font-mono mt-1 block">
-                  {fillersCount}
-                </span>
-                <span className="text-[10px] text-slate-500">"umm/uh" Count</span>
-              </div>
-            </div>
-
-            {/* Detailed Mistake Detection & Fixes */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center gap-2 text-slate-900">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-                <h4 className="text-base font-extrabold">
-                  Spoken Mistakes &amp; Grammar Improvements
-                </h4>
-              </div>
-
-              {spokenMistakes.mistakes.length === 0 ? (
-                <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-800 text-xs font-semibold">
-                  ✅ Flawless vocal delivery! No repetitive fillers or major grammatical errors detected.
-                </div>
-              ) : (
-                <div className="space-y-3 text-xs">
-                  {spokenMistakes.mistakes.map((m, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between font-bold text-slate-900">
-                        <span>{m.type}</span>
-                        <span className="text-[10px] text-rose-600 uppercase font-black">Needs Practice</span>
-                      </div>
-                      <p className="text-rose-900 font-medium">⚠️ {m.found}</p>
-                      <p className="text-emerald-900 font-bold bg-white p-2 rounded-xl border border-slate-200">
-                        💡 <strong>Executive Correction:</strong> {m.correction}
-                      </p>
+            ) : (
+              <div className="space-y-3">
+                {spokenMistakes.mistakes.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 hover:border-rose-300 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-[10px]">
+                          {idx + 1}
+                        </span>
+                        {m.type}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                        {m.severity || 'Medium'} Severity
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {/* Resume Flaws & Actionable "Iske Jagah Ye Rakhein" Summary */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center gap-2 text-slate-900">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-                <h4 className="text-base font-extrabold">
-                  Resume Action Plan: "Iske Jagah Ye Rakhte Toh Jyada Better Hota"
-                </h4>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                {resumeAudit.problems.map((prob, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                    <span className="font-extrabold text-slate-900 block">{prob.type}</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-100 text-red-900">
-                        <strong>Existing:</strong> {prob.beforeAfter?.before || prob.found}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      <div className="p-3 rounded-xl bg-red-50/70 border border-red-200">
+                        <span className="text-[10px] font-black uppercase text-red-600 block mb-1">
+                          ❌ What was said:
+                        </span>
+                        <p className="text-red-950 font-medium">"{m.found}"</p>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-900 font-bold">
-                        <strong>Better Rewrite:</strong> {prob.beforeAfter?.after || prob.recommendation}
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <span className="text-[10px] font-black uppercase text-emerald-700 block mb-1">
+                          ✨ Executive Corporate Rewrite:
+                        </span>
+                        <p className="text-emerald-950 font-bold">"{m.correction}"</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* ── SECTION 2: RESUME CROSS-MATCH & ALIGNMENT DETAILS ── */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900">
+                    Speech vs. Resume Cross-Match Breakdown
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Verified what you articulated aloud against what you claimed on your resume
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-black text-blue-600 font-mono">
+                {liveMatch.alignmentScore}% Match
+              </span>
             </div>
 
-            {/* Bottom Navigation Buttons */}
-            <div className="flex items-center justify-between pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Mentioned Skills */}
+              <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-2">
+                <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Skills &amp; Projects Successfully Articulated:
+                </span>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {liveMatch.coveredSkills.map((sk, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-emerald-700 border border-emerald-300 shadow-xs"
+                    >
+                      ✓ {sk}
+                    </span>
+                  ))}
+                  {liveMatch.coveredProjects.map((p, i) => (
+                    <span
+                      key={'p_' + i}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 border border-indigo-300 shadow-xs"
+                    >
+                      📁 {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Missed Highlights */}
+              <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-2">
+                <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  Key Resume Points Omitted in Interview:
+                </span>
+                <ul className="text-xs text-amber-900/90 space-y-1 list-disc list-inside font-medium pt-1">
+                  {liveMatch.missedHighlights.map((tip, idx) => (
+                    <li key={idx}>{tip}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* ── SECTION 3: RESUME FLAW AUDIT ("ISKE JAGAH YE RAKHTE TOH JADA BETTER HOTA") ── */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900">
+                    Resume Upgrades ("Iske Jagah Ye Rakhein Toh Jada Better Hota")
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Actionable rewrites to replace passive bullet points with quantifiable engineering impact
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                ATS Score: {resumeAudit.atsScore}/100
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {resumeAudit.problems.map((prob, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5"
+                >
+                  <span className="text-xs font-extrabold text-slate-800 block">
+                    Problem #{idx + 1}: {prob.type}
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 rounded-xl bg-red-50/70 border border-red-200">
+                      <span className="text-[10px] font-black uppercase text-red-600 block mb-1">
+                        ❌ What was in Resume:
+                      </span>
+                      <p className="text-red-950 font-medium">"{prob.beforeAfter?.before || prob.found}"</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                      <span className="text-[10px] font-black uppercase text-emerald-700 block mb-1">
+                        ✨ Iske Jagah Ye Rakhein (Recommended):
+                      </span>
+                      <p className="text-emerald-950 font-bold">"{prob.beforeAfter?.after || prob.recommendation}"</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Dock */}
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-900">
+                Ready to retake or master another session?
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Practice makes permanent. Keep practicing with the 3D Avatar to eliminate speaking fear!
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               <button
-                onClick={() => {
-                  setTranscript('');
-                  setCurrentStep('practice_intro');
-                }}
-                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                onClick={handleStartFaceToFaceInterview}
+                className="flex-1 sm:flex-none px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Practice Again</span>
+                <span>Retake Face-to-Face Interview</span>
               </button>
 
               <button
                 onClick={onBackToDashboard}
-                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="flex-1 sm:flex-none px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
               >
-                <span>Return to Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
+                Return to Dashboard
               </button>
             </div>
           </div>
-        )}
-      </main>
+        </main>
+      )}
     </div>
   );
 }

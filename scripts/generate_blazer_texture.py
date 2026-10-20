@@ -142,7 +142,7 @@ def create_futuristic_white_blazer_texture():
         draw.ellipse([788, by - 2, 794, by + 3], fill=(255, 255, 255, 255))
 
     # ─────────────────────────────────────────────────────────────────
-    # 5. LUXURY EXECUTIVE "AuraGD" CHEST EMBLEM & BADGE
+    # 5. LUXURY EXECUTIVE "Baatology" CHEST EMBLEM & BADGE
     # ─────────────────────────────────────────────────────────────────
     bx0, by0 = 688, 238
     bx1, by1 = 775, 292
@@ -160,25 +160,25 @@ def create_futuristic_white_blazer_texture():
     draw.rounded_rectangle([bx0, by0, bx1, by1], radius=7, fill=(12, 18, 36, 255), outline=CYAN_GLOW, width=2)
     draw.rounded_rectangle([bx0 + 3, by0 + 3, bx1 - 3, by1 - 3], radius=5, outline=CYAN_GLOW_SOFT, width=1)
 
-    # Typography: "AuraGD" in bold cyber cyan & gold
-    font_brand = ImageFont.truetype(font_bold, 18)
+    # Typography: "Baatology" in bold cyber cyan & gold
+    font_brand = ImageFont.truetype(font_bold, 15)
     font_tag = ImageFont.truetype(font_bold, 8)
 
-    w_aura = draw.textlength("Aura", font=font_brand)
-    w_gd = draw.textlength("GD", font=font_brand)
-    total_w = w_aura + w_gd
+    w_baat = draw.textlength("Baat", font=font_brand)
+    w_ology = draw.textlength("ology", font=font_brand)
+    total_w = w_baat + w_ology
     text_x = bx0 + (bx1 - bx0 - total_w) // 2
-    text_y = by0 + 6
+    text_y = by0 + 7
 
-    draw.text((text_x + 1, text_y + 1), "AuraGD", font=font_brand, fill=(0, 0, 0, 240))
-    draw.text((text_x, text_y), "Aura", font=font_brand, fill=CYAN_GLOW)
-    draw.text((text_x + w_aura, text_y), "GD", font=font_brand, fill=GOLD_LIGHT)
+    draw.text((text_x + 1, text_y + 1), "Baatology", font=font_brand, fill=(0, 0, 0, 240))
+    draw.text((text_x, text_y), "Baat", font=font_brand, fill=CYAN_GLOW)
+    draw.text((text_x + w_baat, text_y), "ology", font=font_brand, fill=GOLD_LIGHT)
 
-    # Subtitle: "AI MENTOR" in polished white
-    sub_text = "AI MENTOR"
+    # Subtitle: "AI INTERVIEW" in polished white
+    sub_text = "AI INTERVIEW"
     w_sub = draw.textlength(sub_text, font=font_tag)
     sub_x = bx0 + (bx1 - bx0 - w_sub) // 2
-    sub_y = text_y + 23
+    sub_y = text_y + 20
     draw.text((sub_x, sub_y), sub_text, font=font_tag, fill=(240, 246, 255, 255))
 
     # Opposite lapel cyan cyber emblem pin
@@ -198,8 +198,10 @@ def create_futuristic_white_blazer_texture():
 
     # Composite overlay onto base texture
     final_im = Image.alpha_composite(im, overlay)
-    final_im.convert('RGB').save(out_path, 'PNG')
-    print('Successfully generated futuristic white cyber blazer texture:', out_path)
+    final_rgb = final_im.convert('RGB')
+    final_rgb.save(out_path, 'PNG')
+    final_rgb.save('public/models/white_cyber_blazer.png', 'PNG')
+    print('Successfully generated futuristic white cyber blazer texture with Baatology badge:', out_path, 'and public/models/white_cyber_blazer.png')
 
 if __name__ == '__main__':
     create_futuristic_white_blazer_texture()
