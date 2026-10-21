@@ -159,42 +159,42 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     // ── 2. Natural Seated Human Arm & Hand Rest Posture (Resting naturally on lap / chair) ──
     // Hands are FIXED and anchored in place, resting naturally in lap like a human sitting in a chair
 
-    // Left Arm & Forearm: Hanging naturally down along ribcage and resting forward in lap
+    // Left Arm & Forearm: Resting naturally and visibly forward on chair armrest
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-1.30);
-      bones.LeftArm.rotateX(0.24);
-      bones.LeftArm.rotateY(-0.08);
+      bones.LeftArm.rotateZ(-1.12);
+      bones.LeftArm.rotateX(0.26);
+      bones.LeftArm.rotateY(-0.06);
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(0.96);
-      bones.LeftForeArm.rotateZ(0.36);
-      bones.LeftForeArm.rotateY(-0.10);
+      bones.LeftForeArm.rotateX(1.18);
+      bones.LeftForeArm.rotateZ(0.18);
+      bones.LeftForeArm.rotateY(-0.12);
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(0.12);
-      bones.LeftHand.rotateZ(-0.08);
+      bones.LeftHand.rotateX(0.22);
+      bones.LeftHand.rotateZ(-0.05);
     }
 
-    // Right Arm & Forearm: Symmetrical seated rest naturally on lap (completely fixed, no repetitive movement)
+    // Right Arm & Forearm: Symmetrical seated rest visibly forward on chair armrest (hands clearly visible)
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(1.30);
-      bones.RightArm.rotateX(0.24);
-      bones.RightArm.rotateY(0.08);
+      bones.RightArm.rotateZ(1.12);
+      bones.RightArm.rotateX(0.26);
+      bones.RightArm.rotateY(0.06);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(0.96);
-      bones.RightForeArm.rotateZ(-0.36);
-      bones.RightForeArm.rotateY(0.10);
+      bones.RightForeArm.rotateX(1.18);
+      bones.RightForeArm.rotateZ(-0.18);
+      bones.RightForeArm.rotateY(0.12);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(0.12);
-      bones.RightHand.rotateZ(0.08);
+      bones.RightHand.rotateX(0.22);
+      bones.RightHand.rotateZ(0.05);
     }
 
     // Relaxed natural finger resting pose (gently curved like human hands at rest)
@@ -353,7 +353,7 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
   });
 
   return (
-    <group position={[0, -1.34, -0.15]} rotation={[0, 0, 0]} scale={1.0}>
+    <group position={[0, -1.28, -0.15]} rotation={[0, 0, 0]} scale={1.0}>
       <primitive object={scene} />
     </group>
   );
@@ -369,7 +369,7 @@ useTexture.preload('/models/head_makeup_texture.png');
  */
 function ModernLightExecutiveChair() {
   return (
-    <group position={[0, -0.10, -0.26]}>
+    <group position={[0, -0.04, -0.26]}>
       {/* 1. Sleek Brushed Aluminum Central Spine & Crossbar */}
       <mesh position={[0, 0.04, -0.05]} castShadow>
         <cylinderGeometry args={[0.014, 0.016, 0.52, 16]} />
@@ -514,8 +514,8 @@ export default function FemaleMentor3DAvatar({
         <Canvas
           shadows
           camera={{
-            position: [0, 0.16, 1.02],
-            fov: 38,
+            position: [0, 0.10, 1.18],
+            fov: 42,
             near: 0.1,
             far: 20,
           }}
@@ -585,7 +585,7 @@ export default function FemaleMentor3DAvatar({
 
           {/* ── Locked Camera Controls Focused at Eye Level (0.8m - 1.2m Intimate Distance) ── */}
           <OrbitControls
-            target={[0, 0.14, -0.15]}
+            target={[0, 0.02, -0.15]}
             enableRotate={false}
             enableZoom={false}
             enablePan={false}

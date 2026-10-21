@@ -389,8 +389,8 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
     setSessionSeconds(0);
     setQuestionAnswers({});
 
-    // Avatar warmly greets the student and asks for their Self-Introduction
-    const introGreeting = `Hello ${resumeData.name}! Welcome to Baatology. Let's begin with your self-introduction. Please introduce yourself, your educational background from ${resumeData.college}, and what you are passionate about. Whenever you are ready, please speak!`;
+    // Avatar warmly welcomes the student and asks them to tell about themselves
+    const introGreeting = `Hello ${resumeData.name}! Welcome. Please tell me about yourself.`;
     setTimeout(() => {
       pauseMicSafely();
       speakText(introGreeting, () => {
@@ -1110,7 +1110,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
               {/* Question Text */}
               {interviewStage === 'intro' ? (
                 <p className="text-sm sm:text-base font-extrabold text-white leading-relaxed tracking-tight">
-                  "Hello {resumeData?.name}! Welcome to your technical interview. Please deliver your self-introduction based on your resume — tell me about your background from {resumeData?.college}, your core skills, and your primary projects."
+                  "Hello {resumeData?.name}! Welcome to your interview. Please tell me about yourself — share your background, your technical skills, and your engineering journey."
                 </p>
               ) : (
                 <p className="text-sm sm:text-base font-extrabold text-white leading-relaxed tracking-tight">
@@ -1125,7 +1125,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                   <span>
                     <strong>AI Guidance:</strong>{' '}
                     {interviewStage === 'intro'
-                      ? `Deliver your 60-90s pitch covering identity, degree, skills (${resumeData?.skills?.allFound?.slice(0, 3).join(', ')}), and your top project.`
+                      ? `Speak freely about yourself, your skills, and your projects. When you are done speaking, click "Done with Self-Intro" below to proceed to technical questions.`
                       : questions[currentQIndex]?.hint || 'Explain technical architecture and trade-offs.'}
                   </span>
                 </div>
@@ -1223,7 +1223,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                       onClick={handleSubmitIntroAndStartQuestions}
                       className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-black shadow-lg shadow-cyan-500/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                     >
-                      <span>Submit Intro &amp; Start Questions</span>
+                      <span>Done with Self-Intro ➔ Ask Technical Questions</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   ) : (
