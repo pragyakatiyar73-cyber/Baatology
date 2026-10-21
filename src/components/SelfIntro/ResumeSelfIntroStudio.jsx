@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   FileText,
+  ExternalLink,
   Upload,
   User,
   Sparkles,
@@ -98,6 +99,11 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
   const [isParsing, setIsParsing] = useState(false);
   const [resumeAudit, setResumeAudit] = useState(null);
   const [selectedAuditTab, setSelectedAuditTab] = useState('alternatives'); // 'alternatives' | 'problems' | 'summary'
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [uploadedFileType, setUploadedFileType] = useState('');
+  const [resumeViewMode, setResumeViewMode] = useState('pdf'); // 'pdf' | 'sheet'
 
   // ── DYNAMIC RESUME QUESTIONS ──
   const [questions, setQuestions] = useState([]);
@@ -180,15 +186,42 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
     }
   }, [resumeData]);
 
-  // ── HANDLE RESUME FILE UPLOAD (PDF, DOCX, TXT) ──
+  // ── CLEANUP PREVIOUS RESUME OBJECT URL ON UNMOUNT ──
+  useEffect(() => {
+    return () => {
+      if (uploadedFileUrl) {
+        try { URL.revokeObjectURL(uploadedFileUrl); } catch (e) {}
+      }
+    };
+  }, [uploadedFileUrl]);
+
+  // ── HANDLE RESUME FILE UPLOAD (PDF, DOCX, TXT) - OPENS RESUME IMMEDIATELY ──
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isDocx = file.name.toLowerCase().endsWith('.docx');
+    const fileType = isPdf ? 'pdf' : (isDocx ? 'docx' : 'txt');
+
+    setUploadedFile(file);
+    setUploadedFileName(file.name);
+    setUploadedFileType(fileType);
+
+    // Create immediate blob URL so resume opens on screen right away
+    if (uploadedFileUrl) {
+      try { URL.revokeObjectURL(uploadedFileUrl); } catch (e) {}
+    }
+    const blobUrl = URL.createObjectURL(file);
+    setUploadedFileUrl(blobUrl);
+    setResumeViewMode(isPdf ? 'pdf' : 'sheet');
 
     setIsParsing(true);
     try {
       const rawText = await extractResumeText(file);
       const parsed = parseResumeContent(rawText, userName);
+      parsed.fileName = file.name;
+      parsed.fileSize = (file.size / 1024).toFixed(1) + ' KB';
       setResumeData(parsed);
       playSuccessChime();
     } catch (err) {
@@ -197,6 +230,8 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
       const fallback = {
         ...SAMPLE_RESUMES[0],
         name: userName || 'Student Candidate',
+        fileName: file.name,
+        fileSize: (file.size / 1024).toFixed(1) + ' KB',
         id: 'uploaded_resume_' + Date.now(),
       };
       setResumeData(fallback);
@@ -208,6 +243,14 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
 
   // ── 1-CLICK SAMPLE RESUME PICKER (OPTIONAL CONVENIENCE) ──
   const handleSelectSample = (sample) => {
+    setUploadedFile(null);
+    if (uploadedFileUrl) {
+      try { URL.revokeObjectURL(uploadedFileUrl); } catch (e) {}
+    }
+    setUploadedFileUrl(null);
+    setUploadedFileName(sample.name + '_Resume.pdf');
+    setUploadedFileType('sheet');
+    setResumeViewMode('sheet');
     setResumeData(sample);
     playSuccessChime();
   };
@@ -459,7 +502,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
     });
 
     // Record to persistent practice history
-    const finalScore = Math.round(((liveMatch?.alignmentScore || 75) + (resumeAudit?.atsScore || 75)) / 2);
+    const finalScore = Math.round(((liveMatch?.alignmentScore || 85) + (wpm ? Math.min(wpm / 1.4, 95) : 85) + (eyeContactScore || 92)) / 3);
     recordPracticeSession({
       mode: 'Self Introduction',
       score: finalScore,
@@ -518,7 +561,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            1. Resume &amp; Audit
+            1. Upload &amp; Open Resume
           </button>
           <button
             onClick={handleStartFaceToFaceInterview}
@@ -539,7 +582,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            3. Mistake Detection
+            3. Performance Report
           </button>
         </div>
       </header>
@@ -684,214 +727,254 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
               )}
             </div>
 
-            {/* Right Column (7 cols): AI RESUME FLAW DETECTOR & LIVE AUDIT CARDS */}
-            <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-6">
+                        {/* Right Column (7 cols): DIRECT OPENED RESUME DOCUMENT VIEWER */}
+            <div className="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4">
               {/* If NO Resume is Uploaded: Clean Zero-Dummy-Data Waiting State */}
               {!resumeData ? (
-                <div className="py-16 px-6 text-center flex flex-col items-center justify-center space-y-4">
+                <div className="py-24 px-6 text-center flex flex-col items-center justify-center space-y-4">
                   <div className="w-20 h-20 rounded-3xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
                     <FileText className="w-10 h-10 animate-pulse" />
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-slate-800">
-                      Live AI Resume Health &amp; Flaw Detector
+                      Resume Document Preview Area
                     </h3>
                     <p className="text-xs text-slate-500 max-w-md mt-1.5 leading-relaxed">
-                      Apna resume (PDF, DOCX ya TXT) upload karein. AI live aapke resume ko scan karega, ATS score calculate karega, aur <strong>"Iske Jagah Ye Likhein"</strong> ke personalized improvement cards generate karega.
+                      Apna resume (PDF, DOCX ya TXT) left side par upload karein. Upload karte hi aapka complete resume document yahan instantly open ho jayega aur interview se pehle aap use clearly review kar payenge.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    <span>Zero Dummy Data • 100% Live Evaluation on Upload</span>
+                    <Eye className="w-4 h-4 text-blue-500" />
+                    <span>Instant Resume Document Viewer • Zero Dummy Data</span>
                   </div>
                 </div>
               ) : (
-                /* When Resume IS Uploaded: Show Live AI Analysis */
+                /* When Resume IS Uploaded: DIRECTLY OPEN THE RESUME DOCUMENT */
                 <>
-                  {/* Header & ATS Score Banner */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white shadow-md">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300">
-                        <Sparkles className="w-6 h-6" />
+                  {/* Top Document Header Bar */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900 text-white shadow-md">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shrink-0">
+                        <FileText className="w-5 h-5" />
                       </div>
-                      <div>
-                        <h3 className="text-base font-extrabold tracking-tight">
-                          Live AI Resume Health Check &amp; Improvement Diagnostic
-                        </h3>
-                        <p className="text-xs text-blue-200">
-                          Evaluated against ATS filters, product company benchmarks &amp; interviewer rubrics
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-extrabold truncate text-white">
+                            {uploadedFileName || `${resumeData.name}_Resume.pdf`}
+                          </h3>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                            ● Opened
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {uploadedFileType ? uploadedFileType.toUpperCase() + ' Document' : 'Resume File'} • {resumeData.fileSize || 'Ready for Avatar Interview'}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right sm:border-l sm:border-white/15 sm:pl-4 shrink-0">
-                      <div className="text-2xl font-black text-amber-300">
-                        {resumeAudit?.atsScore || 75} <span className="text-xs text-slate-400 font-semibold">/ 100</span>
-                      </div>
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">
-                        {resumeAudit?.grade || 'Placement Ready'}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Tabs: "Iske Jagah Ye Rakhein (Suggestions)" vs "Detected Problems" vs "Strengths" */}
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <button
-                      onClick={() => setSelectedAuditTab('alternatives')}
-                      className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        selectedAuditTab === 'alternatives'
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>Iske Jagah Ye Rakhein ({(resumeAudit?.improvements?.length || 0) + (resumeAudit?.problems?.length || 0)})</span>
-                    </button>
-                    <button
-                      onClick={() => setSelectedAuditTab('problems')}
-                      className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        selectedAuditTab === 'problems'
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Resume Mistakes ({resumeAudit?.problems?.length || 0})</span>
-                    </button>
-                    <button
-                      onClick={() => setSelectedAuditTab('summary')}
-                      className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        selectedAuditTab === 'summary'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Strong Assets ({resumeAudit?.strongPoints?.length || 0})</span>
-                    </button>
-                  </div>
-
-                  {/* TAB 1: BETTER ALTERNATIVES ("Iske jagah ye rakhein toh jada better hoga") */}
-                  {selectedAuditTab === 'alternatives' && (
-                    <div className="space-y-4">
-                      <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 leading-relaxed">
-                        💡 <strong>Interviewer Perspective:</strong> Recruiters spend an average of 6 seconds scanning a resume. Ye concrete rewrites add metrics and action verbs so your profile immediately stands out:
-                      </div>
-
-                      {resumeAudit?.problems?.map((prob, idx) => (
-                        <div
-                          key={idx}
-                          className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3 hover:border-blue-300 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
-                              <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px]">
-                                {idx + 1}
-                              </span>
-                              {prob.type}
-                            </span>
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                              High Impact Fix
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                            <div className="p-3 rounded-xl bg-red-50/70 border border-red-200/80">
-                              <span className="text-[10px] font-black uppercase tracking-wider text-red-600 block mb-1">
-                                ❌ What was written (Weak / Passive):
-                              </span>
-                              <p className="text-red-950 font-medium leading-relaxed">
-                                "{prob.beforeAfter?.before || prob.found}"
-                              </p>
-                            </div>
-                            <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
-                              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block mb-1">
-                                ✨ Iske Jagah Ye Likhein (2x Impact):
-                              </span>
-                              <p className="text-emerald-950 font-bold leading-relaxed">
-                                "{prob.beforeAfter?.after || prob.recommendation}"
-                              </p>
-                            </div>
-                          </div>
-
-                          <p className="text-[11px] text-slate-600 leading-normal bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                            <strong>Kyun better hai:</strong> {prob.recommendation}
-                          </p>
-                        </div>
-                      ))}
-
-                      {resumeAudit?.improvements?.map((imp, idx) => (
-                        <div
-                          key={'imp_' + idx}
-                          className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Zap className="w-4 h-4 text-indigo-600" />
-                            <h5 className="text-xs font-bold text-slate-800">{imp.title}</h5>
-                            <span className="text-[10px] text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                              {imp.context}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-600">{imp.suggestion}</p>
-                          <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-900">
-                            💡 <em>{imp.betterAlternative}</em>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* TAB 2: DETECTED PROBLEMS & MISTAKES */}
-                  {selectedAuditTab === 'problems' && (
-                    <div className="space-y-3">
-                      {!resumeAudit?.problems?.length ? (
-                        <div className="p-6 text-center text-xs text-emerald-700 font-bold bg-emerald-50 rounded-2xl border border-emerald-200">
-                          🎉 No major flaws detected in this resume!
-                        </div>
-                      ) : (
-                        resumeAudit.problems.map((prob, i) => (
-                          <div
-                            key={i}
-                            className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 text-xs space-y-1.5"
+                    {/* View Mode & Open Actions */}
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                      {uploadedFileUrl && (
+                        <div className="flex items-center bg-white/10 p-1 rounded-xl text-xs font-bold border border-white/10">
+                          <button
+                            onClick={() => setResumeViewMode('pdf')}
+                            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                              resumeViewMode === 'pdf'
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'text-slate-300 hover:text-white'
+                            }`}
+                            title="View Original Uploaded PDF Document"
                           >
-                            <div className="flex items-center gap-2 text-amber-900 font-extrabold">
-                              <AlertTriangle className="w-4 h-4 text-amber-600" />
-                              <span>{prob.type}</span>
-                            </div>
-                            <p className="text-amber-800 font-medium">{prob.found}</p>
-                            <p className="text-slate-600 text-[11px] font-semibold mt-1">
-                              <strong>Fix Advice:</strong> {prob.recommendation}
+                            📄 PDF View
+                          </button>
+                          <button
+                            onClick={() => setResumeViewMode('sheet')}
+                            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                              resumeViewMode === 'sheet'
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'text-slate-300 hover:text-white'
+                            }`}
+                            title="View Formatted Executive Resume Sheet"
+                          >
+                            📑 Formatted Sheet
+                          </button>
+                        </div>
+                      )}
+
+                      {uploadedFileUrl && (
+                        <button
+                          onClick={() => window.open(uploadedFileUrl, '_blank')}
+                          className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-blue-200 text-xs font-bold border border-white/15 flex items-center gap-1.5 transition-all cursor-pointer"
+                          title="Open Resume Document in Full New Tab"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">New Tab</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── DOCUMENT PREVIEW CANVAS ── */}
+                  {uploadedFileUrl && resumeViewMode === 'pdf' ? (
+                    /* 1. Native High-Resolution PDF Viewer */
+                    <div className="w-full h-[620px] rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-inner relative">
+                      <iframe
+                        src={uploadedFileUrl}
+                        className="w-full h-full rounded-2xl border-0"
+                        title="Opened Resume Document PDF"
+                      />
+                    </div>
+                  ) : (
+                    /* 2. Pristine Executive Formatted Resume Sheet (For DOCX / TXT / Sheet view) */
+                    <div className="w-full max-h-[620px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-inner text-slate-800 space-y-5 font-sans">
+                      {/* Sheet Header */}
+                      <div className="border-b-2 border-slate-900 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+                              {resumeData.name}
+                            </h1>
+                            <p className="text-xs font-bold text-blue-700 mt-0.5">
+                              {resumeData.role || 'Aspiring Software Engineer'}
                             </p>
                           </div>
-                        ))
+                          <div className="text-left sm:text-right text-xs text-slate-600 space-y-0.5">
+                            {resumeData.contact?.email && <div>✉️ {resumeData.contact.email}</div>}
+                            {resumeData.contact?.phone && <div>📞 {resumeData.contact.phone}</div>}
+                            {resumeData.contact?.github && <div>🐙 {resumeData.contact.github}</div>}
+                            {resumeData.contact?.linkedin && <div>💼 {resumeData.contact.linkedin}</div>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Education Section */}
+                      <div className="space-y-2">
+                        <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                          <GraduationCap className="w-4 h-4 text-blue-600" />
+                          <span>Education</span>
+                        </h2>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs pt-1">
+                          <div>
+                            <div className="font-extrabold text-slate-900">{resumeData.college}</div>
+                            <div className="text-slate-600 font-medium">{resumeData.degree}</div>
+                          </div>
+                          <div className="text-left sm:text-right text-slate-500 font-semibold mt-1 sm:mt-0">
+                            <div>Class of {resumeData.graduationYear}</div>
+                            {resumeData.cgpa && <div className="text-blue-700 font-bold">CGPA: {resumeData.cgpa}</div>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Technical Skills Section */}
+                      <div className="space-y-2">
+                        <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                          <Zap className="w-4 h-4 text-blue-600" />
+                          <span>Technical Skills</span>
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                          {resumeData.skills?.languages?.length > 0 && (
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                              <span className="font-bold text-slate-700 block mb-1">Languages:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {resumeData.skills.languages.map((sk, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[11px] font-semibold">
+                                    {sk}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {resumeData.skills?.frameworks?.length > 0 && (
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                              <span className="font-bold text-slate-700 block mb-1">Frameworks &amp; Libraries:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {resumeData.skills.frameworks.map((sk, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-semibold">
+                                    {sk}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {resumeData.skills?.databases?.length > 0 && (
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                              <span className="font-bold text-slate-700 block mb-1">Databases:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {resumeData.skills.databases.map((sk, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[11px] font-semibold">
+                                    {sk}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {resumeData.skills?.tools?.length > 0 && (
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                              <span className="font-bold text-slate-700 block mb-1">Developer Tools:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {resumeData.skills.tools.map((sk, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 text-[11px] font-semibold">
+                                    {sk}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Projects Section */}
+                      {resumeData.projects?.length > 0 && (
+                        <div className="space-y-2">
+                          <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                            <Briefcase className="w-4 h-4 text-blue-600" />
+                            <span>Engineering Projects</span>
+                          </h2>
+                          <div className="space-y-3 pt-1">
+                            {resumeData.projects.map((proj, idx) => (
+                              <div key={idx} className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 space-y-1.5">
+                                <div className="flex flex-wrap items-center justify-between gap-1">
+                                  <span className="font-extrabold text-xs text-slate-900">{proj.title}</span>
+                                  {proj.tech?.length > 0 && (
+                                    <span className="text-[11px] font-bold text-blue-600">
+                                      {proj.tech.join(' • ')}
+                                    </span>
+                                  )}
+                                </div>
+                                {proj.bullets?.length > 0 && (
+                                  <ul className="text-xs text-slate-700 space-y-1 list-disc list-inside">
+                                    {proj.bullets.map((b, bi) => (
+                                      <li key={bi} className="leading-relaxed">{b}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
 
-                  {/* TAB 3: STRONG ASSETS */}
-                  {selectedAuditTab === 'summary' && (
-                    <div className="space-y-2.5">
-                      {resumeAudit?.strongPoints?.map((str, i) => (
-                        <div
-                          key={i}
-                          className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200 text-xs text-emerald-950 font-medium flex items-center gap-2.5"
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>{str}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
                   {/* Bottom Quick-Launch Bar */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 font-medium">
-                      Resume evaluated. Ready for your face-to-face interview with the Avatar?
-                    </span>
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                      <div>
+                        <span className="text-xs font-extrabold text-slate-900 block">
+                          Resume Opened &amp; Ready for 1-on-1 Interview!
+                        </span>
+                        <span className="text-[11px] text-slate-600">
+                          AI Avatar is ready to question you on this resume. Deliver self-intro first.
+                        </span>
+                      </div>
+                    </div>
                     <button
                       onClick={handleStartFaceToFaceInterview}
-                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-blue-200 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                      className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0"
                     >
-                      <span>Start Face-to-Face Interview</span>
+                      <Bot className="w-4 h-4" />
+                      <span>Start Face-to-Face Interview with Avatar</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1194,7 +1277,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
 
             <div className="text-center sm:text-right sm:border-l sm:border-white/15 sm:pl-6 shrink-0">
               <div className="text-3xl font-black text-emerald-400 font-mono">
-                {Math.round(((liveMatch?.alignmentScore || 75) + (resumeAudit?.atsScore || 75)) / 2)}
+                {Math.round(((liveMatch?.alignmentScore || 85) + (wpm ? Math.min(wpm / 1.4, 95) : 85) + (eyeContactScore || 92)) / 3)}
                 <span className="text-xs text-slate-400 font-sans"> / 100</span>
               </div>
               <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300">
@@ -1216,12 +1299,12 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
             </div>
 
             <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ATS Health Score</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Eye Contact &amp; Poise</span>
               <div className="text-2xl font-black text-indigo-600 font-mono">
-                {resumeAudit?.atsScore || 75}%
+                {eyeContactScore || 92}%
               </div>
               <span className="text-[10px] font-semibold text-slate-500">
-                Grade: {resumeAudit?.grade || 'Placement Ready'}
+                Attentive &amp; Professional
               </span>
             </div>
 
@@ -1373,56 +1456,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
             </div>
           </div>
 
-          {/* ── SECTION 3: RESUME FLAW AUDIT ("ISKE JAGAH YE RAKHTE TOH JADA BETTER HOTA") ── */}
-          {resumeAudit && (
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-extrabold text-slate-900">
-                      Resume Upgrades ("Iske Jagah Ye Rakhein Toh Jada Better Hota")
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      Actionable rewrites to replace passive bullet points with quantifiable engineering impact
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                  ATS Score: {resumeAudit.atsScore}/100
-                </span>
-              </div>
 
-              <div className="space-y-3">
-                {resumeAudit.problems.map((prob, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5"
-                  >
-                    <span className="text-xs font-extrabold text-slate-800 block">
-                      Problem #{idx + 1}: {prob.type}
-                    </span>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                      <div className="p-3 rounded-xl bg-red-50/70 border border-red-200">
-                        <span className="text-[10px] font-black uppercase text-red-600 block mb-1">
-                          ❌ What was in Resume:
-                        </span>
-                        <p className="text-red-950 font-medium">"{prob.beforeAfter?.before || prob.found}"</p>
-                      </div>
-                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                        <span className="text-[10px] font-black uppercase text-emerald-700 block mb-1">
-                          ✨ Iske Jagah Ye Rakhein (Recommended):
-                        </span>
-                        <p className="text-emerald-950 font-bold">"{prob.beforeAfter?.after || prob.recommendation}"</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Action Dock */}
           <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
