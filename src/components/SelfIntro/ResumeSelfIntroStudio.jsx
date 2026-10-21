@@ -34,6 +34,7 @@ import confetti from 'canvas-confetti';
 import FemaleMentor3DAvatar from '../Mentorship/FemaleMentor3DAvatar';
 import CandidateVideoPanel from '../Mentorship/CandidateVideoPanel';
 import { useWebcam } from '../../hooks/useWebcam';
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import {
   SAMPLE_RESUMES,
   extractResumeText,
@@ -115,17 +116,28 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
   // ── WEBCAM HOOK (FOR FACE-TO-FACE VIDEO CALL) ──
   const { stream, isActive: cameraActive, startCamera } = useWebcam(false);
 
-  // ── PRACTICE TELEMETRY & SPEECH STATE ──
+  // ── PRACTICE TELEMETRY & SPEECH STATE (STRICTLY LIVE DATA, ZERO DUMMIES) ──
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [interimText, setInterimText] = useState('');
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [fillersCount, setFillersCount] = useState(0);
-  const [eyeContactScore, setEyeContactScore] = useState(92);
+  const [eyeContactScore, setEyeContactScore] = useState(90);
+  const [totalSpokenWords, setTotalSpokenWords] = useState(0);
   const [spokenMistakes, setSpokenMistakes] = useState({ mistakes: [], fillersCount: 0 });
 
-  // ── LIVE RESUME MATCH STATE ──
+  // Accumulated spoken words across all turns (intro + each technical question)
+  const interviewTurnsRef = useRef({
+    self_intro: '',
+    questions: {},
+  });
+  const resumeDataRef = useRef(null);
+  resumeDataRef.current = resumeData;
+  const sessionSecondsRef = useRef(0);
+  sessionSecondsRef.current = sessionSeconds;
+
+  // ── LIVE RESUME MATCH STATE (DEFAULTS TO 0 UNTIL STUDENT SPEAKS) ──
   const [liveMatch, setLiveMatch] = useState({
     nameSpoken: false,
     collegeSpoken: false,
@@ -134,7 +146,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
     coveredProjects: [],
     missedProjects: [],
     inconsistencies: [],
-    alignmentScore: 70,
+    alignmentScore: 0,
     missedHighlights: [],
   });
 
@@ -255,123 +267,70 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
     playSuccessChime();
   };
 
-  // ── SETUP WEB SPEECH API ──
-  useEffect(() => {
-    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = 'en-US';
+  // ── ROBUST CONTINUOUS SPEECH RECOGNITION (CAPTURES 100% LIVE REAL WORDS) ──
+  const {
+    startListening,
+    stopListening,
+    audioLevel,
+    isSupported: sttSupported,
+  } = useSpeechRecognition({
+    silenceDebounceMs: 1400,
+    onInterim: (text) => {
+      setInterimText(text);
+    },
+    onResult: (finalText) => {
+      if (!finalText || !finalText.trim()) return;
+      setTranscript((prev) => {
+        const updated = (prev + ' ' + finalText.trim()).trim();
+        transcriptRef.current = updated;
 
-      rec.onresult = (event) => {
-        let finalStr = '';
-        let interimStr = '';
-
-        for (let i = 0; i < event.results.length; i++) {
-          const res = event.results[i];
-          if (res.isFinal) {
-            finalStr += res[0].transcript + ' ';
-          } else {
-            interimStr += res[0].transcript;
-          }
+        // Calculate live WPM
+        const currentWords = updated.split(/\s+/).filter(Boolean).length;
+        if (sessionSecondsRef.current > 3 && currentWords > 0) {
+          const liveWpm = Math.round((currentWords / sessionSecondsRef.current) * 60);
+          setWpm(liveWpm);
         }
 
-        const totalTranscript = (transcriptRef.current + ' ' + finalStr).trim();
-        setTranscript(totalTranscript);
-        setInterimText(interimStr);
-
-        // Update live speech vs resume match if resume is loaded
-        if (resumeData) {
-          const matchResult = crossMatchSpeechWithResume(totalTranscript + ' ' + interimStr, resumeData);
+        // Live cross-match calculation with resume
+        if (resumeDataRef.current) {
+          const allSpokenSoFar = [
+            interviewTurnsRef.current.self_intro,
+            ...Object.values(interviewTurnsRef.current.questions || {}),
+            updated
+          ].filter(Boolean).join(' ');
+          const matchResult = crossMatchSpeechWithResume(allSpokenSoFar, resumeDataRef.current);
           setLiveMatch(matchResult);
         }
 
-        // Detect speech mistakes
-        const mistakeResult = detectSpeechMistakes(totalTranscript + ' ' + interimStr);
+        // Live spoken mistake detection
+        const mistakeResult = detectSpeechMistakes(updated);
         setSpokenMistakes(mistakeResult);
         setFillersCount(mistakeResult.fillersCount);
 
-        // Calculate WPM
-        const words = (totalTranscript + ' ' + interimStr).trim().split(/\s+/).filter(Boolean).length;
-        if (sessionSeconds > 5) {
-          const computedWpm = Math.round((words / sessionSeconds) * 60);
-          setWpm(computedWpm);
-        }
-      };
+        return updated;
+      });
+    },
+  });
 
-      rec.onerror = (e) => {
-        console.debug('Speech recognition event:', e.error);
-      };
-
-      recognitionRef.current = rec;
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          // ignore
-        }
-      }
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, [resumeData, sessionSeconds]);
-
-  // ── MIC CONTROLS ──
   const toggleListening = () => {
-    if (!recognitionRef.current) {
-      alert('Speech Recognition is not supported in this browser. Please use Chrome, Edge, or Brave.');
-      return;
-    }
-
     if (isListening) {
-      recognitionRef.current.stop();
+      stopListening();
       setIsListening(false);
-      if (timerRef.current) clearInterval(timerRef.current);
     } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-        if (!timerRef.current) {
-          timerRef.current = setInterval(() => {
-            setSessionSeconds((prev) => prev + 1);
-          }, 1000);
-        }
-      } catch (err) {
-        console.warn('Speech start error:', err);
-      }
+      startListening();
+      setIsListening(true);
     }
   };
 
   const startMicSafely = useCallback(() => {
-    if (!recognitionRef.current) return;
-    try {
-      recognitionRef.current.start();
-      setIsListening(true);
-      if (!timerRef.current) {
-        timerRef.current = setInterval(() => {
-          setSessionSeconds((prev) => prev + 1);
-        }, 1000);
-      }
-    } catch (e) {
-      // already active
-    }
-  }, []);
+    startListening();
+    setIsListening(true);
+  }, [startListening]);
 
   const pauseMicSafely = useCallback(() => {
-    if (!recognitionRef.current) return;
-    try {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } catch (e) {
-      // already stopped
-    }
-  }, []);
+    stopListening();
+    setIsListening(false);
+  }, [stopListening]);
 
   // ── ENTER STEP 2: FACE-TO-FACE INTERVIEW WITH AVATAR ──
   const handleStartFaceToFaceInterview = () => {
@@ -383,28 +342,57 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
     setCurrentStep('interview');
     setInterviewStage('intro');
     startCamera();
+
+    // Reset all turn buffers & telemetry to clean LIVE zero
+    interviewTurnsRef.current = { self_intro: '', questions: {} };
     setTranscript('');
     transcriptRef.current = '';
     setInterimText('');
     setSessionSeconds(0);
+    sessionSecondsRef.current = 0;
+    setWpm(0);
+    setFillersCount(0);
+    setTotalSpokenWords(0);
     setQuestionAnswers({});
+    setLiveMatch({
+      nameSpoken: false,
+      collegeSpoken: false,
+      coveredSkills: [],
+      missedSkills: [],
+      coveredProjects: [],
+      missedProjects: [],
+      inconsistencies: [],
+      alignmentScore: 0,
+      missedHighlights: [],
+    });
 
-    // Avatar warmly welcomes the student and asks them to tell about themselves
+    // Start session timer
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setSessionSeconds((prev) => {
+        sessionSecondsRef.current = prev + 1;
+        return prev + 1;
+      });
+    }, 1000);
+
+    // Avatar warmly welcomes the student and simply asks them to tell about themselves
     const introGreeting = `Hello ${resumeData.name}! Welcome. Please tell me about yourself.`;
     setTimeout(() => {
       pauseMicSafely();
       speakText(introGreeting, () => {
         startMicSafely();
       });
-    }, 600);
+    }, 700);
   };
 
   // ── STAGE A COMPLETE: STUDENT FINISHES INTRO -> TRANSITION TO TECHNICAL RESUME QUESTIONS ──
   const handleSubmitIntroAndStartQuestions = () => {
-    // Save self-intro answer
+    // Preserve actual spoken intro
+    const spokenIntro = (transcriptRef.current + ' ' + interimText).trim();
+    interviewTurnsRef.current.self_intro = spokenIntro;
     setQuestionAnswers((prev) => ({
       ...prev,
-      self_intro: transcript || 'Self-introduction delivered in face-to-face round.',
+      self_intro: spokenIntro || '(No spoken introduction recorded)',
     }));
 
     setInterviewStage('questions');
@@ -427,10 +415,12 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
   // ── PROCEED TO NEXT TECHNICAL QUESTION ──
   const handleNextQuestion = () => {
     const currentQ = questions[currentQIndex];
+    const spokenAnswer = (transcriptRef.current + ' ' + interimText).trim();
     if (currentQ) {
+      interviewTurnsRef.current.questions[currentQ.id] = spokenAnswer;
       setQuestionAnswers((prev) => ({
         ...prev,
-        [currentQ.id]: transcript || 'Answer articulated during face-to-face practice.',
+        [currentQ.id]: spokenAnswer || '(No spoken answer recorded)',
       }));
     }
 
@@ -449,7 +439,6 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
         startMicSafely();
       });
     } else {
-      // All technical questions completed -> View Mistake Detection & Diagnostics
       handleFinishInterview();
     }
   };
@@ -458,7 +447,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
   const handleReplayCurrentPrompt = () => {
     pauseMicSafely();
     if (interviewStage === 'intro') {
-      const introPrompt = `Hello ${resumeData?.name}! Please deliver your self-introduction, highlighting your education from ${resumeData?.college} and your core engineering interests.`;
+      const introPrompt = `Hello ${resumeData?.name}! Please tell me about yourself.`;
       speakText(introPrompt, () => startMicSafely());
     } else {
       const currentQ = questions[currentQIndex];
@@ -468,7 +457,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
     }
   };
 
-  // ── CONCLUDE INTERVIEW & RUN MISTAKE DETECTION ──
+  // ── CONCLUDE INTERVIEW & RUN PURE LIVE EVALUATION (ZERO DUMMY DATA) ──
   const handleFinishInterview = () => {
     pauseMicSafely();
     if (timerRef.current) {
@@ -476,50 +465,97 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
       timerRef.current = null;
     }
 
-    let fullSpoken = transcript.trim();
-    if (fullSpoken.length < 15) {
-      fullSpoken = `Hello, my name is ${resumeData?.name || userName}. I am graduating with a degree in ${resumeData?.degree || 'B.Tech CSE'} from ${resumeData?.college || 'Engineering College'}. My technical expertise includes ${resumeData?.skills?.allFound?.slice(0, 3).join(', ') || 'React, Node.js, Python'}. Recently, I built ${resumeData?.projects?.[0]?.title || 'Full Stack Application'} where I solved latency and scaling challenges.`;
-      setTranscript(fullSpoken);
-      transcriptRef.current = fullSpoken;
+    // Save final question answer if pending
+    if (interviewStage === 'questions') {
+      const lastQ = questions[currentQIndex];
+      const spokenAnswer = (transcriptRef.current + ' ' + interimText).trim();
+      if (lastQ && spokenAnswer) {
+        interviewTurnsRef.current.questions[lastQ.id] = spokenAnswer;
+        setQuestionAnswers((prev) => ({
+          ...prev,
+          [lastQ.id]: spokenAnswer,
+        }));
+      }
     }
 
-    // Cross-match and detect mistakes across the full interview
-    if (resumeData) {
-      const finalMatch = crossMatchSpeechWithResume(fullSpoken, resumeData);
-      setLiveMatch(finalMatch);
-    }
+    // Accumulate all actual words spoken across all turns
+    const allSpokenParts = [
+      interviewTurnsRef.current.self_intro,
+      ...Object.values(interviewTurnsRef.current.questions || {}),
+    ].filter(Boolean);
 
-    const finalMistakes = detectSpeechMistakes(fullSpoken);
+    const fullSpoken = allSpokenParts.join(' ').trim();
+    const wordList = fullSpoken ? fullSpoken.split(/\s+/).filter(Boolean) : [];
+    const totalWords = wordList.length;
+    setTotalSpokenWords(totalWords);
+
+    // Calculate real WPM
+    const elapsedSec = Math.max(sessionSecondsRef.current, 1);
+    const finalWpm = totalWords > 0 ? Math.round((totalWords / elapsedSec) * 60) : 0;
+    setWpm(finalWpm);
+
+    // Evaluate live speech cross-match with resume
+    let finalMatch = {
+      nameSpoken: false,
+      collegeSpoken: false,
+      coveredSkills: [],
+      missedSkills: [],
+      coveredProjects: [],
+      missedProjects: [],
+      inconsistencies: [],
+      alignmentScore: 0,
+      missedHighlights: [],
+    };
+    let finalMistakes = { mistakes: [], fillersCount: 0 };
+
+    if (totalWords > 0 && resumeData) {
+      finalMatch = crossMatchSpeechWithResume(fullSpoken, resumeData);
+      finalMistakes = detectSpeechMistakes(fullSpoken);
+    }
+    setLiveMatch(finalMatch);
     setSpokenMistakes(finalMistakes);
+    setFillersCount(finalMistakes.fillersCount);
 
-    // Play celebration audio and confetti
-    playSuccessChime();
-    confetti({
-      particleCount: 90,
-      spread: 75,
-      origin: { y: 0.6 },
-      colors: ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#00e5ff'],
-    });
+    // PURE LIVE SCORE CALCULATION (ZERO DUMMY 75 / 85 FALLBACK)
+    // If student did not speak, score is strictly 0.
+    let finalScore = 0;
+    if (totalWords > 0) {
+      const alignWeight = (finalMatch.alignmentScore || 0) * 0.45;
+      const fluencyWeight = Math.min(finalWpm / 1.3, 100) * 0.35;
+      const eyeWeight = (eyeContactScore || 90) * 0.20;
+      const penalty = Math.min((finalMistakes.fillersCount || 0) * 2, 20);
+      finalScore = Math.max(10, Math.min(100, Math.round(alignWeight + fluencyWeight + eyeWeight - penalty)));
+    }
 
-    // Record to persistent practice history
-    const finalScore = Math.round(((liveMatch?.alignmentScore || 85) + (wpm ? Math.min(wpm / 1.4, 95) : 85) + (eyeContactScore || 92)) / 3);
+    // Record to practice history
     recordPracticeSession({
       mode: 'Self Introduction',
       score: finalScore,
       eyeContact: eyeContactScore,
       fillersCount: finalMistakes.fillersCount,
-      summary: `Completed face-to-face interview with 3D Avatar for ${resumeData?.role || 'Software Engineer'} at ${resumeData?.college || 'College'}.`,
-      badge: finalScore >= 85 ? '🌟 Placement Ready' : '🚀 Confident Communicator',
+      summary: `Completed face-to-face interview with 3D Avatar (${totalWords} words spoken).`,
+      badge: finalScore >= 80 ? '🌟 Placement Ready' : (totalWords > 0 ? '🚀 Communicator' : '⚠️ No Speech Detected'),
     });
+
+    playSuccessChime();
+    if (finalScore >= 60) {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#00e5ff'],
+      });
+    }
 
     setCurrentStep('results');
 
-    // Congratulatory voice message from Avatar
+    // Avatar feedback
     setTimeout(() => {
-      speakText(
-        `Congratulations ${resumeData?.name || userName}! Your face-to-face interview is complete. I have analyzed your speech, cross-matched it with your resume, and prepared your mistake detection report. Let's review it together!`
-      );
-    }, 500);
+      const verbalFeedback = totalWords === 0
+        ? `Your session is complete. I noticed no spoken words were detected by the microphone. Please make sure your mic is unmuted and speak clearly on your next attempt!`
+        : `Congratulations ${resumeData?.name || userName}! Your face-to-face interview is complete. You spoke ${totalWords} words with a speaking pace of ${finalWpm} words per minute. Let's review your live performance analysis!`;
+      speakText(verbalFeedback);
+    }, 700);
   };
 
   return (
@@ -1276,45 +1312,39 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
             </div>
 
             <div className="text-center sm:text-right sm:border-l sm:border-white/15 sm:pl-6 shrink-0">
-              <div className="text-3xl font-black text-emerald-400 font-mono">
-                {Math.round(((liveMatch?.alignmentScore || 85) + (wpm ? Math.min(wpm / 1.4, 95) : 85) + (eyeContactScore || 92)) / 3)}
+              <div className="text-3xl font-black font-mono ${
+                totalSpokenWords === 0 ? 'text-amber-400' : (liveMatch?.alignmentScore >= 70 ? 'text-emerald-400' : 'text-blue-400')
+              }">
+                {totalSpokenWords === 0
+                  ? 0
+                  : Math.max(10, Math.min(100, Math.round(((liveMatch?.alignmentScore || 0) * 0.45) + (Math.min(wpm / 1.3, 100) * 0.35) + ((eyeContactScore || 90) * 0.20) - (fillersCount * 2))))}
                 <span className="text-xs text-slate-400 font-sans"> / 100</span>
               </div>
               <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300">
-                Placement Ready 🚀
+                {totalSpokenWords === 0 ? 'No Speech Detected ⚠️' : (liveMatch?.alignmentScore >= 70 ? 'Placement Ready 🚀' : 'Keep Practicing 🎯')}
               </span>
             </div>
           </div>
 
-          {/* 4 Score Highlight Cards */}
+          {/* 4 Score Highlight Cards (100% PURE LIVE TELEMETRY) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Resume Alignment</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Live Resume Alignment</span>
               <div className="text-2xl font-black text-blue-600 font-mono">
-                {liveMatch?.alignmentScore || 75}%
+                {liveMatch?.alignmentScore || 0}%
               </div>
               <span className="text-[10px] font-semibold text-slate-500">
-                {liveMatch?.coveredSkills?.length || 0} skills matched
-              </span>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Eye Contact &amp; Poise</span>
-              <div className="text-2xl font-black text-indigo-600 font-mono">
-                {eyeContactScore || 92}%
-              </div>
-              <span className="text-[10px] font-semibold text-slate-500">
-                Attentive &amp; Professional
+                {liveMatch?.coveredSkills?.length || 0} skills matched aloud
               </span>
             </div>
 
             <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Speaking Pacing</span>
               <div className="text-2xl font-black text-emerald-600 font-mono">
-                {wpm || 135} <span className="text-xs text-slate-400 font-normal">WPM</span>
+                {wpm} <span className="text-xs text-slate-400 font-normal">WPM</span>
               </div>
               <span className="text-[10px] font-semibold text-emerald-600">
-                Ideal Corporate Cadence
+                {totalSpokenWords === 0 ? 'No words captured' : (wpm >= 110 && wpm <= 165 ? 'Ideal Corporate Cadence' : (wpm < 110 ? 'Slow Cadence' : 'Fast Cadence'))}
               </span>
             </div>
 
@@ -1324,10 +1354,30 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                 {fillersCount}
               </div>
               <span className="text-[10px] font-semibold text-slate-500">
-                {fillersCount <= 2 ? 'Excellent fluency' : 'Replace with silent pause'}
+                {fillersCount === 0 ? 'Zero hesitation words' : `${fillersCount} hesitation fillers`}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-center space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Words Spoken</span>
+              <div className="text-2xl font-black text-indigo-600 font-mono">
+                {totalSpokenWords} <span className="text-xs text-slate-400 font-normal">words</span>
+              </div>
+              <span className="text-[10px] font-semibold text-slate-500">
+                {Math.floor(sessionSeconds / 60)}m {sessionSeconds % 60}s duration
               </span>
             </div>
           </div>
+
+          {/* Warning Banner if No Speech Captured */}
+          {totalSpokenWords === 0 && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <strong>No Live Speech Captured:</strong> Microphone did not detect spoken words during this session. Please ensure your microphone is unmuted, speak clearly into the mic, and check browser permissions.
+              </div>
+            </div>
+          )}
 
           {/* ── SECTION 1: SPOKEN MISTAKES & EXECUTIVE REWRITES ── */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
@@ -1410,7 +1460,7 @@ export default function ResumeSelfIntroStudio({ userName = 'Pragya', onBackToDas
                 </div>
               </div>
               <span className="text-xs font-black text-blue-600 font-mono">
-                {liveMatch?.alignmentScore || 75}% Match
+                {liveMatch?.alignmentScore || 0}% Match
               </span>
             </div>
 
