@@ -5,6 +5,59 @@ import * as THREE from 'three';
 
 
 
+// ── Canonical Seated Arm & Finger Resting Quaternions (Direct from animations.glb Idle) ──
+const IDLE_ARM_FINGER_QUATS = {
+  LeftShoulder: [0.51861, 0.46859, -0.56172, 0.44264],
+  LeftArm: [0.55495, 0.21826, 0.18113, 0.78204],
+  LeftForeArm: [0.00276, -0.01507, 0.07414, 0.99713],
+  LeftHand: [-0.1395, -0.2142, 0.1249, 0.95868],
+  LeftHandThumb1: [0.27573, 0.02816, 0.15127, 0.94884],
+  LeftHandThumb2: [-0.03476, -0.00211, -0.09888, 0.99449],
+  LeftHandThumb3: [0, 0.00262, 0, 1],
+  LeftHandThumb4: [-0.03272, 0.02971, 0.0432, 0.99809],
+  LeftHandIndex1: [0.16577, -0.06899, -0.09201, 0.97944],
+  LeftHandIndex2: [0.09678, 0.03738, -0.0228, 0.99434],
+  LeftHandIndex3: [0, -0.04699, 0, 0.9989],
+  LeftHandIndex4: [-0.06403, 0.04266, -0.03069, 0.99656],
+  LeftHandMiddle1: [0.14603, -0.01052, -0.04491, 0.9882],
+  LeftHandMiddle2: [0.08977, 0.0232, -0.00893, 0.99565],
+  LeftHandMiddle3: [0, -0.00725, 0, 0.99997],
+  LeftHandMiddle4: [-0.07933, 0.00227, -0.02302, 0.99658],
+  LeftHandRing1: [0.21821, 0.03055, -0.05018, 0.97413],
+  LeftHandRing2: [0.09017, 0.0187, -0.00929, 0.99571],
+  LeftHandRing3: [0, -0.01306, 0, 0.99991],
+  LeftHandRing4: [-0.01598, 0.00318, 0.02056, 0.99966],
+  LeftHandPinky1: [0.29076, 0.0608, -0.07388, 0.952],
+  LeftHandPinky2: [0.14395, 0.03296, 0.01142, 0.98897],
+  LeftHandPinky3: [0, -0.03482, 0, 0.99939],
+  LeftHandPinky4: [-0.03942, 0.02194, 0.01046, 0.99893],
+
+  RightShoulder: [0.49305, -0.49232, 0.56244, 0.44518],
+  RightArm: [0.54261, -0.29099, -0.17161, 0.76906],
+  RightForeArm: [0.00351, 0.01814, -0.08703, 0.99603],
+  RightHand: [-0.2397, 0.31182, -0.08695, 0.91529],
+  RightHandThumb1: [0.2611, 0.00242, -0.13531, 0.95578],
+  RightHandThumb2: [-0.01976, 0.01047, 0.13409, 0.99072],
+  RightHandThumb3: [0, -0.00261, 0, 1],
+  RightHandThumb4: [-0.03272, -0.0297, -0.04321, 0.99809],
+  RightHandIndex1: [0.1724, 0.06755, 0.05496, 0.98117],
+  RightHandIndex2: [0.04463, -0.03384, 0.0108, 0.99837],
+  RightHandIndex3: [0, 0.047, 0, 0.99889],
+  RightHandIndex4: [-0.06403, -0.04266, 0.03069, 0.99656],
+  RightHandMiddle1: [0.17328, 0.00448, 0.04194, 0.98397],
+  RightHandMiddle2: [0.09064, -0.02268, 0.00739, 0.9956],
+  RightHandMiddle3: [0, 0.00726, 0, 0.99997],
+  RightHandMiddle4: [-0.07934, -0.00227, 0.02302, 0.99658],
+  RightHandRing1: [0.23259, -0.01125, 0.02654, 0.97215],
+  RightHandRing2: [0.08155, -0.01686, 0.00328, 0.99652],
+  RightHandRing3: [0, 0.01305, 0, 0.99991],
+  RightHandRing4: [-0.01597, -0.00317, -0.02056, 0.99966],
+  RightHandPinky1: [0.24855, -0.02262, 0.0284, 0.96794],
+  RightHandPinky2: [0.11159, -0.0266, -0.02637, 0.99305],
+  RightHandPinky3: [0, 0.03483, 0, 0.99939],
+  RightHandPinky4: [-0.03943, -0.02195, -0.01046, 0.99893],
+};
+
 /**
  * SeatedFemaleMentorModel
  */
@@ -156,67 +209,22 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
       bones.Spine1.rotateX(chestRise * 0.6);
     }
 
-    // ── 2. Natural Seated Human Arm & Hand Rest Posture (Resting naturally on lap / chair) ──
-    // Hands are FIXED and anchored in place, resting naturally in lap like a human sitting in a chair
-
-    // Left Arm & Forearm: Resting naturally and visibly forward on chair armrest
-    if (bones.LeftArm && restQuats.LeftArm) {
-      bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-1.12);
-      bones.LeftArm.rotateX(0.26);
-      bones.LeftArm.rotateY(-0.06);
-    }
-    if (bones.LeftForeArm && restQuats.LeftForeArm) {
-      bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(1.18);
-      bones.LeftForeArm.rotateZ(0.18);
-      bones.LeftForeArm.rotateY(-0.12);
-    }
-    if (bones.LeftHand && restQuats.LeftHand) {
-      bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(0.22);
-      bones.LeftHand.rotateZ(-0.05);
-    }
-
-    // Right Arm & Forearm: Symmetrical seated rest visibly forward on chair armrest (hands clearly visible)
-    if (bones.RightArm && restQuats.RightArm) {
-      bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(1.12);
-      bones.RightArm.rotateX(0.26);
-      bones.RightArm.rotateY(0.06);
-    }
-    if (bones.RightForeArm && restQuats.RightForeArm) {
-      bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(1.18);
-      bones.RightForeArm.rotateZ(-0.18);
-      bones.RightForeArm.rotateY(0.12);
-    }
-    if (bones.RightHand && restQuats.RightHand) {
-      bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(0.22);
-      bones.RightHand.rotateZ(0.05);
-    }
-
-    // Relaxed natural finger resting pose (gently curved like human hands at rest)
-    const fingerCurls = [
-      { name: 'LeftHandIndex1', rx: 0.18 }, { name: 'LeftHandIndex2', rx: 0.24 }, { name: 'LeftHandIndex3', rx: 0.16 },
-      { name: 'LeftHandMiddle1', rx: 0.20 }, { name: 'LeftHandMiddle2', rx: 0.26 }, { name: 'LeftHandMiddle3', rx: 0.18 },
-      { name: 'LeftHandRing1', rx: 0.22 }, { name: 'LeftHandRing2', rx: 0.28 }, { name: 'LeftHandRing3', rx: 0.20 },
-      { name: 'LeftHandPinky1', rx: 0.24 }, { name: 'LeftHandPinky2', rx: 0.30 }, { name: 'LeftHandPinky3', rx: 0.22 },
-      { name: 'LeftHandThumb1', rx: 0.12 }, { name: 'LeftHandThumb2', rx: 0.16 },
-
-      { name: 'RightHandIndex1', rx: 0.18 }, { name: 'RightHandIndex2', rx: 0.24 }, { name: 'RightHandIndex3', rx: 0.16 },
-      { name: 'RightHandMiddle1', rx: 0.20 }, { name: 'RightHandMiddle2', rx: 0.26 }, { name: 'RightHandMiddle3', rx: 0.18 },
-      { name: 'RightHandRing1', rx: 0.22 }, { name: 'RightHandRing2', rx: 0.28 }, { name: 'RightHandRing3', rx: 0.20 },
-      { name: 'RightHandPinky1', rx: 0.24 }, { name: 'RightHandPinky2', rx: 0.30 }, { name: 'RightHandPinky3', rx: 0.22 },
-      { name: 'RightHandThumb1', rx: 0.12 }, { name: 'RightHandThumb2', rx: 0.16 },
-    ];
-    fingerCurls.forEach(({ name, rx }) => {
-      if (bones[name] && restQuats[name]) {
-        bones[name].quaternion.copy(restQuats[name]);
-        bones[name].rotateX(rx);
+    // ── 2. Natural Seated Human Arm & Hand Rest Posture (100% Fixed & Natural) ──
+    // Uses canonical resting pose from animations.glb with forearms naturally resting forward
+    Object.entries(IDLE_ARM_FINGER_QUATS).forEach(([boneName, quatArr]) => {
+      const b = bones[boneName];
+      if (b) {
+        b.quaternion.fromArray(quatArr);
       }
     });
+
+    // Angle forearms comfortably forward resting naturally in lap / consultation desk
+    if (bones.LeftForeArm) {
+      bones.LeftForeArm.rotateZ(0.48);
+    }
+    if (bones.RightForeArm) {
+      bones.RightForeArm.rotateZ(-0.48);
+    }
 
     // ── 3. Head & Gaze Movement ──
     if (bones.Head) {
@@ -412,32 +420,7 @@ function ModernLightExecutiveChair() {
         />
       </RoundedBox>
 
-      {/* 3. Sleek Low-Profile Pearl White Armrests */}
-      <group position={[-0.24, -0.08, 0.02]}>
-        {/* Support Post */}
-        <mesh position={[0, -0.06, 0]} castShadow>
-          <cylinderGeometry args={[0.010, 0.012, 0.15, 16]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.15} />
-        </mesh>
-        {/* Armrest Pad */}
-        <RoundedBox args={[0.065, 0.022, 0.22]} radius={0.012} smoothness={4} position={[0, 0.01, 0]} castShadow>
-          <meshStandardMaterial color="#f8fafc" roughness={0.35} metalness={0.08} />
-        </RoundedBox>
-      </group>
-
-      <group position={[0.24, -0.08, 0.02]}>
-        {/* Support Post */}
-        <mesh position={[0, -0.06, 0]} castShadow>
-          <cylinderGeometry args={[0.010, 0.012, 0.15, 16]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.15} />
-        </mesh>
-        {/* Armrest Pad */}
-        <RoundedBox args={[0.065, 0.022, 0.22]} radius={0.012} smoothness={4} position={[0, 0.01, 0]} castShadow>
-          <meshStandardMaterial color="#f8fafc" roughness={0.35} metalness={0.08} />
-        </RoundedBox>
-      </group>
-
-      {/* 4. Compact Pearl-White Seat Cushion */}
+      {/* 3. Compact Pearl-White Seat Cushion */}
       <RoundedBox
         args={[0.42, 0.065, 0.40]}
         radius={0.024}
@@ -514,8 +497,8 @@ export default function FemaleMentor3DAvatar({
         <Canvas
           shadows
           camera={{
-            position: [0, 0.10, 1.18],
-            fov: 42,
+            position: [0, 0.16, 0.82],
+            fov: 39,
             near: 0.1,
             far: 20,
           }}
@@ -583,9 +566,9 @@ export default function FemaleMentor3DAvatar({
             color="#000000"
           />
 
-          {/* ── Locked Camera Controls Focused at Eye Level (0.8m - 1.2m Intimate Distance) ── */}
+          {/* ── Locked Camera Controls Focused at Eye Level (Intimate Face-to-Face Meeting Presence) ── */}
           <OrbitControls
-            target={[0, 0.02, -0.15]}
+            target={[0, 0.14, -0.15]}
             enableRotate={false}
             enableZoom={false}
             enablePan={false}
