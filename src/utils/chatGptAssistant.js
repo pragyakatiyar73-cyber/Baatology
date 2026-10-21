@@ -154,7 +154,7 @@ const CONVERSATIONAL_KNOWLEDGE = [
       'Responding with an engaging, welcoming conversational tone.',
     ],
     generateSpoken: (name) =>
-      `Namaste ${name || ''}! Main bilkul badhiya hoon aur aapke saath practice karne ke liye excited hoon. Aaj hum kis topic par baat karein? Aap interview prep karna chahte hain ya koi specific question poochna chahte hain?`,
+      `Hello ${name || 'friend'}! I am doing wonderful and so excited to chat with you today. What is on your mind? We can talk about interview preparation, life, coding, or anything you'd like to share!`,
   },
   {
     patterns: [
@@ -166,7 +166,7 @@ const CONVERSATIONAL_KNOWLEDGE = [
       'Outlining the 3 pillars: DSA coding, core CS subjects (OS/DBMS), and communication/HR rounds.',
     ],
     generateSpoken: () =>
-      `Placement crack karne ke liye teen cheezein sabse zaroori hain: pehla, DSA me strong command; doosra, core subjects jaise OS, DBMS aur Computer Networks ke clear concepts; aur teesra, confident communication skills. Hum yahan aapki communication aur GD skills ko perfect banayenge. Bataiye, pehle kis round ki practice karein?`,
+      `To crack campus placements successfully, focus on three key pillars: first, building strong fundamentals in Data Structures and Algorithms; second, mastering core CS subjects like OS, DBMS, and Networks; and third, clear, confident verbal communication. Which round would you like to practice today?`,
   },
 ];
 
@@ -283,7 +283,10 @@ export async function getChatGPTConversationalResponse(userSpeech = '', context 
 
   // ── Tier 2: Direct Client-Side ChatGPT / Pollinations Provider ──
   try {
-    const systemPrompt = `You are Aura, an exceptionally smart, friendly AI mentor with the intelligence of ChatGPT. The student's name is ${userName}. Answer the student's question accurately on ANY topic (grammar corrections, coding, placement, science, daily talk). If in Hindi/Hinglish, reply in Hinglish. If in English, reply in English. First write internal reasoning in <thought>...</thought> tags, then provide a direct 2 to 4 sentence spoken answer. Student says: "${cleaned}".`;
+    const isCasual = currentMode === 'casual' || String(currentMode).toLowerCase().includes('casual');
+    const systemPrompt = isCasual
+      ? `You are Aura, an exceptionally smart, warm, friendly AI mentor on Baatology. The student's name is ${userName}. You are in Casual Talk mode. Speak and respond EXCLUSIVELY in natural, encouraging, and fluent English only. Do NOT use Hindi or Hinglish words. First write internal reasoning in <thought>...</thought> tags, then provide a direct 2 to 4 sentence supportive spoken answer in English. Student says: "${cleaned}".`
+      : `You are Aura, an exceptionally smart, friendly AI mentor with the intelligence of ChatGPT. The student's name is ${userName}. Answer the student's question accurately on ANY topic (grammar corrections, coding, placement, science, daily talk). If in Hindi/Hinglish, reply in Hinglish. If in English, reply in English. First write internal reasoning in <thought>...</thought> tags, then provide a direct 2 to 4 sentence spoken answer. Student says: "${cleaned}".`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 9000);

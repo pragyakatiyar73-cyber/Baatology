@@ -83,8 +83,8 @@ export default function ControlDock({
           </span>
         </button>
 
-        {/* 2. Direct Language Toggle Button (Hindi / English) */}
-        {onToggleLanguage && (
+        {/* 2. Direct Language Toggle Button (Hindi / English) - Hidden in Casual Talk */}
+        {onToggleLanguage && currentMode !== 'casual' && (
           <button
             onClick={onToggleLanguage}
             className="px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer text-xs font-bold"

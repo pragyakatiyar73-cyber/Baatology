@@ -364,6 +364,7 @@ export default function App() {
     isSupported: sttSupported,
     permissionDenied: micPermissionDenied,
     language: speechLang,
+    setLanguage: setSpeechLang,
     toggleLanguage: toggleSpeechLang,
     micNotice,
     clearMicNotice,
@@ -397,6 +398,13 @@ export default function App() {
 
   startListeningRef.current = startListening;
   stopListeningRef.current = stopListening;
+
+  // Ensure Casual Talk is strictly English (remove Hindi)
+  useEffect(() => {
+    if (currentMode === MODES.CASUAL && speechLang !== 'en-US') {
+      setSpeechLang?.('en-US');
+    }
+  }, [currentMode, speechLang, setSpeechLang]);
 
   // ── Interrupt AI and speak immediately
   const handleImmediateSpeak = useCallback(() => {
@@ -491,6 +499,7 @@ export default function App() {
     } else if (modeId === MODES.SELF_INTRO) {
       greeting = "Welcome to the Self-Introduction arena. Please deliver your 60 to 90-second elevator pitch. Whenever you are ready, you can start speaking.";
     } else if (modeId === MODES.CASUAL) {
+      setSpeechLang?.('en-US');
       // Feature 8: Casual Talk & Empathetic Mental Wellness welcome
       greeting = CASUAL_ROBOT_WELCOME;
     } else {
@@ -600,6 +609,7 @@ export default function App() {
     } else if (newMode === MODES.SELF_INTRO) {
       verbalAnnouncement = 'Welcome to the Self-Introduction arena. Please deliver your 60 to 90-second elevator pitch. Whenever you are ready, you can start speaking.';
     } else if (newMode === MODES.CASUAL) {
+      setSpeechLang?.('en-US');
       verbalAnnouncement = CASUAL_ROBOT_WELCOME;
     } else {
       verbalAnnouncement = `Switched to Group Discussion mode. Our theme is: "${getCurrentTopic()}".`;
@@ -979,13 +989,15 @@ export default function App() {
                       <span>Done ➔</span>
                     </button>
                   )}
-                  <button
-                    onClick={toggleSpeechLang}
-                    className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30 transition-all cursor-pointer shrink-0"
-                    title={`Recognition language: ${speechLang || 'en-IN'}. Click to toggle English / Hindi`}
-                  >
-                    🌐 {speechLang === 'hi-IN' ? 'Hindi (हिन्दी)' : 'English (EN)'}
-                  </button>
+                  {currentMode !== MODES.CASUAL && (
+                    <button
+                      onClick={toggleSpeechLang}
+                      className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30 transition-all cursor-pointer shrink-0"
+                      title={`Recognition language: ${speechLang || 'en-IN'}. Click to toggle English / Hindi`}
+                    >
+                      🌐 {speechLang === 'hi-IN' ? 'Hindi (हिन्दी)' : 'English (EN)'}
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowTextInput((prev) => !prev)}
                     className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs cursor-pointer transition-all"
@@ -1117,8 +1129,8 @@ export default function App() {
             onEndCall={handleEndCall}
             onBackToDashboard={handleBackToDashboard}
             audioLevel={audioLevel}
-            speechLang={speechLang}
-            onToggleLanguage={toggleSpeechLang}
+            speechLang={currentMode === MODES.CASUAL ? 'en-US' : speechLang}
+            onToggleLanguage={currentMode === MODES.CASUAL ? null : toggleSpeechLang}
             showTextInput={showTextInput}
             onToggleTextInput={() => setShowTextInput((prev) => !prev)}
             manualInputText={manualInputText}

@@ -42,6 +42,18 @@ export function useSpeechRecognition({
   const languageRef = useRef('hi-IN');
   languageRef.current = language;
 
+  const updateLanguage = useCallback((newLang) => {
+    const validLang = newLang === 'hi-IN' ? 'hi-IN' : newLang === 'en-US' ? 'en-US' : 'en-IN';
+    setLanguage(validLang);
+    languageRef.current = validLang;
+    console.log('[SpeechRecognition] Set recognition language to:', validLang);
+    if (activeRef.current && recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+    }
+  }, []);
+
   const toggleLanguage = useCallback(() => {
     setLanguage((prev) => {
       const next = prev === 'hi-IN' ? 'en-IN' : 'hi-IN';
@@ -427,7 +439,7 @@ export function useSpeechRecognition({
     permissionDenied,
     audioLevel, // 0-100 real-time volume indicator
     language,
-    setLanguage,
+    setLanguage: updateLanguage,
     toggleLanguage,
     micNotice,
     clearMicNotice,

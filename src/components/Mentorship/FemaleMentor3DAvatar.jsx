@@ -162,33 +162,39 @@ function SeatedFemaleMentorModel({ isSpeaking = false, isListening = false, isTh
     // Left Arm & Forearm: Hanging naturally down along ribcage and resting forward in lap
     if (bones.LeftArm && restQuats.LeftArm) {
       bones.LeftArm.quaternion.copy(restQuats.LeftArm);
-      bones.LeftArm.rotateZ(-0.68);
-      bones.LeftArm.rotateX(0.18);
+      bones.LeftArm.rotateZ(-1.30);
+      bones.LeftArm.rotateX(0.24);
+      bones.LeftArm.rotateY(-0.08);
     }
     if (bones.LeftForeArm && restQuats.LeftForeArm) {
       bones.LeftForeArm.quaternion.copy(restQuats.LeftForeArm);
-      bones.LeftForeArm.rotateX(0.28);
-      bones.LeftForeArm.rotateZ(-0.08);
+      bones.LeftForeArm.rotateX(0.96);
+      bones.LeftForeArm.rotateZ(0.36);
+      bones.LeftForeArm.rotateY(-0.10);
     }
     if (bones.LeftHand && restQuats.LeftHand) {
       bones.LeftHand.quaternion.copy(restQuats.LeftHand);
-      bones.LeftHand.rotateX(-0.10);
+      bones.LeftHand.rotateX(0.12);
+      bones.LeftHand.rotateZ(-0.08);
     }
 
-    // Right Arm & Forearm: Symmetrical seated rest (FIXED - No erratic waving gestures)
+    // Right Arm & Forearm: Symmetrical seated rest naturally on lap (completely fixed, no repetitive movement)
     if (bones.RightArm && restQuats.RightArm) {
       bones.RightArm.quaternion.copy(restQuats.RightArm);
-      bones.RightArm.rotateZ(0.68);
-      bones.RightArm.rotateX(0.18);
+      bones.RightArm.rotateZ(1.30);
+      bones.RightArm.rotateX(0.24);
+      bones.RightArm.rotateY(0.08);
     }
     if (bones.RightForeArm && restQuats.RightForeArm) {
       bones.RightForeArm.quaternion.copy(restQuats.RightForeArm);
-      bones.RightForeArm.rotateX(0.28);
-      bones.RightForeArm.rotateZ(0.08);
+      bones.RightForeArm.rotateX(0.96);
+      bones.RightForeArm.rotateZ(-0.36);
+      bones.RightForeArm.rotateY(0.10);
     }
     if (bones.RightHand && restQuats.RightHand) {
       bones.RightHand.quaternion.copy(restQuats.RightHand);
-      bones.RightHand.rotateX(-0.10);
+      bones.RightHand.rotateX(0.12);
+      bones.RightHand.rotateZ(0.08);
     }
 
     // Relaxed natural finger resting pose (gently curved like human hands at rest)
